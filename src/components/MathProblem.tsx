@@ -113,37 +113,50 @@ const generateProblem = (grade: number): Problem => {
   }
 };
 
+const generateUniqueProblems = (grade: number, count: number = 10): Problem[] => {
+  const problems: Problem[] = [];
+  const seenQuestions = new Set<string>();
+  
+  let attempts = 0;
+  while (problems.length < count && attempts < count * 3) {
+    const problem = generateProblem(grade);
+    if (!seenQuestions.has(problem.question)) {
+      seenQuestions.add(problem.question);
+      problems.push(problem);
+    }
+    attempts++;
+  }
+  
+  return problems;
+};
+
 export function MathProblem({ grade, onBack, onComplete }: MathProblemProps) {
-  const [currentProblem, setCurrentProblem] = useState<Problem>(generateProblem(grade));
+  const [problems] = useState<Problem[]>(() => generateUniqueProblems(grade, 10));
+  const [currentProblemIndex, setCurrentProblemIndex] = useState(0);
   const [userAnswer, setUserAnswer] = useState('');
   const [correctAnswers, setCorrectAnswers] = useState(0);
   const [totalQuestions, setTotalQuestions] = useState(0);
   const [feedback, setFeedback] = useState<'correct' | 'incorrect' | null>(null);
   const [streak, setStreak] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(300); // 5 minutes
+  const [sessionStartTime] = useState(Date.now());
+  const [questionStartTime, setQuestionStartTime] = useState(Date.now());
+  const [totalTimeSpent, setTotalTimeSpent] = useState(0);
 
   const targetQuestions = 5;
-  const progress = (correctAnswers / targetQuestions) * 100;
+  const currentProblem = problems[currentProblemIndex];
+  const progress = (totalQuestions / targetQuestions) * 100;
 
+  // Reset question timer when starting new question
   useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev <= 1) {
-          // Zeit abgelaufen
-          onComplete(0);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+    setQuestionStartTime(Date.now());
+  }, [currentProblemIndex]);
 
-    return () => clearInterval(timer);
-  }, [onComplete]);
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  const calculateReward = () => {
+    const minutesPerCorrect = 2;
+    const earnedMinutes = correctAnswers * minutesPerCorrect;
+    const timeSpentMinutes = Math.ceil(totalTimeSpent / 60);
+    const netMinutes = Math.max(0, earnedMinutes - timeSpentMinutes);
+    return { earnedMinutes, timeSpentMinutes, netMinutes };
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -152,6 +165,8 @@ export function MathProblem({ grade, onBack, onComplete }: MathProblemProps) {
     
     if (isNaN(answer)) return;
     
+    const questionTime = (Date.now() - questionStartTime) / 1000;
+    setTotalTimeSpent(prev => prev + questionTime);
     setTotalQuestions(prev => prev + 1);
     
     if (answer === currentProblem.answer) {
@@ -159,11 +174,11 @@ export function MathProblem({ grade, onBack, onComplete }: MathProblemProps) {
       setStreak(prev => prev + 1);
       setFeedback('correct');
       
-      if (correctAnswers + 1 >= targetQuestions) {
-        // Ziel erreicht!
+      if (totalQuestions + 1 >= targetQuestions) {
+        // Session beendet
         setTimeout(() => {
-          const earnedMinutes = 15 + (streak >= 3 ? 5 : 0); // Bonus für Streak
-          onComplete(earnedMinutes);
+          const { netMinutes } = calculateReward();
+          onComplete(netMinutes);
         }, 1500);
         return;
       }
@@ -174,29 +189,49 @@ export function MathProblem({ grade, onBack, onComplete }: MathProblemProps) {
 
     setTimeout(() => {
       setFeedback(null);
-      setCurrentProblem(generateProblem(grade));
+      setCurrentProblemIndex(prev => (prev + 1) % problems.length);
       setUserAnswer('');
     }, 1500);
   };
 
-  if (correctAnswers >= targetQuestions) {
+  if (totalQuestions >= targetQuestions) {
+    const { earnedMinutes, timeSpentMinutes, netMinutes } = calculateReward();
+    
     return (
       <div className="min-h-screen bg-gradient-bg flex items-center justify-center p-4">
         <Card className="max-w-md w-full shadow-card">
           <CardContent className="p-8 text-center">
             <div className="text-6xl mb-4 animate-celebrate">🎉</div>
             <h2 className="text-2xl font-bold text-success mb-4">
-              Geschafft!
+              Session beendet!
             </h2>
             <p className="text-muted-foreground mb-6">
               Du hast {correctAnswers} von {targetQuestions} Aufgaben richtig gelöst!
             </p>
-            <div className="bg-gradient-success text-success-foreground p-4 rounded-lg mb-6">
-              <div className="text-2xl font-bold">
-                +{15 + (streak >= 3 ? 5 : 0)} Minuten
+            
+            <div className="space-y-3 mb-6">
+              <div className="bg-primary/10 p-3 rounded-lg">
+                <div className="text-sm text-muted-foreground">Verdient</div>
+                <div className="text-lg font-bold text-primary">
+                  +{earnedMinutes} Min ({correctAnswers} × 2 Min)
+                </div>
               </div>
-              <div className="text-sm opacity-90">Handyzeit verdient!</div>
+              
+              <div className="bg-destructive/10 p-3 rounded-lg">
+                <div className="text-sm text-muted-foreground">Benötigte Zeit</div>
+                <div className="text-lg font-bold text-destructive">
+                  -{timeSpentMinutes} Min
+                </div>
+              </div>
+              
+              <div className="bg-gradient-success text-success-foreground p-4 rounded-lg">
+                <div className="text-sm opacity-90">Netto Handyzeit</div>
+                <div className="text-2xl font-bold">
+                  {netMinutes > 0 ? `+${netMinutes}` : '0'} Minuten
+                </div>
+              </div>
             </div>
+            
             <Button onClick={onBack} variant="default" className="w-full">
               Zurück zur Auswahl
             </Button>
@@ -205,6 +240,8 @@ export function MathProblem({ grade, onBack, onComplete }: MathProblemProps) {
       </div>
     );
   }
+
+  const sessionTime = Math.floor((Date.now() - sessionStartTime) / 1000);
 
   return (
     <div className="min-h-screen bg-gradient-bg p-4">
@@ -224,7 +261,7 @@ export function MathProblem({ grade, onBack, onComplete }: MathProblemProps) {
           <div className="flex items-center gap-4">
             <Badge variant="secondary" className="flex items-center gap-2">
               <Clock className="w-4 h-4" />
-              {formatTime(timeLeft)}
+              {Math.floor(sessionTime / 60)}:{(sessionTime % 60).toString().padStart(2, '0')}
             </Badge>
             
             {streak > 0 && (
@@ -236,13 +273,24 @@ export function MathProblem({ grade, onBack, onComplete }: MathProblemProps) {
           </div>
         </div>
 
+        {/* Reward Info */}
+        <Card className="mb-6 shadow-card">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between text-sm">
+              <span>Verdient: <strong className="text-primary">{correctAnswers * 2} Min</strong></span>
+              <span>Zeit: <strong className="text-destructive">{Math.ceil((totalTimeSpent + (Date.now() - questionStartTime) / 1000) / 60)} Min</strong></span>
+              <span>Netto: <strong className="text-success">{Math.max(0, correctAnswers * 2 - Math.ceil((totalTimeSpent + (Date.now() - questionStartTime) / 1000) / 60))} Min</strong></span>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Progress */}
         <Card className="mb-6 shadow-card">
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-medium">Fortschritt</span>
               <span className="text-sm text-muted-foreground">
-                {correctAnswers} / {targetQuestions} korrekt
+                {totalQuestions} / {targetQuestions} Aufgaben
               </span>
             </div>
             <Progress value={progress} className="h-3" />
@@ -254,14 +302,14 @@ export function MathProblem({ grade, onBack, onComplete }: MathProblemProps) {
           <CardHeader>
             <CardTitle className="text-center">
               <Badge variant="outline" className="mb-4">
-                Klasse {grade} • {currentProblem.type}
+                Klasse {grade} • {currentProblem?.type || 'Aufgabe'}
               </Badge>
             </CardTitle>
           </CardHeader>
           <CardContent className="p-8">
             <div className="text-center mb-8">
               <div className="text-4xl font-bold mb-6 text-foreground">
-                {currentProblem.question}
+                {currentProblem?.question || 'Lade...'}
               </div>
               
               <form onSubmit={handleSubmit} className="space-y-6">
@@ -298,12 +346,12 @@ export function MathProblem({ grade, onBack, onComplete }: MathProblemProps) {
                   {feedback === 'correct' ? (
                     <>
                       <CheckCircle className="w-6 h-6" />
-                      Richtig!
+                      Richtig! +2 Minuten
                     </>
                   ) : (
                     <>
                       <XCircle className="w-6 h-6" />
-                      Falsch! Die richtige Antwort ist {currentProblem.answer}
+                      Falsch! Die richtige Antwort ist {currentProblem?.answer}
                     </>
                   )}
                 </div>
