@@ -203,6 +203,9 @@ export function useFamilyLinking() {
         description: "Du bist jetzt mit einem Elternteil verbunden.",
       });
 
+      // Reload family data to update UI
+      await loadFamilyData(result.parent_id);
+
       return true;
 
     } catch (error: any) {
