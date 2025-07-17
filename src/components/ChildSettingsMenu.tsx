@@ -50,6 +50,12 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack }: ChildSet
   const { userAchievements, getCompletedAchievements, getTotalRewardMinutes, loading: achievementsLoading } = useAchievements(user?.id);
 
   useEffect(() => {
+    console.log('🔍 ChildSettingsMenu useEffect triggered:', { 
+      userId: user?.id, 
+      settingsLoading, 
+      userRole: user?.role || 'unknown' 
+    });
+    
     if (user?.id && !settingsLoading) {
       loadParentInfo();
     }

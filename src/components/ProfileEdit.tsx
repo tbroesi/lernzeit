@@ -205,18 +205,6 @@ export function ProfileEdit({ user, profile, onBack, onUpdate }: ProfileEditProp
           </CardContent>
         </Card>
 
-        {/* Info Card */}
-        <Card className="shadow-card bg-blue-50 border-blue-200">
-          <CardContent className="p-4">
-            <div className="text-center">
-              <div className="text-2xl mb-2">ℹ️</div>
-              <div className="text-sm text-blue-800">
-                <strong>Status: Unabhängig</strong><br />
-                Du lernst eigenständig und bist noch nicht mit einem Elternteil verknüpft.
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );
