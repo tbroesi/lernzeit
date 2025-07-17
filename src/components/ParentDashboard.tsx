@@ -26,8 +26,9 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
   const { toast } = useToast();
 
   useEffect(() => {
+    console.log('🔄 ParentDashboard: Loading family data for userId:', userId);
     loadFamilyData(userId);
-  }, [userId, loadFamilyData]);
+  }, [userId]); // Removed loadFamilyData from dependencies to prevent infinite rerenders
 
   // Add refresh button functionality
   const handleRefresh = () => {

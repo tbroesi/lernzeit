@@ -25,6 +25,7 @@ export function useFamilyLinking() {
 
   // Load invitation codes and linked children
   const loadFamilyData = async (userId: string) => {
+    console.log('📊 loadFamilyData called for userId:', userId);
     try {
       setLoading(true);
       
@@ -55,6 +56,7 @@ export function useFamilyLinking() {
           .in('id', childIds);
 
         if (childrenError) throw childrenError;
+        console.log('👶 Loaded children:', children);
         setLinkedChildren(children || []);
       } else {
         setLinkedChildren([]);
