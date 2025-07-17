@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -212,12 +211,6 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
                 <BookOpen className="w-6 h-6 mr-2" />
                 🚀 Lernen starten (Klasse {profile?.grade || 1})
               </Button>
-              
-              <div className="mt-4 flex justify-center">
-                <div className="text-xs text-green-600 bg-green-50 px-3 py-1 rounded-full">
-                  +2 Min pro gelöste Aufgabe! 🎯
-                </div>
-              </div>
             </CardContent>
           </Card>
 

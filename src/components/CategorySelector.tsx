@@ -3,6 +3,8 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { BookOpen, Languages, GraduationCap, ArrowLeft, Globe, Clock, Atom, Leaf, FlaskConical, Columns3 } from 'lucide-react';
+import { useChildSettings } from '@/hooks/useChildSettings';
+import { useAuth } from '@/hooks/useAuth';
 
 interface CategorySelectorProps {
   grade: number;
@@ -11,6 +13,26 @@ interface CategorySelectorProps {
 }
 
 export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySelectorProps) {
+  const { user } = useAuth();
+  const { settings, loading } = useChildSettings(user?.id || '');
+
+  const getMinutesForCategory = (categoryId: string) => {
+    if (!settings) return 5;
+    
+    switch (categoryId) {
+      case 'math': return settings.math_minutes_per_task;
+      case 'german': return settings.german_minutes_per_task;
+      case 'english': return settings.english_minutes_per_task;
+      case 'geography': return settings.geography_minutes_per_task;
+      case 'history': return settings.history_minutes_per_task;
+      case 'physics': return settings.physics_minutes_per_task;
+      case 'biology': return settings.biology_minutes_per_task;
+      case 'chemistry': return settings.chemistry_minutes_per_task;
+      case 'latin': return settings.latin_minutes_per_task;
+      default: return 5;
+    }
+  };
+
   const categories = [
     {
       id: 'math' as const,
@@ -103,10 +125,23 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
           </CardHeader>
         </Card>
 
+        {/* Motivation Card - Now at the top */}
+        <Card className="shadow-card bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-200">
+          <CardContent className="p-4 text-center">
+            <div className="text-3xl mb-2">🏆</div>
+            <h3 className="font-bold text-green-800 mb-1">Verdiene Handyzeit!</h3>
+            <p className="text-sm text-green-700">
+              Löse 5 Aufgaben und verdiene wertvolle Bildschirmzeit
+            </p>
+          </CardContent>
+        </Card>
+
         {/* Categories Grid */}
         <div className="grid grid-cols-1 gap-4">
           {categories.map((category) => {
             const IconComponent = category.icon;
+            const minutes = getMinutesForCategory(category.id);
+            
             return (
               <Card
                 key={category.id}
@@ -121,6 +156,12 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
                     <div className="flex-1">
                       <h3 className="text-lg font-bold mb-1">{category.name}</h3>
                       <p className="text-sm text-muted-foreground">{category.description}</p>
+                      <div className="flex items-center gap-1 mt-1">
+                        <Clock className="w-4 h-4 text-green-600" />
+                        <span className="text-sm text-green-600 font-medium">
+                          +{minutes} Min pro Aufgabe
+                        </span>
+                      </div>
                     </div>
                     <IconComponent className="w-5 h-5 text-muted-foreground" />
                   </div>
@@ -129,17 +170,6 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
             );
           })}
         </div>
-
-        {/* Info Card */}
-        <Card className="shadow-card">
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl mb-2">🏆</div>
-            <h3 className="font-semibold mb-1">Verdiene Handyzeit!</h3>
-            <p className="text-sm text-muted-foreground">
-              Löse 5 Aufgaben und verdiene wertvolle Bildschirmzeit
-            </p>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );
