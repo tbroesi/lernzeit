@@ -122,9 +122,11 @@ export function useFamilyLinking() {
       console.log('📋 Code search result:', { inviteData, findError });
 
       if (findError || !inviteData) {
+        console.log('❌ Code not found or error:', findError);
+        const errorMessage = findError?.message || 'Code nicht gefunden';
         toast({
           title: "Ungültiger Code",
-          description: "Der Code ist nicht gültig oder abgelaufen.",
+          description: `Der Code ist nicht gültig oder abgelaufen. Fehler: ${errorMessage}`,
           variant: "destructive",
         });
         return false;
