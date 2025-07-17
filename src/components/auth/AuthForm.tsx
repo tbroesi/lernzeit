@@ -29,9 +29,9 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     setLoading(true);
 
     try {
-      // Für Username-Modus erstellen wir eine lokale E-Mail
+      // Für Username-Modus erstellen wir eine gültige E-Mail mit einer Dummy-Domain
       const authEmail = authMode === 'username' 
-        ? `${username}@mathtime.local` 
+        ? `${username}@mathtime-app.com` 
         : email;
 
       const { data, error } = await supabase.auth.signUp({
@@ -80,9 +80,9 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     setLoading(true);
 
     try {
-      // Für Username-Modus verwenden wir die lokale E-Mail
+      // Für Username-Modus verwenden wir die Dummy-E-Mail
       const authEmail = authMode === 'username' 
-        ? `${username}@mathtime.local` 
+        ? `${username}@mathtime-app.com` 
         : email;
 
       const { data, error } = await supabase.auth.signInWithPassword({
