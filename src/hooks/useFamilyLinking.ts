@@ -26,6 +26,8 @@ export function useFamilyLinking() {
   // Load invitation codes and linked children
   const loadFamilyData = async (userId: string) => {
     try {
+      setLoading(true);
+      
       // Load invitation codes
       const { data: codes, error: codesError } = await supabase
         .from('invitation_codes')
@@ -36,26 +38,37 @@ export function useFamilyLinking() {
       if (codesError) throw codesError;
       setInvitationCodes(codes || []);
 
-      // Load linked children
+      // Load linked children by getting relationships and then fetching profiles
       const { data: relationships, error: relationshipsError } = await supabase
         .from('parent_child_relationships')
-        .select(`
-          child_id,
-          profiles!parent_child_relationships_child_id_fkey (
-            id,
-            name,
-            grade
-          )
-        `)
+        .select('child_id')
         .eq('parent_id', userId);
 
       if (relationshipsError) throw relationshipsError;
-      
-      const children = relationships?.map(rel => rel.profiles).filter(Boolean) || [];
-      setLinkedChildren(children as ChildProfile[]);
+
+      if (relationships && relationships.length > 0) {
+        const childIds = relationships.map(rel => rel.child_id);
+        
+        const { data: children, error: childrenError } = await supabase
+          .from('profiles')
+          .select('id, name, grade')
+          .in('id', childIds);
+
+        if (childrenError) throw childrenError;
+        setLinkedChildren(children || []);
+      } else {
+        setLinkedChildren([]);
+      }
 
     } catch (error: any) {
       console.error('Error loading family data:', error);
+      toast({
+        title: "Fehler",
+        description: "Daten konnten nicht geladen werden.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
