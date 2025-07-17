@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { User, Settings, LogOut, Baby, Shield, Clock, Award } from 'lucide-react';
+import { ScreenTimeWidget } from '@/components/ScreenTimeWidget';
 
 interface UserProfileProps {
   user: any;
@@ -287,6 +288,9 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
             </CardContent>
           </Card>
         )}
+
+        {/* Screen Time Widget */}
+        <ScreenTimeWidget />
 
         {/* Parent Dashboard */}
         {profile?.role === 'parent' && (
