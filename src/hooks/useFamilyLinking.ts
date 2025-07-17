@@ -163,11 +163,18 @@ export function useFamilyLinking() {
         return false;
       }
 
-      // STEP 3: Test UPDATE permission first with a dummy update
+      // STEP 3: Test UPDATE permission with correct data format
       console.log('🔍 STEP 3: Testing UPDATE permissions...');
+      const testUpdateData = {
+        child_id: childId,
+        is_used: true,
+        used_at: new Date().toISOString()
+      };
+      console.log('🧪 Test update data:', testUpdateData);
+      
       const { data: permissionTest, error: permError } = await supabase
         .from('invitation_codes')
-        .update({ used_at: new Date().toISOString() }) // Harmless update (used_at exists)
+        .update(testUpdateData)
         .eq('code', code)
         .eq('is_used', false)
         .gt('expires_at', new Date().toISOString())
