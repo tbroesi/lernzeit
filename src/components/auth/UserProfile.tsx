@@ -195,6 +195,32 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
             </CardHeader>
           </Card>
 
+          {/* Game Start - Now positioned right after header */}
+          <Card className="shadow-card bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-200">
+            <CardContent className="p-6">
+              <div className="text-center mb-4">
+                <div className="text-4xl mb-3">🎮</div>
+                <h3 className="text-xl font-bold text-green-800 mb-2">Bereit für neue Aufgaben?</h3>
+                <p className="text-green-700 text-sm">
+                  Löse Übungen und verdiene wertvolle Handyzeit!
+                </p>
+              </div>
+              <Button 
+                onClick={() => onStartGame(profile?.grade || 1)} 
+                className="w-full h-14 text-lg bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 shadow-lg"
+              >
+                <BookOpen className="w-6 h-6 mr-2" />
+                🚀 Lernen starten (Klasse {profile?.grade || 1})
+              </Button>
+              
+              <div className="mt-4 flex justify-center">
+                <div className="text-xs text-green-600 bg-green-50 px-3 py-1 rounded-full">
+                  +2 Min pro gelöste Aufgabe! 🎯
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Stats Cards */}
           <div className="grid grid-cols-2 gap-4">
             <Card className="shadow-card bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200">
@@ -239,32 +265,6 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
           {!hasParentLink && (
             <ChildLinking userId={user.id} onLinked={() => setHasParentLink(true)} />
           )}
-
-          {/* Game Start */}
-          <Card className="shadow-card bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-200">
-            <CardContent className="p-6">
-              <div className="text-center mb-4">
-                <div className="text-4xl mb-3">🎮</div>
-                <h3 className="text-xl font-bold text-green-800 mb-2">Bereit für neue Aufgaben?</h3>
-                <p className="text-green-700 text-sm">
-                  Löse Übungen und verdiene wertvolle Handyzeit!
-                </p>
-              </div>
-              <Button 
-                onClick={() => onStartGame(profile?.grade || 1)} 
-                className="w-full h-14 text-lg bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 shadow-lg"
-              >
-                <BookOpen className="w-6 h-6 mr-2" />
-                🚀 Lernen starten (Klasse {profile?.grade || 1})
-              </Button>
-              
-              <div className="mt-4 flex justify-center">
-                <div className="text-xs text-green-600 bg-green-50 px-3 py-1 rounded-full">
-                  +2 Min pro gelöste Aufgabe! 🎯
-                </div>
-              </div>
-            </CardContent>
-          </Card>
 
           {/* Fun Motivation */}
           <div className="text-center py-2">
