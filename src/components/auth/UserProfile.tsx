@@ -189,6 +189,9 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
             </Card>
           </div>
 
+          {/* Family Linking */}
+          <ChildLinking userId={user.id} />
+
           {/* Game Start */}
           <Card className="shadow-card">
             <CardContent className="p-6">
