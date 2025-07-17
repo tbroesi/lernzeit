@@ -14,7 +14,113 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      game_sessions: {
+        Row: {
+          correct_answers: number
+          created_at: string | null
+          grade: number
+          id: string
+          session_date: string | null
+          time_earned: number
+          time_spent: number
+          total_questions: number
+          user_id: string | null
+        }
+        Insert: {
+          correct_answers?: number
+          created_at?: string | null
+          grade: number
+          id?: string
+          session_date?: string | null
+          time_earned?: number
+          time_spent?: number
+          total_questions?: number
+          user_id?: string | null
+        }
+        Update: {
+          correct_answers?: number
+          created_at?: string | null
+          grade?: number
+          id?: string
+          session_date?: string | null
+          time_earned?: number
+          time_spent?: number
+          total_questions?: number
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      parent_child_relationships: {
+        Row: {
+          child_id: string | null
+          created_at: string | null
+          id: string
+          parent_id: string | null
+        }
+        Insert: {
+          child_id?: string | null
+          created_at?: string | null
+          id?: string
+          parent_id?: string | null
+        }
+        Update: {
+          child_id?: string | null
+          created_at?: string | null
+          id?: string
+          parent_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parent_child_relationships_child_id_fkey"
+            columns: ["child_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parent_child_relationships_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          grade: number | null
+          id: string
+          name: string | null
+          role: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          grade?: number | null
+          id: string
+          name?: string | null
+          role?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          grade?: number | null
+          id?: string
+          name?: string | null
+          role?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
