@@ -883,7 +883,9 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
               
               <div className="max-w-sm mx-auto">
                 <Input
-                  type="text"
+                  type={typeof currentQuestionData.answer === 'number' ? "number" : "text"}
+                  inputMode={typeof currentQuestionData.answer === 'number' ? "numeric" : "text"}
+                  pattern={typeof currentQuestionData.answer === 'number' ? "[0-9]*" : undefined}
                   value={userAnswer}
                   onChange={(e) => setUserAnswer(e.target.value)}
                   onKeyPress={handleKeyPress}
