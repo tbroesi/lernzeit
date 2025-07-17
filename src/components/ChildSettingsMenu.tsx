@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -38,6 +37,7 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack }: ChildSet
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [hasParentLink, setHasParentLink] = useState(false);
   const [parentInfo, setParentInfo] = useState<ParentInfo | null>(null);
+  const [loadingParentInfo, setLoadingParentInfo] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -45,48 +45,84 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack }: ChildSet
   }, [user]);
 
   const checkParentLink = async () => {
+    if (!user?.id) return;
+    
+    setLoadingParentInfo(true);
+    console.log('🔍 Checking parent link for child:', user.id);
+    
     try {
-      const { data: relationship, error } = await supabase
+      // Schritt 1: Parent-Child Beziehung suchen
+      const { data: relationship, error: relationshipError } = await supabase
         .from('parent_child_relationships')
         .select('parent_id')
         .eq('child_id', user.id)
-        .single();
+        .maybeSingle();
 
-      if (relationship && !error) {
+      console.log('👥 Relationship result:', { relationship, relationshipError });
+
+      if (relationshipError) {
+        console.error('Error fetching relationship:', relationshipError);
+        setHasParentLink(false);
+        setParentInfo(null);
+        return;
+      }
+
+      if (relationship?.parent_id) {
         setHasParentLink(true);
         
-        // Get parent profile information
+        // Schritt 2: Eltern-Profil laden
         const { data: parentProfile, error: parentError } = await supabase
           .from('profiles')
           .select('id, name')
           .eq('id', relationship.parent_id)
-          .single();
+          .maybeSingle();
+
+        console.log('👨‍👩‍👧‍👦 Parent profile result:', { parentProfile, parentError });
 
         if (parentProfile && !parentError) {
-          // Get parent email from auth metadata if needed
           setParentInfo({
             id: parentProfile.id,
             name: parentProfile.name || 'Elternteil',
-            email: '' // We can't directly access auth.users, so we'll show just the name
+            email: '' // Email ist nicht verfügbar über profiles
+          });
+        } else {
+          console.error('Error fetching parent profile:', parentError);
+          setParentInfo({
+            id: relationship.parent_id,
+            name: 'Elternteil',
+            email: ''
           });
         }
+      } else {
+        console.log('❌ No parent relationship found');
+        setHasParentLink(false);
+        setParentInfo(null);
       }
     } catch (error) {
-      console.log('Keine Elternverknüpfung gefunden');
+      console.error('❌ Error in checkParentLink:', error);
+      setHasParentLink(false);
+      setParentInfo(null);
+    } finally {
+      setLoadingParentInfo(false);
     }
   };
 
   const handleUnlinkParent = async () => {
-    if (!parentInfo) return;
+    if (!parentInfo || !user?.id) return;
     
     try {
+      console.log('🔥 Unlinking parent:', parentInfo.id, 'from child:', user.id);
+      
       const { error } = await supabase
         .from('parent_child_relationships')
         .delete()
         .eq('child_id', user.id)
         .eq('parent_id', parentInfo.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error unlinking parent:', error);
+        throw error;
+      }
 
       setHasParentLink(false);
       setParentInfo(null);
@@ -96,6 +132,7 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack }: ChildSet
         description: "Die Verbindung zu deinen Eltern wurde getrennt.",
       });
     } catch (error: any) {
+      console.error('Error in handleUnlinkParent:', error);
       toast({
         title: "Fehler",
         description: "Verknüpfung konnte nicht entfernt werden.",
@@ -170,15 +207,25 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack }: ChildSet
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-6">
-                    <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
-                      <Check className="w-6 h-6 text-green-600" />
-                      <div>
-                        <div className="font-medium text-green-800">Mit Eltern verknüpft</div>
-                        <div className="text-sm text-green-600">
-                          Verbunden mit: {parentInfo.name}
+                    {loadingParentInfo ? (
+                      <div className="flex items-center gap-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="animate-spin w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+                        <div>
+                          <div className="font-medium text-blue-800">Lade Informationen...</div>
+                          <div className="text-sm text-blue-600">Verbindung wird überprüft</div>
                         </div>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
+                        <Check className="w-6 h-6 text-green-600" />
+                        <div>
+                          <div className="font-medium text-green-800">Mit Eltern verknüpft</div>
+                          <div className="text-sm text-green-600">
+                            Verbunden mit: {parentInfo.name}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     
                     <div className="space-y-3">
                       <h4 className="font-medium">Was bedeutet das?</h4>
@@ -186,6 +233,7 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack }: ChildSet
                         <li>• Deine Eltern können deine Lernfortschritte sehen</li>
                         <li>• Sie können deine Bildschirmzeit verwalten</li>
                         <li>• Du bekommst automatisch Zeit für gelöste Aufgaben</li>
+                        <li>• Deine Eltern können Einstellungen anpassen</li>
                       </ul>
                     </div>
                     
@@ -193,6 +241,7 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack }: ChildSet
                       variant="destructive" 
                       onClick={handleUnlinkParent}
                       className="w-full"
+                      disabled={loadingParentInfo}
                     >
                       <X className="w-4 h-4 mr-2" />
                       Verknüpfung trennen
@@ -203,7 +252,7 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack }: ChildSet
                 <ChildLinking 
                   userId={user.id} 
                   onLinked={() => {
-                    setHasParentLink(true);
+                    console.log('✅ Child linked successfully, refreshing parent info');
                     checkParentLink();
                     setActiveSection(null);
                   }}
