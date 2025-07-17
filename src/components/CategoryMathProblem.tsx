@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,7 +11,7 @@ import { supabase } from '@/lib/supabase';
 interface MathProblem {
   question: string;
   answer: number;
-  options?: number[];
+  options?: (string | number)[];
 }
 
 interface CategoryMathProblemProps {
