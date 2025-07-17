@@ -20,10 +20,13 @@ export function ChildLinking({ userId, onLinked }: ChildLinkingProps) {
     e.preventDefault();
     
     if (invitationCode.length !== 6) {
+      console.log('❌ Code length invalid:', invitationCode.length);
       return;
     }
 
+    console.log('🚀 Starting linking process with code:', invitationCode.toUpperCase(), 'userId:', userId);
     const success = await useInvitationCode(invitationCode.toUpperCase(), userId);
+    console.log('✅ Linking result:', success);
     
     if (success) {
       setIsLinked(true);

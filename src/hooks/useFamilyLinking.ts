@@ -106,8 +106,11 @@ export function useFamilyLinking() {
   // Use invitation code (for children)
   const useInvitationCode = async (code: string, childId: string): Promise<boolean> => {
     setLoading(true);
+    console.log('🔗 Attempting to use invitation code:', code, 'for child:', childId);
+    
     try {
       // First, check if code exists and is valid
+      console.log('🔍 Searching for code in database...');
       const { data: inviteData, error: findError } = await supabase
         .from('invitation_codes')
         .select('*')
@@ -115,6 +118,8 @@ export function useFamilyLinking() {
         .eq('is_used', false)
         .gt('expires_at', new Date().toISOString())
         .single();
+
+      console.log('📋 Code search result:', { inviteData, findError });
 
       if (findError || !inviteData) {
         toast({
