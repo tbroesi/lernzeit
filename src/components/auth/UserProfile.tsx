@@ -14,6 +14,8 @@ import { ChildLinking } from '@/components/ChildLinking';
 import { ChildSettingsMenu } from '@/components/ChildSettingsMenu';
 import { ParentSettingsMenu } from '@/components/ParentSettingsMenu';
 import { AchievementsBadge } from '@/components/AchievementsBadge';
+import { ProfileEdit } from '@/components/ProfileEdit';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useChildSettings } from '@/hooks/useChildSettings';
 import { useScreenTimeLimit } from '@/hooks/useScreenTimeLimit';
 
@@ -27,6 +29,7 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
+  const [showProfileEdit, setShowProfileEdit] = useState(false);
   const [totalTimeEarned, setTotalTimeEarned] = useState(0);
   const [gamesPlayed, setGamesPlayed] = useState(0);
   const { toast } = useToast();
@@ -199,6 +202,21 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
     );
   }
 
+  // Show profile edit for children
+  if (profile?.role === 'child' && showProfileEdit) {
+    return (
+      <ProfileEdit 
+        user={user} 
+        profile={profile} 
+        onBack={() => setShowProfileEdit(false)}
+        onUpdate={(updatedProfile) => {
+          setProfile(updatedProfile);
+          setShowProfileEdit(false);
+        }}
+      />
+    );
+  }
+
   // Child Dashboard
   if (profile?.role === 'child') {
     return (
@@ -209,22 +227,28 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center text-2xl">
-                    👦
-                  </div>
+                  <button 
+                    onClick={() => setShowProfileEdit(true)}
+                    className="w-16 h-16 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center hover:scale-105 transition-transform cursor-pointer"
+                  >
+                    <Avatar className="w-14 h-14">
+                      <AvatarImage src={profile?.avatar_url} />
+                      <AvatarFallback className="bg-transparent text-white text-xl">
+                        {profile?.name ? profile.name.charAt(0).toUpperCase() : '👦'}
+                      </AvatarFallback>
+                    </Avatar>
+                  </button>
                   <div>
                     <CardTitle className="text-xl">
                       Hallo, {profile?.name || 'Nutzer'}! 👋
                     </CardTitle>
                     <div className="flex items-center gap-2 mt-1">
                       <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                        📚 Klasse {profile?.grade || 1}
+                        Klasse {profile?.grade}
                       </Badge>
-                      {hasParentLink && (
-                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                          👨‍👩‍👧‍👦 Verknüpft
-                        </Badge>
-                      )}
+                      <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+                        Unabhängig
+                      </Badge>
                     </div>
                   </div>
                 </div>
