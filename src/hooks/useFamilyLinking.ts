@@ -133,6 +133,7 @@ export function useFamilyLinking() {
       }
 
       // Update the invitation code
+      console.log('✅ Code found, updating invitation code...');
       const { error: updateError } = await supabase
         .from('invitation_codes')
         .update({
@@ -142,9 +143,11 @@ export function useFamilyLinking() {
         })
         .eq('id', inviteData.id);
 
+      console.log('📝 Update result:', { updateError });
       if (updateError) throw updateError;
 
       // Create parent-child relationship
+      console.log('🔗 Creating parent-child relationship...');
       const { error: relationshipError } = await supabase
         .from('parent_child_relationships')
         .insert({
@@ -152,8 +155,13 @@ export function useFamilyLinking() {
           child_id: childId
         });
 
-      if (relationshipError) throw relationshipError;
+      console.log('👨‍👩‍👧‍👦 Relationship result:', { relationshipError });
+      if (relationshipError) {
+        console.error('Relationship creation failed:', relationshipError);
+        throw relationshipError;
+      }
 
+      console.log('🎉 All operations successful!');
       toast({
         title: "Erfolgreich verknüpft!",
         description: "Du bist jetzt mit einem Elternteil verbunden.",
@@ -162,9 +170,10 @@ export function useFamilyLinking() {
       return true;
 
     } catch (error: any) {
+      console.error('❌ Full error details:', error);
       toast({
         title: "Fehler",
-        description: "Verknüpfung fehlgeschlagen.",
+        description: `Verknüpfung fehlgeschlagen: ${error?.message || 'Unbekannter Fehler'}`,
         variant: "destructive",
       });
       return false;
