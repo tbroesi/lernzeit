@@ -12,11 +12,14 @@ import {
   User,
   Trophy,
   Star,
-  Target
+  Target,
+  Check,
+  X
 } from 'lucide-react';
 import { ChildLinking } from '@/components/ChildLinking';
 import { ScreenTimeWidget } from '@/components/ScreenTimeWidget';
 import { supabase } from '@/lib/supabase';
+import { useToast } from '@/hooks/use-toast';
 
 interface ChildSettingsMenuProps {
   user: any;
@@ -25,9 +28,17 @@ interface ChildSettingsMenuProps {
   onBack: () => void;
 }
 
+interface ParentInfo {
+  id: string;
+  name: string;
+  email: string;
+}
+
 export function ChildSettingsMenu({ user, profile, onSignOut, onBack }: ChildSettingsMenuProps) {
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [hasParentLink, setHasParentLink] = useState(false);
+  const [parentInfo, setParentInfo] = useState<ParentInfo | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     checkParentLink();
@@ -35,17 +46,61 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack }: ChildSet
 
   const checkParentLink = async () => {
     try {
-      const { data, error } = await supabase
+      const { data: relationship, error } = await supabase
         .from('parent_child_relationships')
-        .select('*')
+        .select('parent_id')
         .eq('child_id', user.id)
         .single();
 
-      if (data && !error) {
+      if (relationship && !error) {
         setHasParentLink(true);
+        
+        // Get parent profile information
+        const { data: parentProfile, error: parentError } = await supabase
+          .from('profiles')
+          .select('id, name')
+          .eq('id', relationship.parent_id)
+          .single();
+
+        if (parentProfile && !parentError) {
+          // Get parent email from auth metadata if needed
+          setParentInfo({
+            id: parentProfile.id,
+            name: parentProfile.name || 'Elternteil',
+            email: '' // We can't directly access auth.users, so we'll show just the name
+          });
+        }
       }
     } catch (error) {
       console.log('Keine Elternverknüpfung gefunden');
+    }
+  };
+
+  const handleUnlinkParent = async () => {
+    if (!parentInfo) return;
+    
+    try {
+      const { error } = await supabase
+        .from('parent_child_relationships')
+        .delete()
+        .eq('child_id', user.id)
+        .eq('parent_id', parentInfo.id);
+
+      if (error) throw error;
+
+      setHasParentLink(false);
+      setParentInfo(null);
+      
+      toast({
+        title: "Verknüpfung entfernt",
+        description: "Die Verbindung zu deinen Eltern wurde getrennt.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Fehler",
+        description: "Verknüpfung konnte nicht entfernt werden.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -71,14 +126,14 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack }: ChildSet
       color: 'text-green-600',
       gradient: 'from-green-500 to-emerald-600'
     },
-    ...(hasParentLink ? [] : [{
+    {
       id: 'family',
-      title: 'Mit Eltern verknüpfen',
-      description: 'Verbinde dein Konto mit deinen Eltern',
+      title: hasParentLink ? 'Eltern-Verknüpfung' : 'Mit Eltern verknüpfen',
+      description: hasParentLink ? 'Verwalte deine Eltern-Verbindung' : 'Verbinde dein Konto mit deinen Eltern',
       icon: Users,
       color: 'text-orange-600',
       gradient: 'from-orange-500 to-red-600'
-    }]),
+    },
     {
       id: 'achievements',
       title: 'Erfolge',
@@ -103,13 +158,58 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack }: ChildSet
           </Button>
           
           {activeSection === 'family' && (
-            <ChildLinking 
-              userId={user.id} 
-              onLinked={() => {
-                setHasParentLink(true);
-                setActiveSection(null);
-              }}
-            />
+            <>
+              {hasParentLink && parentInfo ? (
+                <Card className="shadow-card">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-600 rounded-full flex items-center justify-center">
+                        <Users className="w-5 h-5 text-white" />
+                      </div>
+                      Eltern-Verknüpfung
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
+                      <Check className="w-6 h-6 text-green-600" />
+                      <div>
+                        <div className="font-medium text-green-800">Mit Eltern verknüpft</div>
+                        <div className="text-sm text-green-600">
+                          Verbunden mit: {parentInfo.name}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <h4 className="font-medium">Was bedeutet das?</h4>
+                      <ul className="text-sm text-muted-foreground space-y-1">
+                        <li>• Deine Eltern können deine Lernfortschritte sehen</li>
+                        <li>• Sie können deine Bildschirmzeit verwalten</li>
+                        <li>• Du bekommst automatisch Zeit für gelöste Aufgaben</li>
+                      </ul>
+                    </div>
+                    
+                    <Button 
+                      variant="destructive" 
+                      onClick={handleUnlinkParent}
+                      className="w-full"
+                    >
+                      <X className="w-4 h-4 mr-2" />
+                      Verknüpfung trennen
+                    </Button>
+                  </CardContent>
+                </Card>
+              ) : (
+                <ChildLinking 
+                  userId={user.id} 
+                  onLinked={() => {
+                    setHasParentLink(true);
+                    checkParentLink();
+                    setActiveSection(null);
+                  }}
+                />
+              )}
+            </>
           )}
           
           {activeSection === 'screen-time' && (
