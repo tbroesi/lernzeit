@@ -103,37 +103,58 @@ export function useFamilyLinking() {
     }
   };
 
-  // Use invitation code (for children) - NEUE EINFACHE LOGIK
+  // Use invitation code (for children) - COMPREHENSIVE DEBUG VERSION
   const useInvitationCode = async (code: string, childId: string): Promise<boolean> => {
     setLoading(true);
-    console.log('🔗 Starting invitation code claim:', { code, childId });
-    
-    // ERSTE DEBUG: Aktuelle User-ID prüfen
-    const { data: { user } } = await supabase.auth.getUser();
-    console.log('🔍 Current authenticated user:', user?.id);
-    console.log('🔍 Provided childId:', childId);
-    console.log('🔍 User match:', user?.id === childId);
+    console.log('🚀🚀🚀 FULL DEBUG: Starting invitation code claim');
+    console.log('📊 Input parameters:', { code, childId });
     
     try {
-      // SCHRITT 1: Einfach den Code direkt beanspruchen (eine einzige Operation)
-      console.log('⚡ Claiming code directly...');
-      const { data: updatedCode, error: claimError } = await supabase
+      // STEP 0: Verify current authentication
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      console.log('🔐 Auth check:', { 
+        user: user?.id, 
+        authError,
+        matches_childId: user?.id === childId 
+      });
+      
+      if (authError || !user) {
+        console.log('❌ Authentication failed');
+        throw new Error('Benutzer ist nicht authentifiziert');
+      }
+
+      // STEP 1: Query the code first to see current state
+      console.log('🔍 STEP 1: Checking current code state...');
+      const { data: currentCodeState, error: queryError } = await supabase
         .from('invitation_codes')
-        .update({
-          child_id: childId,
-          is_used: true,
-          used_at: new Date().toISOString()
-        })
-        .eq('code', code)
-        .eq('is_used', false)
-        .gt('expires_at', new Date().toISOString())
         .select('*')
+        .eq('code', code)
         .single();
+      
+      console.log('📋 Current code state:', { currentCodeState, queryError });
+      
+      if (queryError) {
+        console.log('❌ Code query failed:', queryError);
+        throw new Error('Code konnte nicht gefunden werden');
+      }
 
-      console.log('📝 Claim result:', { updatedCode, claimError });
-
-      if (claimError) {
-        console.log('❌ Claim failed:', claimError.message);
+      // STEP 2: Check all conditions manually
+      console.log('🔍 STEP 2: Manual condition checks...');
+      const now = new Date().toISOString();
+      const conditions = {
+        code_exists: !!currentCodeState,
+        is_not_used: currentCodeState?.is_used === false,
+        not_expired: currentCodeState?.expires_at > now,
+        child_id_null: currentCodeState?.child_id === null,
+        user_authenticated: !!user?.id
+      };
+      console.log('✅ Condition checks:', conditions);
+      
+      const allConditionsMet = Object.values(conditions).every(Boolean);
+      console.log('🎯 All conditions met:', allConditionsMet);
+      
+      if (!allConditionsMet) {
+        console.log('❌ Conditions not met, cannot proceed');
         toast({
           title: "Ungültiger Code",
           description: "Der Code ist nicht gültig, bereits verwendet oder abgelaufen.",
@@ -142,30 +163,92 @@ export function useFamilyLinking() {
         return false;
       }
 
-      if (!updatedCode) {
-        console.log('❌ No code updated - probably invalid');
+      // STEP 3: Test UPDATE permission first with a dummy update
+      console.log('🔍 STEP 3: Testing UPDATE permissions...');
+      const { data: permissionTest, error: permError } = await supabase
+        .from('invitation_codes')
+        .update({ used_at: new Date().toISOString() }) // Harmless update (used_at exists)
+        .eq('code', code)
+        .eq('is_used', false)
+        .gt('expires_at', new Date().toISOString())
+        .select('*');
+      
+      console.log('🔒 Permission test result:', { permissionTest, permError });
+      
+      if (permError) {
+        console.log('❌ Permission test failed:', permError);
         toast({
-          title: "Ungültiger Code",
-          description: "Der Code wurde nicht gefunden oder ist nicht mehr verfügbar.",
+          title: "Berechtigung fehlt",
+          description: "Keine Berechtigung zum Aktualisieren des Codes.",
           variant: "destructive",
         });
         return false;
       }
 
-      // SCHRITT 2: Parent-Child Beziehung erstellen
-      console.log('🔗 Creating parent-child relationship...');
-      const { error: relationshipError } = await supabase
-        .from('parent_child_relationships')
-        .insert({
-          parent_id: updatedCode.parent_id,
-          child_id: childId
+      // STEP 4: Perform the actual claim update
+      console.log('🔍 STEP 4: Performing actual claim update...');
+      const updateData = {
+        child_id: childId,
+        is_used: true,
+        used_at: new Date().toISOString()
+      };
+      console.log('📝 Update data:', updateData);
+      
+      const { data: updatedCode, error: claimError } = await supabase
+        .from('invitation_codes')
+        .update(updateData)
+        .eq('code', code)
+        .eq('is_used', false)
+        .gt('expires_at', new Date().toISOString())
+        .select('*')
+        .single();
+
+      console.log('📝 Claim update result:', { updatedCode, claimError });
+
+      if (claimError) {
+        console.log('❌ Claim update failed with error:', claimError);
+        console.log('❌ Error details:', JSON.stringify(claimError, null, 2));
+        toast({
+          title: "Update Fehler", 
+          description: `Code Update fehlgeschlagen: ${claimError.message}`,
+          variant: "destructive",
         });
+        return false;
+      }
+
+      if (!updatedCode) {
+        console.log('❌ No code was updated (null result)');
+        toast({
+          title: "Kein Update",
+          description: "Der Code wurde nicht aktualisiert - möglicherweise zwischenzeitlich verwendet.",
+          variant: "destructive",
+        });
+        return false;
+      }
+
+      console.log('✅ Code successfully claimed!');
+
+      // STEP 5: Create parent-child relationship
+      console.log('🔍 STEP 5: Creating parent-child relationship...');
+      const relationshipData = {
+        parent_id: updatedCode.parent_id,
+        child_id: childId
+      };
+      console.log('👨‍👧‍👦 Relationship data:', relationshipData);
+      
+      const { data: relationship, error: relationshipError } = await supabase
+        .from('parent_child_relationships')
+        .insert(relationshipData)
+        .select('*');
+
+      console.log('👨‍👧‍👦 Relationship result:', { relationship, relationshipError });
 
       if (relationshipError) {
         console.error('❌ Relationship creation failed:', relationshipError);
         
-        // Rollback: Code wieder freigeben
-        await supabase
+        // STEP 6: Rollback the code claim
+        console.log('🔄 STEP 6: Rolling back code claim...');
+        const { error: rollbackError } = await supabase
           .from('invitation_codes')
           .update({
             child_id: null,
@@ -173,11 +256,13 @@ export function useFamilyLinking() {
             used_at: null
           })
           .eq('id', updatedCode.id);
-
+        
+        console.log('🔄 Rollback result:', { rollbackError });
+        
         throw relationshipError;
       }
 
-      console.log('🎉 Successfully linked!');
+      console.log('🎉🎉🎉 COMPLETE SUCCESS! Family linking completed!');
       toast({
         title: "Erfolgreich verknüpft!",
         description: "Du bist jetzt mit einem Elternteil verbunden.",
@@ -186,7 +271,12 @@ export function useFamilyLinking() {
       return true;
 
     } catch (error: any) {
-      console.error('❌ Full error details:', error);
+      console.error('💥💥💥 COMPLETE FAILURE! Full error details:');
+      console.error('Error object:', error);
+      console.error('Error message:', error?.message);
+      console.error('Error code:', error?.code);
+      console.error('Error stack:', error?.stack);
+      
       toast({
         title: "Fehler",
         description: `Verknüpfung fehlgeschlagen: ${error?.message || 'Unbekannter Fehler'}`,
@@ -195,6 +285,7 @@ export function useFamilyLinking() {
       return false;
     } finally {
       setLoading(false);
+      console.log('🏁 useInvitationCode completed');
     }
   };
 
