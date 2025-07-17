@@ -243,65 +243,88 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack }: ChildSet
                   </CardContent>
                 </Card>
               ) : hasParentLink && parentInfo ? (
-                <Card className="shadow-card">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-600 rounded-full flex items-center justify-center">
-                        <Users className="w-5 h-5 text-white" />
-                      </div>
-                      Eltern-Verknüpfung
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
-                      <Check className="w-6 h-6 text-green-600" />
-                      <div className="flex-1">
-                        <div className="font-medium text-green-800">Mit Eltern verknüpft</div>
-                        <div className="text-sm text-green-600">
-                          Verbunden mit: {parentInfo.name}
+                <div className="space-y-6">
+                  {/* Current Parent Link Display */}
+                  <Card className="shadow-card">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-600 rounded-full flex items-center justify-center">
+                          <Users className="w-5 h-5 text-white" />
+                        </div>
+                        Aktuelle Verknüpfung
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
+                        <Check className="w-6 h-6 text-green-600" />
+                        <div className="flex-1">
+                          <div className="font-medium text-green-800">Mit Eltern verknüpft</div>
+                          <div className="text-sm text-green-600">
+                            Verbunden mit: {parentInfo.name}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    
-                    <div className="space-y-3">
-                      <h4 className="font-medium">Was bedeutet das?</h4>
-                      <ul className="text-sm text-muted-foreground space-y-1">
-                        <li>• Deine Eltern können deine Lernfortschritte sehen</li>
-                        <li>• Sie können deine Bildschirmzeit verwalten</li>
-                        <li>• Du bekommst automatisch Zeit für gelöste Aufgaben</li>
-                        <li>• Deine Eltern können Einstellungen anpassen</li>
-                      </ul>
-                    </div>
-                    
-                    <div className="space-y-3">
-                      <Button 
-                        onClick={refreshParentLink}
-                        variant="outline"
-                        className="w-full"
-                        disabled={checkingRelationship}
-                      >
-                        {checkingRelationship ? (
-                          <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Überprüfe...
-                          </>
-                        ) : (
-                          'Status aktualisieren'
-                        )}
-                      </Button>
                       
-                      <Button 
-                        variant="destructive" 
-                        onClick={handleUnlinkParent}
-                        className="w-full"
-                        disabled={checkingRelationship}
-                      >
-                        <X className="w-4 h-4 mr-2" />
-                        Verknüpfung trennen
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
+                      <div className="space-y-3">
+                        <h4 className="font-medium">Was bedeutet das?</h4>
+                        <ul className="text-sm text-muted-foreground space-y-1">
+                          <li>• Deine Eltern können deine Lernfortschritte sehen</li>
+                          <li>• Sie können deine Bildschirmzeit verwalten</li>
+                          <li>• Du bekommst automatisch Zeit für gelöste Aufgaben</li>
+                          <li>• Deine Eltern können Einstellungen anpassen</li>
+                        </ul>
+                      </div>
+                      
+                      <div className="space-y-3">
+                        <Button 
+                          onClick={refreshParentLink}
+                          variant="outline"
+                          className="w-full"
+                          disabled={checkingRelationship}
+                        >
+                          {checkingRelationship ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Überprüfe...
+                            </>
+                          ) : (
+                            'Status aktualisieren'
+                          )}
+                        </Button>
+                        
+                        <Button 
+                          variant="destructive" 
+                          onClick={handleUnlinkParent}
+                          className="w-full"
+                          disabled={checkingRelationship}
+                        >
+                          <X className="w-4 h-4 mr-2" />
+                          Verknüpfung trennen
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* New Link Option */}
+                  <Card className="shadow-card">
+                    <CardHeader>
+                      <CardTitle className="text-lg">Neue Verknüpfung erstellen</CardTitle>
+                      <p className="text-sm text-muted-foreground">
+                        Falls du dich mit einem anderen Elternteil verknüpfen möchtest
+                      </p>
+                    </CardHeader>
+                    <CardContent>
+                      <ChildLinking 
+                        userId={user.id} 
+                        onLinked={() => {
+                          console.log('✅ Child linked successfully, refreshing parent info');
+                          loadParentInfo();
+                          setActiveSection(null);
+                        }}
+                      />
+                    </CardContent>
+                  </Card>
+                </div>
               ) : (
                 <ChildLinking 
                   userId={user.id} 
