@@ -32,6 +32,8 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
   const [showProfileEdit, setShowProfileEdit] = useState(false);
   const [totalTimeEarned, setTotalTimeEarned] = useState(0);
   const [gamesPlayed, setGamesPlayed] = useState(0);
+  const [hasParentLink, setHasParentLink] = useState(false);
+  const [checkingParentLink, setCheckingParentLink] = useState(true);
   const { toast } = useToast();
 
   // Use the existing useChildSettings hook for children
@@ -43,10 +45,42 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
   const { isAtLimit, remainingMinutes, getDailyLimit, todayMinutesUsed } = useScreenTimeLimit(
     profile?.role === 'child' ? user?.id || '' : ''
   );
-  
-  // Determine if child has parent link based on child settings
-  const hasParentLink = profile?.role === 'child' ? 
-    (!childSettingsLoading && childSettings !== null) : false;
+
+  // Check for parent-child relationship
+  const checkParentLink = async () => {
+    if (!user?.id || profile?.role !== 'child') {
+      setHasParentLink(false);
+      setCheckingParentLink(false);
+      return;
+    }
+
+    try {
+      setCheckingParentLink(true);
+      console.log('🔍 Checking parent link for child:', user.id);
+      
+      const { data, error } = await supabase
+        .from('parent_child_relationships')
+        .select('parent_id')
+        .eq('child_id', user.id)
+        .maybeSingle();
+
+      console.log('🔍 Parent link query result:', { data, error });
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('❌ Error checking parent link:', error);
+        setHasParentLink(false);
+      } else {
+        const linked = !!data?.parent_id;
+        console.log('✅ Parent link status:', linked ? 'LINKED' : 'NOT LINKED');
+        setHasParentLink(linked);
+      }
+    } catch (error) {
+      console.error('❌ Error in checkParentLink:', error);
+      setHasParentLink(false);
+    } finally {
+      setCheckingParentLink(false);
+    }
+  };
 
   useEffect(() => {
     if (user) {
@@ -54,6 +88,13 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
       loadStats();
     }
   }, [user]);
+
+  // Check parent link when profile is loaded
+  useEffect(() => {
+    if (profile?.role === 'child') {
+      checkParentLink();
+    }
+  }, [profile?.role]);
 
   // Reload stats when user navigates back to dashboard or when hash changes
   useEffect(() => {
@@ -246,9 +287,6 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
                       <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
                         Klasse {profile?.grade}
                       </Badge>
-                      <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
-                        Unabhängig
-                      </Badge>
                     </div>
                   </div>
                 </div>
@@ -366,12 +404,13 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
           </div>
 
           {/* Parent Linking - only show if no parent link exists */}
-          {!hasParentLink && !childSettingsLoading && (
+          {!hasParentLink && !checkingParentLink && profile?.role === 'child' && (
             <ChildLinking 
               userId={user.id} 
               onLinked={() => {
-                // Reload profile to update hasParentLink status
+                // Reload profile and check parent link status
                 loadProfile();
+                checkParentLink();
               }} 
             />
           )}
