@@ -10,6 +10,7 @@ import { User, Settings, LogOut, Baby, Shield, Clock, Award } from 'lucide-react
 import { ScreenTimeWidget } from '@/components/ScreenTimeWidget';
 import { ParentDashboard } from '@/components/ParentDashboard';
 import { ChildLinking } from '@/components/ChildLinking';
+import { ChildSettingsMenu } from '@/components/ChildSettingsMenu';
 
 interface UserProfileProps {
   user: any;
@@ -20,8 +21,7 @@ interface UserProfileProps {
 export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [editMode, setEditMode] = useState(false);
-  const [grade, setGrade] = useState<number>(1);
+  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [totalTimeEarned, setTotalTimeEarned] = useState(0);
   const [gamesPlayed, setGamesPlayed] = useState(0);
   const { toast } = useToast();
@@ -61,10 +61,8 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
 
         if (createError) throw createError;
         setProfile(created);
-        setGrade(created.grade || 1);
       } else {
         setProfile(data);
-        setGrade(data.grade || 1);
       }
     } catch (error: any) {
       toast({
@@ -96,30 +94,6 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
     }
   };
 
-  const updateProfile = async () => {
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ grade })
-        .eq('id', user.id);
-
-      if (error) throw error;
-
-      setProfile({ ...profile, grade });
-      setEditMode(false);
-      
-      toast({
-        title: "Profil aktualisiert!",
-        description: "Deine Änderungen wurden gespeichert.",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Fehler",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -139,139 +113,70 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-bg p-4">
-      <div className="max-w-2xl mx-auto space-y-6">
-        {/* Header */}
-        <Card className="shadow-card">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-primary rounded-full flex items-center justify-center">
-                  {profile?.role === 'parent' ? (
-                    <Shield className="w-6 h-6 text-primary-foreground" />
-                  ) : (
+  // Show settings menu for children
+  if (profile?.role === 'child' && showSettingsMenu) {
+    return (
+      <ChildSettingsMenu 
+        user={user} 
+        profile={profile} 
+        onSignOut={onSignOut} 
+        onBack={() => setShowSettingsMenu(false)} 
+      />
+    );
+  }
+
+  // Child Dashboard
+  if (profile?.role === 'child') {
+    return (
+      <div className="min-h-screen bg-gradient-bg p-4">
+        <div className="max-w-md mx-auto space-y-6">
+          {/* Header */}
+          <Card className="shadow-card">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-gradient-primary rounded-full flex items-center justify-center">
                     <Baby className="w-6 h-6 text-primary-foreground" />
-                  )}
-                </div>
-                <div>
-                  <CardTitle className="text-xl">
-                    Willkommen, {profile?.name || 'Nutzer'}!
-                  </CardTitle>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Badge variant={profile?.role === 'parent' ? 'secondary' : 'default'}>
-                      {profile?.role === 'parent' ? 'Elternteil' : 'Kind'}
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl">
+                      Hallo, {profile?.name || 'Nutzer'}!
+                    </CardTitle>
+                    <Badge variant="outline">
+                      Klasse {profile?.grade || 1}
                     </Badge>
-                    {profile?.role === 'child' && (
-                      <Badge variant="outline">
-                        Klasse {profile?.grade || 1}
-                      </Badge>
-                    )}
                   </div>
                 </div>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setShowSettingsMenu(true)}
+                >
+                  <Settings className="w-4 h-4" />
+                </Button>
               </div>
-              <Button variant="ghost" size="sm" onClick={handleSignOut}>
-                <LogOut className="w-4 h-4" />
-              </Button>
-            </div>
-          </CardHeader>
-        </Card>
+            </CardHeader>
+          </Card>
 
-        {/* Stats */}
-        {profile?.role === 'child' && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Stats */}
+          <div className="grid grid-cols-2 gap-4">
             <Card className="shadow-card">
-              <CardContent className="p-6 text-center">
-                <Clock className="w-8 h-8 text-primary mx-auto mb-2" />
-                <div className="text-2xl font-bold text-primary">{totalTimeEarned}</div>
-                <div className="text-sm text-muted-foreground">Min. verdient</div>
+              <CardContent className="p-4 text-center">
+                <Clock className="w-6 h-6 text-primary mx-auto mb-2" />
+                <div className="text-xl font-bold text-primary">{totalTimeEarned}</div>
+                <div className="text-xs text-muted-foreground">Min. verdient</div>
               </CardContent>
             </Card>
             <Card className="shadow-card">
-              <CardContent className="p-6 text-center">
-                <Award className="w-8 h-8 text-secondary mx-auto mb-2" />
-                <div className="text-2xl font-bold text-secondary">{gamesPlayed}</div>
-                <div className="text-sm text-muted-foreground">Spiele gespielt</div>
-              </CardContent>
-            </Card>
-            <Card className="shadow-card">
-              <CardContent className="p-6 text-center">
-                <User className="w-8 h-8 text-accent mx-auto mb-2" />
-                <div className="text-2xl font-bold text-accent">
-                  {gamesPlayed > 0 ? Math.round(totalTimeEarned / gamesPlayed) : 0}
-                </div>
-                <div className="text-sm text-muted-foreground">⌀ Min./Spiel</div>
+              <CardContent className="p-4 text-center">
+                <Award className="w-6 h-6 text-secondary mx-auto mb-2" />
+                <div className="text-xl font-bold text-secondary">{gamesPlayed}</div>
+                <div className="text-xs text-muted-foreground">Spiele</div>
               </CardContent>
             </Card>
           </div>
-        )}
 
-        {/* Profile Settings */}
-        <Card className="shadow-card">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <Settings className="w-5 h-5" />
-                Profil-Einstellungen
-              </CardTitle>
-              {!editMode && profile?.role === 'child' && (
-                <Button variant="outline" size="sm" onClick={() => setEditMode(true)}>
-                  Bearbeiten
-                </Button>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {editMode ? (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="grade">Klassenstufe</Label>
-                  <select 
-                    value={grade}
-                    onChange={(e) => setGrade(Number(e.target.value))}
-                    className="w-full p-2 border rounded-lg bg-background"
-                  >
-                    {Array.from({ length: 10 }, (_, i) => i + 1).map(g => (
-                      <option key={g} value={g}>Klasse {g}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex gap-2">
-                  <Button onClick={updateProfile} variant="default">
-                    Speichern
-                  </Button>
-                  <Button onClick={() => setEditMode(false)} variant="outline">
-                    Abbrechen
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">E-Mail:</span>
-                  <span>{user.email}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Name:</span>
-                  <span>{profile?.name || 'Nicht gesetzt'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Rolle:</span>
-                  <span>{profile?.role === 'parent' ? 'Elternteil' : 'Kind'}</span>
-                </div>
-                {profile?.role === 'child' && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Klassenstufe:</span>
-                    <span>Klasse {profile?.grade || 1}</span>
-                  </div>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Game Start */}
-        {profile?.role === 'child' && (
+          {/* Game Start */}
           <Card className="shadow-card">
             <CardContent className="p-6">
               <div className="text-center mb-4">
@@ -289,20 +194,42 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
               </Button>
             </CardContent>
           </Card>
-        )}
+        </div>
+      </div>
+    );
+  }
 
-        {/* Family Linking for Children */}
-        {profile?.role === 'child' && (
-          <ChildLinking userId={user.id} />
-        )}
+  // Parent Dashboard
+  return (
+    <div className="min-h-screen bg-gradient-bg p-4">
+      <div className="max-w-2xl mx-auto space-y-6">
+        {/* Header */}
+        <Card className="shadow-card">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-primary rounded-full flex items-center justify-center">
+                  <Shield className="w-6 h-6 text-primary-foreground" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl">
+                    Willkommen, {profile?.name || 'Nutzer'}!
+                  </CardTitle>
+                  <Badge variant="secondary">Elternteil</Badge>
+                </div>
+              </div>
+              <Button variant="ghost" size="sm" onClick={handleSignOut}>
+                <LogOut className="w-4 h-4" />
+              </Button>
+            </div>
+          </CardHeader>
+        </Card>
 
         {/* Screen Time Widget */}
         <ScreenTimeWidget />
 
         {/* Parent Dashboard */}
-        {profile?.role === 'parent' && (
-          <ParentDashboard userId={user.id} />
-        )}
+        <ParentDashboard userId={user.id} />
       </div>
     </div>
   );
