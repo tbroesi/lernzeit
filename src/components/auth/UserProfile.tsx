@@ -14,6 +14,7 @@ import { ChildLinking } from '@/components/ChildLinking';
 import { ChildSettingsMenu } from '@/components/ChildSettingsMenu';
 import { ParentSettingsMenu } from '@/components/ParentSettingsMenu';
 import { useChildSettings } from '@/hooks/useChildSettings';
+import { useScreenTimeLimit } from '@/hooks/useScreenTimeLimit';
 
 interface UserProfileProps {
   user: any;
@@ -34,14 +35,46 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
     profile?.role === 'child' ? user?.id || '' : ''
   );
   
+  // Use screen time limit hook for children
+  const { isAtLimit, remainingMinutes, getDailyLimit, todayMinutesUsed } = useScreenTimeLimit(
+    profile?.role === 'child' ? user?.id || '' : ''
+  );
+  
   // Determine if child has parent link based on child settings
   const hasParentLink = profile?.role === 'child' ? 
     (!childSettingsLoading && childSettings !== null) : false;
 
   useEffect(() => {
-    loadProfile();
-    loadStats();
+    if (user) {
+      loadProfile();
+      loadStats();
+    }
   }, [user]);
+
+  // Reload stats when user navigates back to dashboard or when hash changes
+  useEffect(() => {
+    if (user && profile?.role === 'child') {
+      loadStats();
+    }
+  }, [user, profile?.role]);
+
+  // Listen for hash changes to reload stats after completing a game
+  useEffect(() => {
+    const handleHashChange = () => {
+      if (window.location.hash === '#reload-stats' && user && profile?.role === 'child') {
+        loadStats();
+        // Clear the hash
+        window.location.hash = '';
+      }
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    
+    // Also check on mount
+    handleHashChange();
+
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, [user, profile?.role]);
 
   const loadProfile = async () => {
     try {
@@ -88,19 +121,38 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
   };
 
   const loadStats = async () => {
+    if (!user?.id) return;
+    
     try {
-      const { data, error } = await supabase
-        .from('game_sessions')
-        .select('*')
-        .eq('user_id', user.id);
+      // Load from both game_sessions and learning_sessions for complete stats
+      const [gameSessionsResponse, learningSessionsResponse] = await Promise.all([
+        supabase
+          .from('game_sessions')
+          .select('*')
+          .eq('user_id', user.id),
+        supabase
+          .from('learning_sessions')
+          .select('*')
+          .eq('user_id', user.id)
+      ]);
 
-      if (error) throw error;
+      let totalTime = 0;
+      let totalGames = 0;
 
-      if (data) {
-        const totalTime = data.reduce((sum, session) => sum + session.time_earned, 0);
-        setTotalTimeEarned(totalTime);
-        setGamesPlayed(data.length);
+      // Add time from game_sessions
+      if (gameSessionsResponse.data) {
+        totalTime += gameSessionsResponse.data.reduce((sum, session) => sum + session.time_earned, 0);
+        totalGames += gameSessionsResponse.data.length;
       }
+
+      // Add time from learning_sessions  
+      if (learningSessionsResponse.data) {
+        totalTime += learningSessionsResponse.data.reduce((sum, session) => sum + session.time_earned, 0);
+        totalGames += learningSessionsResponse.data.length;
+      }
+
+      setTotalTimeEarned(totalTime);
+      setGamesPlayed(totalGames);
     } catch (error: any) {
       console.error('Fehler beim Laden der Statistiken:', error);
     }
@@ -187,25 +239,63 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
             </CardHeader>
           </Card>
 
-          {/* Game Start - Now positioned right after header */}
-          <Card className="shadow-card bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-200">
-            <CardContent className="p-6">
-              <div className="text-center mb-4">
-                <div className="text-4xl mb-3">🎮</div>
-                <h3 className="text-xl font-bold text-green-800 mb-2">Bereit für neue Aufgaben?</h3>
-                <p className="text-green-700 text-sm">
-                  Löse Übungen und verdiene wertvolle Handyzeit!
-                </p>
-              </div>
-              <Button 
-                onClick={() => onStartGame(profile?.grade || 1)} 
-                className="w-full h-14 text-lg bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 shadow-lg"
-              >
-                <BookOpen className="w-6 h-6 mr-2" />
-                🚀 Lernen starten (Klasse {profile?.grade || 1})
-              </Button>
-            </CardContent>
-          </Card>
+          {/* Screen Time Status */}
+          {isAtLimit ? (
+            <Card className="shadow-card bg-gradient-to-r from-red-500/10 to-orange-500/10 border-red-200">
+              <CardContent className="p-6">
+                <div className="text-center mb-4">
+                  <div className="text-4xl mb-3">⏰</div>
+                  <h3 className="text-xl font-bold text-red-800 mb-2">Tageslimit erreicht!</h3>
+                  <p className="text-red-700 text-sm">
+                    Du hast bereits {getDailyLimit()} Minuten verdient. Du kannst weiter üben, aber keine weitere Zeit verdienen.
+                  </p>
+                </div>
+                <Button 
+                  onClick={() => onStartGame(profile?.grade || 1)} 
+                  className="w-full h-14 text-lg bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 shadow-lg"
+                >
+                  <BookOpen className="w-6 h-6 mr-2" />
+                  📚 Trotzdem üben (ohne Belohnung)
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              <Card className="shadow-card bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border-blue-200">
+                <CardContent className="p-4">
+                  <div className="text-center">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm text-blue-700">Heute verdient:</span>
+                      <span className="font-bold text-blue-800">{todayMinutesUsed} Min.</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-blue-700">Noch verfügbar:</span>
+                      <span className="font-bold text-blue-800">{remainingMinutes} Min.</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="shadow-card bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-200">
+                <CardContent className="p-6">
+                  <div className="text-center mb-4">
+                    <div className="text-4xl mb-3">🎮</div>
+                    <h3 className="text-xl font-bold text-green-800 mb-2">Bereit für neue Aufgaben?</h3>
+                    <p className="text-green-700 text-sm">
+                      Löse Übungen und verdiene wertvolle Handyzeit!
+                    </p>
+                  </div>
+                  <Button 
+                    onClick={() => onStartGame(profile?.grade || 1)} 
+                    className="w-full h-14 text-lg bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 shadow-lg"
+                  >
+                    <BookOpen className="w-6 h-6 mr-2" />
+                    🚀 Lernen starten (Klasse {profile?.grade || 1})
+                  </Button>
+                </CardContent>
+              </Card>
+            </>
+          )}
 
           {/* Stats Cards */}
           <div className="grid grid-cols-2 gap-4">

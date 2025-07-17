@@ -12,6 +12,8 @@ interface ChildSettings {
   biology_minutes_per_task: number;
   chemistry_minutes_per_task: number;
   latin_minutes_per_task: number;
+  weekday_max_minutes: number;
+  weekend_max_minutes: number;
 }
 
 export function useChildSettings(childId: string) {
@@ -87,6 +89,8 @@ export function useChildSettings(childId: string) {
         biology_minutes_per_task: 5,
         chemistry_minutes_per_task: 5,
         latin_minutes_per_task: 5,
+        weekday_max_minutes: 30,
+        weekend_max_minutes: 60,
       };
       
       setSettings(defaultSettings);
@@ -105,6 +109,8 @@ export function useChildSettings(childId: string) {
         biology_minutes_per_task: 5,
         chemistry_minutes_per_task: 5,
         latin_minutes_per_task: 5,
+        weekday_max_minutes: 30,
+        weekend_max_minutes: 60,
       };
       
       setSettings(defaultSettings);

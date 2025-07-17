@@ -50,6 +50,11 @@ const Index = () => {
     setEarnedTime(minutes);
     setEarnedCategory(category);
     setShowSuccess(true);
+    
+    // Force reload of user profile when returning to update stats
+    if (user) {
+      window.location.hash = 'reload-stats';
+    }
   };
 
   const handleBack = () => {

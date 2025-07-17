@@ -7,6 +7,7 @@ import { Check, X, ArrowLeft, Clock } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { useChildSettings } from '@/hooks/useChildSettings';
+import { useScreenTimeLimit } from '@/hooks/useScreenTimeLimit';
 
 interface Problem {
   id: number;
@@ -626,6 +627,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
   const [usedQuestions, setUsedQuestions] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const { settings } = useChildSettings(userId);
+  const { canEarnMoreTime, isAtLimit, remainingMinutes, getDailyLimit } = useScreenTimeLimit(userId);
 
   const totalQuestions = 5;
 
@@ -771,7 +773,26 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
     };
 
     const minutesPerTask = settings[categoryMapping[category]] || 5;
-    const timeEarned = correctAnswers * minutesPerTask;
+    
+    // Calculate how much time can still be earned today
+    let timeEarned = correctAnswers * minutesPerTask;
+    
+    // If at daily limit, don't award time but still save the session
+    if (isAtLimit || remainingMinutes <= 0) {
+      timeEarned = 0;
+      toast({
+        title: "Tageslimit erreicht",
+        description: `Du hast bereits dein Tageslimit von ${getDailyLimit()} Minuten erreicht. Du kannst weiter üben, aber keine weitere Zeit verdienen.`,
+        variant: "destructive",
+      });
+    } else if (timeEarned > remainingMinutes) {
+      // Cap the earned time at remaining minutes
+      timeEarned = remainingMinutes;
+      toast({
+        title: "Nur noch wenig Zeit verfügbar",
+        description: `Du konntest nur noch ${timeEarned} Minuten verdienen, da dein Tageslimit fast erreicht ist.`,
+      });
+    }
 
     try {
       const { error } = await supabase.from('learning_sessions').insert({
