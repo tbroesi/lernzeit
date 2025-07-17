@@ -19,21 +19,33 @@ export function useChildSettings(childId: string) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadChildSettings();
+    if (childId) {
+      loadChildSettings();
+    }
   }, [childId]);
 
   const loadChildSettings = async () => {
+    if (!childId) {
+      console.log('❌ No childId provided to useChildSettings');
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
+      console.log('🔧 Loading child settings for:', childId);
       
       // First try to get child-specific settings
       const { data: childSettings, error: childError } = await supabase
         .from('child_settings')
         .select('*')
         .eq('child_id', childId)
-        .single();
+        .maybeSingle();
+
+      console.log('🔧 Child settings result:', { childSettings, childError });
 
       if (childSettings && !childError) {
+        console.log('✅ Found child-specific settings');
         setSettings(childSettings);
         return;
       }
@@ -43,23 +55,29 @@ export function useChildSettings(childId: string) {
         .from('parent_child_relationships')
         .select('parent_id')
         .eq('child_id', childId)
-        .single();
+        .maybeSingle();
 
-      if (relationships && !relError) {
+      console.log('🔧 Parent relationship result:', { relationships, relError });
+
+      if (relationships && !relError && relationships.parent_id) {
         const { data: parentSettings, error: parentError } = await supabase
           .from('parent_settings')
           .select('*')
           .eq('user_id', relationships.parent_id)
-          .single();
+          .maybeSingle();
+
+        console.log('🔧 Parent settings result:', { parentSettings, parentError });
 
         if (parentSettings && !parentError) {
+          console.log('✅ Found parent settings');
           setSettings(parentSettings);
           return;
         }
       }
 
       // If no settings found, use defaults
-      setSettings({
+      console.log('🔧 Using default settings');
+      const defaultSettings = {
         math_minutes_per_task: 5,
         german_minutes_per_task: 5,
         english_minutes_per_task: 5,
@@ -69,12 +87,15 @@ export function useChildSettings(childId: string) {
         biology_minutes_per_task: 5,
         chemistry_minutes_per_task: 5,
         latin_minutes_per_task: 5,
-      });
+      };
+      
+      setSettings(defaultSettings);
 
     } catch (error) {
-      console.error('Fehler beim Laden der Einstellungen:', error);
+      console.error('❌ Error loading child settings:', error);
+      
       // Use defaults on error
-      setSettings({
+      const defaultSettings = {
         math_minutes_per_task: 5,
         german_minutes_per_task: 5,
         english_minutes_per_task: 5,
@@ -84,7 +105,9 @@ export function useChildSettings(childId: string) {
         biology_minutes_per_task: 5,
         chemistry_minutes_per_task: 5,
         latin_minutes_per_task: 5,
-      });
+      };
+      
+      setSettings(defaultSettings);
     } finally {
       setLoading(false);
     }

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -25,156 +26,190 @@ interface CategoryMathProblemProps {
 }
 
 const generateMathProblem = (grade: number): Problem => {
-  const problems: Problem[] = [];
-  
   if (grade <= 2) {
-    // Grade 1-2: Basic addition/subtraction up to 20
+    // Klasse 1-2: Einfache Addition/Subtraktion bis 20
     const operations = ['+', '-'];
     const op = operations[Math.floor(Math.random() * operations.length)];
     
     if (op === '+') {
-      const a = Math.floor(Math.random() * 15) + 1;
+      const a = Math.floor(Math.random() * 10) + 1;
       const b = Math.floor(Math.random() * (20 - a)) + 1;
-      const answer = a + b;
-      problems.push({
+      return {
         id: 1,
         question: `${a} + ${b} = ?`,
-        answer: answer,
-        type: 'math'
-      });
+        answer: a + b,
+        type: 'math',
+        explanation: `${a} + ${b} = ${a + b}`
+      };
     } else {
-      const answer = Math.floor(Math.random() * 15) + 1;
+      const answer = Math.floor(Math.random() * 10) + 1;
       const a = answer + Math.floor(Math.random() * 10) + 1;
-      const b = a - answer;
-      problems.push({
+      return {
         id: 1,
-        question: `${a} - ${b} = ?`,
+        question: `${a} - ${a - answer} = ?`,
         answer: answer,
-        type: 'math'
-      });
+        type: 'math',
+        explanation: `${a} - ${a - answer} = ${answer}`
+      };
     }
   } else if (grade <= 4) {
-    // Grade 3-4: Multiplication tables and division
+    // Klasse 3-4: Kleines Einmaleins und größere Zahlen
     const operations = ['+', '-', '×', '÷'];
     const op = operations[Math.floor(Math.random() * operations.length)];
     
     if (op === '+') {
-      const a = Math.floor(Math.random() * 50) + 10;
-      const b = Math.floor(Math.random() * 50) + 10;
-      problems.push({
+      const a = Math.floor(Math.random() * 90) + 10;
+      const b = Math.floor(Math.random() * 90) + 10;
+      return {
         id: 1,
         question: `${a} + ${b} = ?`,
         answer: a + b,
-        type: 'math'
-      });
+        type: 'math',
+        explanation: `${a} + ${b} = ${a + b}`
+      };
     } else if (op === '-') {
-      const b = Math.floor(Math.random() * 30) + 10;
-      const a = b + Math.floor(Math.random() * 50) + 10;
-      problems.push({
+      const b = Math.floor(Math.random() * 50) + 10;
+      const a = b + Math.floor(Math.random() * 90) + 10;
+      return {
         id: 1,
         question: `${a} - ${b} = ?`,
         answer: a - b,
-        type: 'math'
-      });
+        type: 'math',
+        explanation: `${a} - ${b} = ${a - b}`
+      };
     } else if (op === '×') {
-      const a = Math.floor(Math.random() * 9) + 2;
-      const b = Math.floor(Math.random() * 9) + 2;
-      problems.push({
+      const a = Math.floor(Math.random() * 10) + 2;
+      const b = Math.floor(Math.random() * 10) + 2;
+      return {
         id: 1,
         question: `${a} × ${b} = ?`,
         answer: a * b,
-        type: 'math'
-      });
+        type: 'math',
+        explanation: `${a} × ${b} = ${a * b}`
+      };
     } else {
       const b = Math.floor(Math.random() * 9) + 2;
-      const answer = Math.floor(Math.random() * 9) + 2;
+      const answer = Math.floor(Math.random() * 12) + 2;
       const a = b * answer;
-      problems.push({
+      return {
         id: 1,
         question: `${a} ÷ ${b} = ?`,
         answer: answer,
-        type: 'math'
-      });
+        type: 'math',
+        explanation: `${a} ÷ ${b} = ${answer}`
+      };
     }
-  } else {
-    // Grade 5+: More complex operations
-    const operations = ['+', '-', '×', '÷', 'fraction', 'percentage'];
+  } else if (grade <= 6) {
+    // Klasse 5-6: Brüche und Dezimalzahlen
+    const operations = ['fraction', 'decimal', 'percentage', 'multiply_large'];
     const op = operations[Math.floor(Math.random() * operations.length)];
     
     if (op === 'fraction') {
-      const numerator = Math.floor(Math.random() * 8) + 1;
+      const numerator = Math.floor(Math.random() * 7) + 1;
       const denominator = Math.floor(Math.random() * 8) + 2;
-      const whole = Math.floor(Math.random() * 5) + 1;
-      const decimal = parseFloat((numerator / denominator).toFixed(2));
-      problems.push({
-        id: 1,
-        question: `Was ist ${numerator}/${denominator} als Dezimalzahl? (auf 2 Stellen gerundet)`,
-        answer: decimal,
-        type: 'math'
-      });
-    } else if (op === 'percentage') {
-      const percentage = Math.floor(Math.random() * 50) + 10;
-      const value = Math.floor(Math.random() * 200) + 50;
-      const answer = Math.round((percentage / 100) * value);
-      problems.push({
-        id: 1,
-        question: `Was sind ${percentage}% von ${value}?`,
-        answer: answer,
-        type: 'math'
-      });
-    } else {
-      // Standard operations with larger numbers
-      const a = Math.floor(Math.random() * 500) + 100;
-      const b = Math.floor(Math.random() * 200) + 50;
-      
-      if (op === '+') {
-        problems.push({
+      if (numerator < denominator) {
+        const decimal = parseFloat((numerator / denominator).toFixed(2));
+        return {
           id: 1,
-          question: `${a} + ${b} = ?`,
-          answer: a + b,
-          type: 'math'
-        });
-      } else if (op === '-') {
-        problems.push({
-          id: 1,
-          question: `${a} - ${b} = ?`,
-          answer: a - b,
-          type: 'math'
-        });
-      } else if (op === '×') {
-        const smallA = Math.floor(Math.random() * 20) + 5;
-        const smallB = Math.floor(Math.random() * 20) + 5;
-        problems.push({
-          id: 1,
-          question: `${smallA} × ${smallB} = ?`,
-          answer: smallA * smallB,
-          type: 'math'
-        });
-      } else {
-        const divisor = Math.floor(Math.random() * 15) + 5;
-        const quotient = Math.floor(Math.random() * 20) + 5;
-        const dividend = divisor * quotient;
-        problems.push({
-          id: 1,
-          question: `${dividend} ÷ ${divisor} = ?`,
-          answer: quotient,
-          type: 'math'
-        });
+          question: `Wandle den Bruch ${numerator}/${denominator} in eine Dezimalzahl um (2 Stellen):`,
+          answer: decimal,
+          type: 'math',
+          explanation: `${numerator} ÷ ${denominator} = ${decimal}`
+        };
       }
+    } else if (op === 'percentage') {
+      const percentage = Math.floor(Math.random() * 40) + 10;
+      const value = Math.floor(Math.random() * 200) + 100;
+      const answer = Math.round((percentage / 100) * value);
+      return {
+        id: 1,
+        question: `Berechne ${percentage}% von ${value}:`,
+        answer: answer,
+        type: 'math',
+        explanation: `${percentage}% von ${value} = ${answer}`
+      };
     }
+    
+    // Fallback zu größeren Multiplikationen
+    const a = Math.floor(Math.random() * 30) + 10;
+    const b = Math.floor(Math.random() * 20) + 10;
+    return {
+      id: 1,
+      question: `${a} × ${b} = ?`,
+      answer: a * b,
+      type: 'math',
+      explanation: `${a} × ${b} = ${a * b}`
+    };
+  } else {
+    // Klasse 7+: Komplexere Mathematik
+    const operations = ['quadratic', 'root', 'percentage_complex', 'algebra'];
+    const op = operations[Math.floor(Math.random() * operations.length)];
+    
+    if (op === 'quadratic') {
+      const base = Math.floor(Math.random() * 15) + 5;
+      return {
+        id: 1,
+        question: `Was ist ${base}²?`,
+        answer: base * base,
+        type: 'math',
+        explanation: `${base}² = ${base} × ${base} = ${base * base}`
+      };
+    } else if (op === 'root') {
+      const squares = [16, 25, 36, 49, 64, 81, 100, 121, 144, 169, 196, 225];
+      const square = squares[Math.floor(Math.random() * squares.length)];
+      const root = Math.sqrt(square);
+      return {
+        id: 1,
+        question: `Was ist √${square}?`,
+        answer: root,
+        type: 'math',
+        explanation: `√${square} = ${root}`
+      };
+    } else if (op === 'algebra') {
+      const x = Math.floor(Math.random() * 10) + 2;
+      const c = Math.floor(Math.random() * 20) + 5;
+      const result = 3 * x + c;
+      return {
+        id: 1,
+        question: `Löse: 3x + ${c} = ${result}. Was ist x?`,
+        answer: x,
+        type: 'math',
+        explanation: `3x = ${result} - ${c} = ${result - c}, also x = ${x}`
+      };
+    }
+    
+    // Fallback
+    const percentage = Math.floor(Math.random() * 50) + 25;
+    const value = Math.floor(Math.random() * 500) + 200;
+    const answer = Math.round((percentage / 100) * value);
+    return {
+      id: 1,
+      question: `Berechne ${percentage}% von ${value}:`,
+      answer: answer,
+      type: 'math',
+      explanation: `${percentage}% von ${value} = ${answer}`
+    };
   }
-  
-  return problems[0];
 };
 
 const generateGermanProblem = (grade: number): Problem => {
-  const germanProblems = [
-    // Grammar problems
+  const germanProblems = grade <= 2 ? [
     {
-      question: "Welcher Artikel gehört zu 'Haus'?",
-      answer: "das",
-      explanation: "'Haus' ist neutral und bekommt den Artikel 'das'"
+      question: "Welcher Artikel gehört zu 'Hund'?",
+      answer: "der",
+      explanation: "'Hund' ist männlich und bekommt den Artikel 'der'"
     },
+    {
+      question: "Wie schreibt man das Tier, das 'Miau' macht?",
+      answer: "Katze",
+      explanation: "Das Tier, das 'Miau' macht, ist eine Katze"
+    },
+    {
+      question: "Was ist das Gegenteil von 'groß'?",
+      answer: "klein",
+      explanation: "Das Gegenteil von 'groß' ist 'klein'"
+    }
+  ] : grade <= 4 ? [
     {
       question: "Wie lautet der Plural von 'Kind'?",
       answer: "Kinder",
@@ -189,17 +224,8 @@ const generateGermanProblem = (grade: number): Problem => {
       question: "Welches Wort ist richtig geschrieben: 'Fahrrad' oder 'Farrad'?",
       answer: "Fahrrad",
       explanation: "'Fahrrad' wird mit 'h' geschrieben"
-    },
-    {
-      question: "Was ist das Gegenteil von 'groß'?",
-      answer: "klein",
-      explanation: "Das Gegenteil von 'groß' ist 'klein'"
-    },
-    {
-      question: "Vervollständige: 'Der Hund bellt ___.' (laut/Adverb)",
-      answer: "laut",
-      explanation: "'Laut' beschreibt, wie der Hund bellt"
-    },
+    }
+  ] : grade <= 6 ? [
     {
       question: "Welche Zeitform: 'Ich bin gelaufen'?",
       answer: "Perfekt",
@@ -209,6 +235,27 @@ const generateGermanProblem = (grade: number): Problem => {
       question: "Setze den richtigen Fall ein: 'Ich helfe ___ Freund.' (der)",
       answer: "dem",
       explanation: "Nach 'helfen' steht der Dativ: 'dem Freund'"
+    },
+    {
+      question: "Was ist ein Adjektiv? Nenne ein Beispiel.",
+      answer: "schön",
+      explanation: "Ein Adjektiv beschreibt Eigenschaften, z.B. 'schön', 'groß', 'schnell'"
+    }
+  ] : [
+    {
+      question: "Was ist ein Partizip II von 'lesen'?",
+      answer: "gelesen",
+      explanation: "Das Partizip II von 'lesen' ist 'gelesen'"
+    },
+    {
+      question: "Erkläre den Unterschied zwischen 'dass' und 'das'.",
+      answer: "dass ist Konjunktion",
+      explanation: "'dass' ist eine Konjunktion, 'das' ist ein Artikel oder Pronomen"
+    },
+    {
+      question: "Was ist ein Metapher? Nenne ein Beispiel.",
+      answer: "Herz aus Stein",
+      explanation: "Eine Metapher ist ein Vergleich ohne 'wie', z.B. 'Herz aus Stein'"
     }
   ];
 
@@ -223,7 +270,23 @@ const generateGermanProblem = (grade: number): Problem => {
 };
 
 const generateEnglishProblem = (grade: number): Problem => {
-  const englishProblems = [
+  const englishProblems = grade <= 2 ? [
+    {
+      question: "What color is the sun?",
+      answer: "yellow",
+      explanation: "The sun is yellow"
+    },
+    {
+      question: "How do you say 'Hund' in English?",
+      answer: "dog",
+      explanation: "'Hund' in English is 'dog'"
+    },
+    {
+      question: "Complete: 'I ___ happy.' (am/is/are)",
+      answer: "am",
+      explanation: "With 'I', we use 'am': I am happy"
+    }
+  ] : grade <= 4 ? [
     {
       question: "What is the plural of 'mouse'?",
       answer: "mice",
@@ -238,16 +301,12 @@ const generateEnglishProblem = (grade: number): Problem => {
       question: "What is the past tense of 'run'?",
       answer: "ran",
       explanation: "The past tense of 'run' is 'ran'"
-    },
+    }
+  ] : grade <= 6 ? [
     {
       question: "Choose the correct article: '___ apple' (a/an)",
       answer: "an",
       explanation: "Before vowel sounds, we use 'an': an apple"
-    },
-    {
-      question: "What color do you get when you mix red and blue?",
-      answer: "purple",
-      explanation: "Red and blue make purple"
     },
     {
       question: "Complete: 'She ___ a book yesterday.' (read - past)",
@@ -255,24 +314,25 @@ const generateEnglishProblem = (grade: number): Problem => {
       explanation: "Past tense of 'read' is also 'read' (pronounced 'red')"
     },
     {
-      question: "What is the opposite of 'hot'?",
-      answer: "cold",
-      explanation: "The opposite of 'hot' is 'cold'"
-    },
-    {
-      question: "How many days are in a week?",
-      answer: "seven",
-      explanation: "There are seven days in a week"
-    },
-    {
-      question: "Complete: 'There ___ three cats in the garden.' (is/are)",
-      answer: "are",
-      explanation: "With plural 'cats', we use 'are'"
-    },
-    {
       question: "What do you call a baby dog?",
       answer: "puppy",
       explanation: "A baby dog is called a puppy"
+    }
+  ] : [
+    {
+      question: "What is the present perfect of 'write' with 'I'?",
+      answer: "have written",
+      explanation: "Present perfect: I have written"
+    },
+    {
+      question: "Complete the conditional: 'If I ___ rich, I would travel.' (be)",
+      answer: "were",
+      explanation: "In conditionals, we use 'were' for all persons: If I were rich"
+    },
+    {
+      question: "What is a synonym for 'big'?",
+      answer: "large",
+      explanation: "Large, huge, enormous are synonyms for 'big'"
     }
   ];
 
@@ -287,7 +347,23 @@ const generateEnglishProblem = (grade: number): Problem => {
 };
 
 const generateGeographyProblem = (grade: number): Problem => {
-  const geographyProblems = [
+  const geographyProblems = grade <= 2 ? [
+    {
+      question: "In welchem Land leben wir?",
+      answer: "Deutschland",
+      explanation: "Wir leben in Deutschland"
+    },
+    {
+      question: "Wie heißt die größte Stadt in Deutschland?",
+      answer: "Berlin",
+      explanation: "Berlin ist die größte Stadt und Hauptstadt Deutschlands"
+    },
+    {
+      question: "Welche Farbe hat das Meer?",
+      answer: "blau",
+      explanation: "Das Meer ist blau"
+    }
+  ] : grade <= 4 ? [
     {
       question: "Was ist die Hauptstadt von Deutschland?",
       answer: "Berlin",
@@ -299,10 +375,11 @@ const generateGeographyProblem = (grade: number): Problem => {
       explanation: "Der Rhein ist mit 1.233 km der längste Fluss in Deutschland"
     },
     {
-      question: "Auf welchem Kontinent liegt Ägypten?",
-      answer: "Afrika",
-      explanation: "Ägypten liegt in Afrika"
-    },
+      question: "Auf welchem Kontinent liegt Deutschland?",
+      answer: "Europa",
+      explanation: "Deutschland liegt in Europa"
+    }
+  ] : grade <= 6 ? [
     {
       question: "Was ist der höchste Berg in Deutschland?",
       answer: "Zugspitze",
@@ -317,31 +394,17 @@ const generateGeographyProblem = (grade: number): Problem => {
       question: "In welchem Bundesland liegt München?",
       answer: "Bayern",
       explanation: "München ist die Hauptstadt von Bayern"
-    },
+    }
+  ] : [
     {
       question: "Welcher Ozean ist der größte der Welt?",
       answer: "Pazifik",
       explanation: "Der Pazifische Ozean ist der größte Ozean der Welt"
     },
     {
-      question: "Was ist die Hauptstadt von Frankreich?",
-      answer: "Paris",
-      explanation: "Paris ist die Hauptstadt von Frankreich"
-    },
-    {
-      question: "Welcher Planet ist der Erde am nächsten?",
-      answer: "Venus",
-      explanation: "Die Venus ist der Erde am nächsten"
-    },
-    {
       question: "Wie viele Bundesländer hat Deutschland?",
       answer: "16",
       explanation: "Deutschland hat 16 Bundesländer"
-    },
-    {
-      question: "Welche Stadt liegt am Rhein und ist bekannt für ihren Dom?",
-      answer: "Köln",
-      explanation: "Köln liegt am Rhein und ist berühmt für den Kölner Dom"
     },
     {
       question: "Was ist der kleinste Kontinent?",
@@ -361,26 +424,43 @@ const generateGeographyProblem = (grade: number): Problem => {
 };
 
 const generateHistoryProblem = (grade: number): Problem => {
-  const historyProblems = [
+  const historyProblems = grade <= 4 ? [
+    {
+      question: "Wer waren die Ritter?",
+      answer: "Kämpfer im Mittelalter",
+      explanation: "Ritter waren Kämpfer im Mittelalter mit Rüstung und Pferd"
+    },
+    {
+      question: "Wie hießen die alten Ägypter-Könige?",
+      answer: "Pharaonen",
+      explanation: "Die Könige im alten Ägypten hießen Pharaonen"
+    },
+    {
+      question: "Was bauten die Römer für Wasser?",
+      answer: "Aquädukte",
+      explanation: "Die Römer bauten Aquädukte, um Wasser zu transportieren"
+    }
+  ] : grade <= 6 ? [
     {
       question: "In welchem Jahr fiel die Berliner Mauer?",
       answer: "1989",
       explanation: "Die Berliner Mauer fiel am 9. November 1989"
     },
     {
-      question: "Wie hieß der erste Bundeskanzler der Bundesrepublik Deutschland?",
-      answer: "Konrad Adenauer",
-      explanation: "Konrad Adenauer war der erste Bundeskanzler (1949-1963)"
-    },
-    {
-      question: "In welchem Jahr wurde die Bundesrepublik Deutschland gegründet?",
+      question: "Wann wurde die Bundesrepublik Deutschland gegründet?",
       answer: "1949",
       explanation: "Die BRD wurde am 23. Mai 1949 gegründet"
     },
     {
-      question: "Welcher römische Kaiser machte das Christentum zur Staatsreligion?",
-      answer: "Konstantin",
-      explanation: "Kaiser Konstantin I. machte das Christentum zur Staatsreligion"
+      question: "In welchem Jahrhundert lebte Martin Luther?",
+      answer: "16. Jahrhundert",
+      explanation: "Martin Luther lebte von 1483 bis 1546 im 16. Jahrhundert"
+    }
+  ] : [
+    {
+      question: "Wie hieß der erste Bundeskanzler der Bundesrepublik Deutschland?",
+      answer: "Konrad Adenauer",
+      explanation: "Konrad Adenauer war der erste Bundeskanzler (1949-1963)"
     },
     {
       question: "Wann endete der Zweite Weltkrieg in Europa?",
@@ -388,39 +468,9 @@ const generateHistoryProblem = (grade: number): Problem => {
       explanation: "Der Zweite Weltkrieg endete in Europa am 8. Mai 1945"
     },
     {
-      question: "Wie lange dauerte der Dreißigjährige Krieg?",
-      answer: "30 Jahre",
-      explanation: "Der Dreißigjährige Krieg dauerte von 1618 bis 1648, also 30 Jahre"
-    },
-    {
-      question: "Welche Dynastie herrschte im alten Ägypten über die Pharaonen?",
-      answer: "verschiedene",
-      explanation: "Es gab verschiedene Dynastien, nicht nur eine"
-    },
-    {
-      question: "In welchem Jahrhundert lebte Martin Luther?",
-      answer: "16. Jahrhundert",
-      explanation: "Martin Luther lebte von 1483 bis 1546 im 16. Jahrhundert"
-    },
-    {
       question: "Wer war der erste Kaiser des Heiligen Römischen Reiches?",
       answer: "Otto I",
       explanation: "Otto I. wurde 962 zum ersten Kaiser gekrönt"
-    },
-    {
-      question: "In welchem Jahr begann der Erste Weltkrieg?",
-      answer: "1914",
-      explanation: "Der Erste Weltkrieg begann 1914"
-    },
-    {
-      question: "Wie hieß die Hauptstadt des Römischen Reiches?",
-      answer: "Rom",
-      explanation: "Rom war die Hauptstadt des Römischen Reiches"
-    },
-    {
-      question: "Welches Ereignis führte zur Französischen Revolution?",
-      answer: "Finanzkrisen",
-      explanation: "Finanzkrisen und soziale Ungerechtigkeiten führten zur Revolution 1789"
     }
   ];
 
@@ -436,11 +486,11 @@ const generateHistoryProblem = (grade: number): Problem => {
 
 const generateOtherSubjectProblem = (category: string, grade: number): Problem => {
   const problems: { [key: string]: any[] } = {
-    physics: [
+    physics: grade <= 6 ? [
       {
-        question: "Was ist die Einheit für Kraft?",
-        answer: "Newton",
-        explanation: "Die Einheit für Kraft ist Newton (N)"
+        question: "Was braucht Feuer zum Brennen?",
+        answer: "Sauerstoff",
+        explanation: "Feuer braucht Sauerstoff zum Brennen"
       },
       {
         question: "Bei welcher Temperatur gefriert Wasser?",
@@ -448,12 +498,44 @@ const generateOtherSubjectProblem = (category: string, grade: number): Problem =
         explanation: "Wasser gefriert bei 0 Grad Celsius"
       },
       {
+        question: "Was ist schwerer: Eisen oder Holz?",
+        answer: "Eisen",
+        explanation: "Eisen ist schwerer als Holz"
+      }
+    ] : [
+      {
+        question: "Was ist die Einheit für Kraft?",
+        answer: "Newton",
+        explanation: "Die Einheit für Kraft ist Newton (N)"
+      },
+      {
         question: "Wie schnell ist Licht im Vakuum? (in km/s, gerundet)",
         answer: "300000",
         explanation: "Lichtgeschwindigkeit beträgt etwa 300.000 km/s"
+      },
+      {
+        question: "Was besagt das erste Newton'sche Gesetz?",
+        answer: "Trägheitsgesetz",
+        explanation: "Das erste Newton'sche Gesetz ist das Trägheitsgesetz"
       }
     ],
-    biology: [
+    biology: grade <= 6 ? [
+      {
+        question: "Wie viele Beine hat eine Spinne?",
+        answer: "8",
+        explanation: "Spinnen haben 8 Beine"
+      },
+      {
+        question: "Was brauchen Pflanzen zum Wachsen?",
+        answer: "Licht und Wasser",
+        explanation: "Pflanzen brauchen Licht, Wasser und Nährstoffe zum Wachsen"
+      },
+      {
+        question: "Wie nennt man Tiere, die nur Pflanzen fressen?",
+        answer: "Pflanzenfresser",
+        explanation: "Tiere, die nur Pflanzen fressen, nennt man Pflanzenfresser"
+      }
+    ] : [
       {
         question: "Wie viele Herzkammern hat ein menschliches Herz?",
         answer: "4",
@@ -465,26 +547,42 @@ const generateOtherSubjectProblem = (category: string, grade: number): Problem =
         explanation: "Pflanzen nehmen CO₂ auf und geben Sauerstoff ab"
       },
       {
-        question: "Wie nennt man Tiere, die nur Pflanzen fressen?",
-        answer: "Pflanzenfresser",
-        explanation: "Tiere, die nur Pflanzen fressen, nennt man Pflanzenfresser oder Herbivoren"
+        question: "Wie heißt der Prozess der Zellteilung?",
+        answer: "Mitose",
+        explanation: "Die normale Zellteilung heißt Mitose"
       }
     ],
-    chemistry: [
+    chemistry: grade <= 6 ? [
+      {
+        question: "Aus was besteht Wasser?",
+        answer: "Wasserstoff und Sauerstoff",
+        explanation: "Wasser besteht aus Wasserstoff und Sauerstoff"
+      },
+      {
+        question: "Was passiert mit Eis bei Wärme?",
+        answer: "schmilzt",
+        explanation: "Eis schmilzt bei Wärme und wird zu Wasser"
+      },
+      {
+        question: "Welche Farbe hat Kupfer?",
+        answer: "rot",
+        explanation: "Kupfer hat eine rötliche Farbe"
+      }
+    ] : [
       {
         question: "Was ist das chemische Symbol für Sauerstoff?",
         answer: "O",
         explanation: "Das chemische Symbol für Sauerstoff ist O"
       },
       {
-        question: "Aus welchen Elementen besteht Wasser?",
-        answer: "Wasserstoff und Sauerstoff",
-        explanation: "Wasser (H₂O) besteht aus Wasserstoff und Sauerstoff"
-      },
-      {
         question: "Was entsteht, wenn man Säure und Base mischt?",
         answer: "Salz und Wasser",
         explanation: "Bei der Neutralisation entstehen Salz und Wasser"
+      },
+      {
+        question: "Wie heißt die Verbindung NaCl?",
+        answer: "Kochsalz",
+        explanation: "NaCl ist die chemische Formel für Kochsalz"
       }
     ],
     latin: [
@@ -545,7 +643,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
 
   const generateUniqueQuestion = (questionGenerator: () => Problem): Problem => {
     let attempts = 0;
-    const maxAttempts = 20; // Prevent infinite loops
+    const maxAttempts = 20;
     
     while (attempts < maxAttempts) {
       const problem = questionGenerator();
@@ -558,18 +656,19 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
       attempts++;
     }
     
-    // If we can't find a unique question, generate a new one anyway
     const problem = questionGenerator();
     return problem;
   };
 
   const generateProblems = () => {
+    console.log('🎯 Generating problems for category:', category, 'grade:', grade);
     const newProblems: Problem[] = [];
-    setUsedQuestions(new Set()); // Reset used questions for new session
+    setUsedQuestions(new Set());
     
     for (let i = 0; i < totalQuestions; i++) {
       let generatedProblem: Problem;
       
+      // WICHTIG: Korrekte Zuordnung der Kategorien zu den Generatoren
       switch (category) {
         case 'Mathematik':
           generatedProblem = generateUniqueQuestion(() => generateMathProblem(grade));
@@ -599,14 +698,17 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
           generatedProblem = generateUniqueQuestion(() => generateOtherSubjectProblem('latin', grade));
           break;
         default:
+          console.warn('⚠️ Unknown category, falling back to math:', category);
           generatedProblem = generateUniqueQuestion(() => generateMathProblem(grade));
       }
       
+      console.log(`📝 Generated problem ${i + 1}:`, generatedProblem.question, '| Type:', generatedProblem.type);
       newProblems.push(generatedProblem);
     }
     
     setProblems(newProblems);
     setGameStarted(true);
+    console.log('✅ All problems generated:', newProblems.length);
   };
 
   const checkAnswer = () => {
@@ -616,14 +718,11 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
     const userAnswerNormalized = userAnswer.toString().toLowerCase().trim();
     const correctAnswerNormalized = problem.answer.toString().toLowerCase().trim();
     
-    // Check for multiple acceptable answers
     const acceptableAnswers = [
       correctAnswerNormalized,
-      // For German subjects, accept common variations
       ...(problem.type === 'german' ? [
         correctAnswerNormalized.replace('ä', 'ae').replace('ö', 'oe').replace('ü', 'ue').replace('ß', 'ss')
       ] : []),
-      // For numbers, accept both string and number format
       ...(typeof problem.answer === 'number' ? [problem.answer.toString()] : [])
     ];
 
