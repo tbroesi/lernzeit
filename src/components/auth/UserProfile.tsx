@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,6 +13,7 @@ import { ParentDashboard } from '@/components/ParentDashboard';
 import { ChildLinking } from '@/components/ChildLinking';
 import { ChildSettingsMenu } from '@/components/ChildSettingsMenu';
 import { ParentSettingsMenu } from '@/components/ParentSettingsMenu';
+import { useChildSettings } from '@/hooks/useChildSettings';
 
 interface UserProfileProps {
   user: any;
@@ -25,13 +27,20 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [totalTimeEarned, setTotalTimeEarned] = useState(0);
   const [gamesPlayed, setGamesPlayed] = useState(0);
-  const [hasParentLink, setHasParentLink] = useState(false);
   const { toast } = useToast();
+
+  // Use the existing useChildSettings hook for children
+  const { settings: childSettings, loading: childSettingsLoading } = useChildSettings(
+    profile?.role === 'child' ? user?.id || '' : ''
+  );
+  
+  // Determine if child has parent link based on child settings
+  const hasParentLink = profile?.role === 'child' ? 
+    (!childSettingsLoading && childSettings !== null) : false;
 
   useEffect(() => {
     loadProfile();
     loadStats();
-    checkParentLink();
   }, [user]);
 
   const loadProfile = async () => {
@@ -75,22 +84,6 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
       });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const checkParentLink = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('parent_child_relationships')
-        .select('*')
-        .eq('child_id', user.id)
-        .single();
-
-      if (data && !error) {
-        setHasParentLink(true);
-      }
-    } catch (error) {
-      console.log('Keine Elternverknüpfung gefunden');
     }
   };
 
@@ -255,8 +248,14 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
           </div>
 
           {/* Parent Linking - only show if no parent link exists */}
-          {!hasParentLink && (
-            <ChildLinking userId={user.id} onLinked={() => setHasParentLink(true)} />
+          {!hasParentLink && !childSettingsLoading && (
+            <ChildLinking 
+              userId={user.id} 
+              onLinked={() => {
+                // Reload profile to update hasParentLink status
+                loadProfile();
+              }} 
+            />
           )}
 
           {/* Fun Motivation */}
