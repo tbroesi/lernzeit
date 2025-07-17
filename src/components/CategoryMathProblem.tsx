@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -668,7 +667,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
     for (let i = 0; i < totalQuestions; i++) {
       let generatedProblem: Problem;
       
-      // WICHTIG: Korrekte Zuordnung der Kategorien zu den Generatoren
+      // KORRIGIERT: Korrekte Zuordnung der deutschen Kategorien zu den Generatoren
       switch (category) {
         case 'Mathematik':
           generatedProblem = generateUniqueQuestion(() => generateMathProblem(grade));
