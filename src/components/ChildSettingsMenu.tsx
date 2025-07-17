@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -43,22 +44,20 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack }: ChildSet
   const [checkingRelationship, setCheckingRelationship] = useState(false);
   const { toast } = useToast();
   
-  // Use the existing useChildSettings hook to check for parent link
+  // Use the existing useChildSettings hook 
   const { settings, loading: settingsLoading } = useChildSettings(user?.id || '');
-  
-  // Determine if there's a parent link based on whether we got parent settings
-  const hasParentLink = settingsLoading ? false : (settings !== null && !settingsLoading);
 
   useEffect(() => {
     if (user?.id && !settingsLoading) {
       loadParentInfo();
     }
-  }, [user?.id, settingsLoading, hasParentLink]);
+  }, [user?.id, settingsLoading]);
 
   const loadParentInfo = async () => {
-    if (!user?.id || !hasParentLink) {
-      console.log('❌ No user ID or no parent link found');
+    if (!user?.id) {
+      console.log('❌ No user ID provided');
       setLoadingParentInfo(false);
+      setParentInfo(null);
       return;
     }
     
@@ -127,6 +126,9 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack }: ChildSet
     }
   };
 
+  // Determine if there's a parent link based on parentInfo (not settings)
+  const hasParentLink = parentInfo !== null;
+
   const handleUnlinkParent = async () => {
     if (!parentInfo || !user?.id) return;
     
@@ -192,7 +194,7 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack }: ChildSet
     {
       id: 'family',
       title: 'Eltern-Verknüpfung',
-      description: settingsLoading ? 'Lade Status...' : (hasParentLink ? 'Verwalte deine Eltern-Verbindung' : 'Verbinde dein Konto mit deinen Eltern'),
+      description: (settingsLoading || loadingParentInfo) ? 'Lade Status...' : (hasParentLink ? 'Verwalte deine Eltern-Verbindung' : 'Verbinde dein Konto mit deinen Eltern'),
       icon: Users,
       color: 'text-orange-600',
       gradient: 'from-orange-500 to-red-600'
@@ -369,7 +371,7 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack }: ChildSet
                   <div className="flex justify-between items-center p-3 bg-muted/30 rounded-lg">
                     <span className="text-muted-foreground">Status:</span>
                     <span className="text-sm font-medium">
-                      {settingsLoading ? (
+                      {loadingParentInfo ? (
                         <span className="flex items-center gap-2">
                           <Loader2 className="w-4 h-4 animate-spin" />
                           Prüfe...
@@ -481,7 +483,7 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack }: ChildSet
                     <div className="flex-1">
                       <h3 className="font-semibold text-lg">{item.title}</h3>
                       <p className="text-sm text-muted-foreground">{item.description}</p>
-                      {item.id === 'family' && hasParentLink && !settingsLoading && (
+                      {item.id === 'family' && hasParentLink && !loadingParentInfo && (
                         <div className="flex items-center gap-1 mt-1">
                           <Check className="w-3 h-3 text-green-600" />
                           <span className="text-xs text-green-600">Verknüpft</span>
@@ -489,10 +491,10 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack }: ChildSet
                       )}
                     </div>
                     <div className="text-muted-foreground">
-                      {item.id === 'family' && settingsLoading && (
+                      {item.id === 'family' && loadingParentInfo && (
                         <Loader2 className="w-4 h-4 animate-spin" />
                       )}
-                      {item.id !== 'family' || !settingsLoading ? '→' : null}
+                      {item.id !== 'family' || !loadingParentInfo ? '→' : null}
                     </div>
                   </div>
                 </CardContent>
