@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -50,15 +51,15 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
   const [settings, setSettings] = useState<ParentSettings>({
     weekday_max_minutes: 30,
     weekend_max_minutes: 60,
-    math_minutes_per_task: 5,
-    german_minutes_per_task: 5,
-    english_minutes_per_task: 5,
-    geography_minutes_per_task: 5,
-    history_minutes_per_task: 5,
-    physics_minutes_per_task: 5,
-    biology_minutes_per_task: 5,
-    chemistry_minutes_per_task: 5,
-    latin_minutes_per_task: 5,
+    math_minutes_per_task: 2,
+    german_minutes_per_task: 2,
+    english_minutes_per_task: 2,
+    geography_minutes_per_task: 2,
+    history_minutes_per_task: 2,
+    physics_minutes_per_task: 2,
+    biology_minutes_per_task: 2,
+    chemistry_minutes_per_task: 2,
+    latin_minutes_per_task: 2,
   });
   const [childSettings, setChildSettings] = useState<ChildSettings[]>([]);
   const [newPassword, setNewPassword] = useState('');
@@ -488,7 +489,7 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
                           value={settings[`${subject.key}_minutes_per_task` as keyof ParentSettings]}
                           onChange={(e) => setSettings({
                             ...settings,
-                            [`${subject.key}_minutes_per_task`]: parseInt(e.target.value) || 5
+                            [`${subject.key}_minutes_per_task`]: parseInt(e.target.value) || 2
                           })}
                         />
                       </div>
@@ -587,7 +588,7 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
                                   onChange={(e) => updateChildSetting(
                                     child.id, 
                                     `${subject.key}_minutes_per_task` as keyof ChildSettings, 
-                                    parseInt(e.target.value) || 5
+                                    parseInt(e.target.value) || 2
                                   )}
                                 />
                               </div>
