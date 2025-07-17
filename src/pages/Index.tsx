@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { GradeSelector } from '@/components/GradeSelector';
 import { CategorySelector } from '@/components/CategorySelector';
@@ -62,6 +63,22 @@ const Index = () => {
 
   const handleBackToGradeSelection = () => {
     setSelectedCategory(null);
+  };
+
+  // Convert English category types to German display names
+  const convertCategoryToGerman = (category: Category): string => {
+    switch (category) {
+      case 'math': return 'Mathematik';
+      case 'german': return 'Deutsch';
+      case 'english': return 'Englisch';
+      case 'geography': return 'Geographie';
+      case 'history': return 'Geschichte';
+      case 'physics': return 'Physik';
+      case 'biology': return 'Biologie';
+      case 'chemistry': return 'Chemie';
+      case 'latin': return 'Latein';
+      default: return 'Mathematik';
+    }
   };
 
   const getCategoryName = (category: string) => {
@@ -174,12 +191,15 @@ const Index = () => {
     );
   }
 
-  // Show math problems if grade and category are selected
+  // Show math problems if grade and category are selected - FIXED: Pass German category name
   if (selectedGrade && selectedCategory) {
+    const germanCategoryName = convertCategoryToGerman(selectedCategory);
+    console.log('🔄 Converting category:', selectedCategory, '→', germanCategoryName);
+    
     return (
       <CategoryMathProblem 
         grade={selectedGrade}
-        category={selectedCategory}
+        category={germanCategoryName}
         onBack={handleBackToGradeSelection}
         onComplete={handleProblemComplete}
         userId={user?.id}
@@ -198,7 +218,6 @@ const Index = () => {
     );
   }
 
-  // Grade selector (default) - shown for non-logged in users
   return (
     <div className="min-h-screen bg-gradient-bg p-4">
       <div className="max-w-4xl mx-auto">
