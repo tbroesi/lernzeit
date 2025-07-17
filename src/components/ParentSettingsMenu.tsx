@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { useFamilyLinking } from '@/hooks/useFamilyLinking';
 import { supabase } from '@/lib/supabase';
-import { Loader2, Save, Plus, Copy, Users, Key, Trash2, RefreshCw, Settings, Calendar, Clock, ArrowLeft, BookOpen, GraduationCap, Languages } from 'lucide-react';
+import { Loader2, Save, Plus, Copy, Users, Key, Trash2, RefreshCw, Settings, Calendar, Clock, ArrowLeft, BookOpen, GraduationCap, Languages, Globe, FlaskConical, Atom, Leaf, Columns3 } from 'lucide-react';
 
 interface ParentSettings {
   weekday_max_minutes: number;
@@ -17,6 +17,12 @@ interface ParentSettings {
   math_minutes_per_task: number;
   german_minutes_per_task: number;
   english_minutes_per_task: number;
+  geography_minutes_per_task: number;
+  history_minutes_per_task: number;
+  physics_minutes_per_task: number;
+  biology_minutes_per_task: number;
+  chemistry_minutes_per_task: number;
+  latin_minutes_per_task: number;
 }
 
 interface ChildSettings {
@@ -27,6 +33,12 @@ interface ChildSettings {
   math_minutes_per_task: number;
   german_minutes_per_task: number;
   english_minutes_per_task: number;
+  geography_minutes_per_task: number;
+  history_minutes_per_task: number;
+  physics_minutes_per_task: number;
+  biology_minutes_per_task: number;
+  chemistry_minutes_per_task: number;
+  latin_minutes_per_task: number;
 }
 
 interface ParentSettingsMenuProps {
@@ -41,6 +53,12 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
     math_minutes_per_task: 5,
     german_minutes_per_task: 5,
     english_minutes_per_task: 5,
+    geography_minutes_per_task: 5,
+    history_minutes_per_task: 5,
+    physics_minutes_per_task: 5,
+    biology_minutes_per_task: 5,
+    chemistry_minutes_per_task: 5,
+    latin_minutes_per_task: 5,
   });
   const [childSettings, setChildSettings] = useState<ChildSettings[]>([]);
   const [newPassword, setNewPassword] = useState('');
@@ -88,6 +106,12 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
           math_minutes_per_task: data.math_minutes_per_task,
           german_minutes_per_task: data.german_minutes_per_task,
           english_minutes_per_task: data.english_minutes_per_task,
+          geography_minutes_per_task: data.geography_minutes_per_task,
+          history_minutes_per_task: data.history_minutes_per_task,
+          physics_minutes_per_task: data.physics_minutes_per_task,
+          biology_minutes_per_task: data.biology_minutes_per_task,
+          chemistry_minutes_per_task: data.chemistry_minutes_per_task,
+          latin_minutes_per_task: data.latin_minutes_per_task,
         });
       }
     } catch (error: any) {
@@ -123,6 +147,12 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
           math_minutes_per_task: settings.math_minutes_per_task,
           german_minutes_per_task: settings.german_minutes_per_task,
           english_minutes_per_task: settings.english_minutes_per_task,
+          geography_minutes_per_task: settings.geography_minutes_per_task,
+          history_minutes_per_task: settings.history_minutes_per_task,
+          physics_minutes_per_task: settings.physics_minutes_per_task,
+          biology_minutes_per_task: settings.biology_minutes_per_task,
+          chemistry_minutes_per_task: settings.chemistry_minutes_per_task,
+          latin_minutes_per_task: settings.latin_minutes_per_task,
         };
       });
 
@@ -149,6 +179,12 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
           math_minutes_per_task: settings.math_minutes_per_task,
           german_minutes_per_task: settings.german_minutes_per_task,
           english_minutes_per_task: settings.english_minutes_per_task,
+          geography_minutes_per_task: settings.geography_minutes_per_task,
+          history_minutes_per_task: settings.history_minutes_per_task,
+          physics_minutes_per_task: settings.physics_minutes_per_task,
+          biology_minutes_per_task: settings.biology_minutes_per_task,
+          chemistry_minutes_per_task: settings.chemistry_minutes_per_task,
+          latin_minutes_per_task: settings.latin_minutes_per_task,
         });
 
       if (error) throw error;
@@ -183,6 +219,12 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
             math_minutes_per_task: childSetting.math_minutes_per_task,
             german_minutes_per_task: childSetting.german_minutes_per_task,
             english_minutes_per_task: childSetting.english_minutes_per_task,
+            geography_minutes_per_task: childSetting.geography_minutes_per_task,
+            history_minutes_per_task: childSetting.history_minutes_per_task,
+            physics_minutes_per_task: childSetting.physics_minutes_per_task,
+            biology_minutes_per_task: childSetting.biology_minutes_per_task,
+            chemistry_minutes_per_task: childSetting.chemistry_minutes_per_task,
+            latin_minutes_per_task: childSetting.latin_minutes_per_task,
           });
 
         if (error) throw error;
@@ -304,11 +346,17 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
     );
   }
 
-  const categoryIcons = {
-    math: BookOpen,
-    german: Languages,
-    english: GraduationCap,
-  };
+  const subjects = [
+    { key: 'math', name: 'Mathematik', icon: BookOpen },
+    { key: 'german', name: 'Deutsch', icon: Languages },
+    { key: 'english', name: 'Englisch', icon: GraduationCap },
+    { key: 'geography', name: 'Geographie', icon: Globe },
+    { key: 'history', name: 'Geschichte', icon: Clock },
+    { key: 'physics', name: 'Physik', icon: Atom },
+    { key: 'biology', name: 'Biologie', icon: Leaf },
+    { key: 'chemistry', name: 'Chemie', icon: FlaskConical },
+    { key: 'latin', name: 'Latein', icon: Columns3 },
+  ];
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -424,55 +472,28 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
 
               <div>
                 <h4 className="font-medium mb-3">Belohnungszeiten pro Aufgabe</h4>
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
-                      <BookOpen className="w-4 h-4" />
-                      Mathematik (Min)
-                    </Label>
-                    <Input
-                      type="number"
-                      min="1"
-                      max="60"
-                      value={settings.math_minutes_per_task}
-                      onChange={(e) => setSettings({
-                        ...settings,
-                        math_minutes_per_task: parseInt(e.target.value) || 5
-                      })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
-                      <Languages className="w-4 h-4" />
-                      Deutsch (Min)
-                    </Label>
-                    <Input
-                      type="number"
-                      min="1"
-                      max="60"
-                      value={settings.german_minutes_per_task}
-                      onChange={(e) => setSettings({
-                        ...settings,
-                        german_minutes_per_task: parseInt(e.target.value) || 5
-                      })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
-                      <GraduationCap className="w-4 h-4" />
-                      Englisch (Min)
-                    </Label>
-                    <Input
-                      type="number"
-                      min="1"
-                      max="60"
-                      value={settings.english_minutes_per_task}
-                      onChange={(e) => setSettings({
-                        ...settings,
-                        english_minutes_per_task: parseInt(e.target.value) || 5
-                      })}
-                    />
-                  </div>
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                  {subjects.map((subject) => {
+                    const IconComponent = subject.icon;
+                    return (
+                      <div key={subject.key} className="space-y-2">
+                        <Label className="flex items-center gap-2">
+                          <IconComponent className="w-4 h-4" />
+                          {subject.name} (Min)
+                        </Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          max="60"
+                          value={settings[`${subject.key}_minutes_per_task` as keyof ParentSettings]}
+                          onChange={(e) => setSettings({
+                            ...settings,
+                            [`${subject.key}_minutes_per_task`]: parseInt(e.target.value) || 5
+                          })}
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
               
@@ -549,58 +570,29 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
 
                       <div>
                         <h5 className="text-sm font-medium mb-2">Belohnungszeiten pro Aufgabe</h5>
-                        <div className="grid grid-cols-3 gap-4">
-                          <div className="space-y-2">
-                            <Label className="flex items-center gap-2">
-                              <BookOpen className="w-4 h-4" />
-                              Mathematik
-                            </Label>
-                            <Input
-                              type="number"
-                              min="1"
-                              max="60"
-                              value={childSetting.math_minutes_per_task}
-                              onChange={(e) => updateChildSetting(
-                                child.id, 
-                                'math_minutes_per_task', 
-                                parseInt(e.target.value) || 5
-                              )}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="flex items-center gap-2">
-                              <Languages className="w-4 h-4" />
-                              Deutsch
-                            </Label>
-                            <Input
-                              type="number"
-                              min="1"
-                              max="60"
-                              value={childSetting.german_minutes_per_task}
-                              onChange={(e) => updateChildSetting(
-                                child.id, 
-                                'german_minutes_per_task', 
-                                parseInt(e.target.value) || 5
-                              )}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="flex items-center gap-2">
-                              <GraduationCap className="w-4 h-4" />
-                              Englisch
-                            </Label>
-                            <Input
-                              type="number"
-                              min="1"
-                              max="60"
-                              value={childSetting.english_minutes_per_task}
-                              onChange={(e) => updateChildSetting(
-                                child.id, 
-                                'english_minutes_per_task', 
-                                parseInt(e.target.value) || 5
-                              )}
-                            />
-                          </div>
+                        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                          {subjects.map((subject) => {
+                            const IconComponent = subject.icon;
+                            return (
+                              <div key={subject.key} className="space-y-2">
+                                <Label className="flex items-center gap-2">
+                                  <IconComponent className="w-4 h-4" />
+                                  {subject.name}
+                                </Label>
+                                <Input
+                                  type="number"
+                                  min="1"
+                                  max="60"
+                                  value={childSetting[`${subject.key}_minutes_per_task` as keyof ChildSettings]}
+                                  onChange={(e) => updateChildSetting(
+                                    child.id, 
+                                    `${subject.key}_minutes_per_task` as keyof ChildSettings, 
+                                    parseInt(e.target.value) || 5
+                                  )}
+                                />
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     </div>

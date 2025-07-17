@@ -2,11 +2,11 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { BookOpen, Languages, GraduationCap, ArrowLeft } from 'lucide-react';
+import { BookOpen, Languages, GraduationCap, ArrowLeft, Globe, Clock, Atom, Leaf, FlaskConical, Columns3 } from 'lucide-react';
 
 interface CategorySelectorProps {
   grade: number;
-  onCategorySelect: (category: 'math' | 'german' | 'english') => void;
+  onCategorySelect: (category: 'math' | 'german' | 'english' | 'geography' | 'history' | 'physics' | 'biology' | 'chemistry' | 'latin') => void;
   onBack: () => void;
 }
 
@@ -35,6 +35,54 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
       icon: GraduationCap,
       color: 'bg-purple-500',
       emoji: '🇬🇧'
+    },
+    {
+      id: 'geography' as const,
+      name: 'Geographie',
+      description: 'Länder und Kontinente',
+      icon: Globe,
+      color: 'bg-teal-500',
+      emoji: '🌍'
+    },
+    {
+      id: 'history' as const,
+      name: 'Geschichte',
+      description: 'Vergangene Ereignisse',
+      icon: Clock,
+      color: 'bg-amber-500',
+      emoji: '🏛️'
+    },
+    {
+      id: 'physics' as const,
+      name: 'Physik',
+      description: 'Naturgesetze',
+      icon: Atom,
+      color: 'bg-cyan-500',
+      emoji: '⚡'
+    },
+    {
+      id: 'biology' as const,
+      name: 'Biologie',
+      description: 'Lebewesen',
+      icon: Leaf,
+      color: 'bg-emerald-500',
+      emoji: '🌱'
+    },
+    {
+      id: 'chemistry' as const,
+      name: 'Chemie',
+      description: 'Stoffe und Reaktionen',
+      icon: FlaskConical,
+      color: 'bg-orange-500',
+      emoji: '🧪'
+    },
+    {
+      id: 'latin' as const,
+      name: 'Latein',
+      description: 'Lateinische Sprache',
+      icon: Columns3,
+      color: 'bg-rose-500',
+      emoji: '🏺'
     }
   ];
 
@@ -55,8 +103,8 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
           </CardHeader>
         </Card>
 
-        {/* Categories */}
-        <div className="space-y-4">
+        {/* Categories Grid */}
+        <div className="grid grid-cols-1 gap-4">
           {categories.map((category) => {
             const IconComponent = category.icon;
             return (
@@ -65,16 +113,16 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
                 className="shadow-card hover:shadow-lg transition-all duration-300 cursor-pointer"
                 onClick={() => onCategorySelect(category.id)}
               >
-                <CardContent className="p-6">
+                <CardContent className="p-4">
                   <div className="flex items-center gap-4">
-                    <div className={`w-16 h-16 ${category.color} rounded-full flex items-center justify-center text-white text-2xl`}>
+                    <div className={`w-12 h-12 ${category.color} rounded-full flex items-center justify-center text-white text-xl`}>
                       {category.emoji}
                     </div>
                     <div className="flex-1">
-                      <h3 className="text-xl font-bold mb-1">{category.name}</h3>
-                      <p className="text-muted-foreground">{category.description}</p>
+                      <h3 className="text-lg font-bold mb-1">{category.name}</h3>
+                      <p className="text-sm text-muted-foreground">{category.description}</p>
                     </div>
-                    <IconComponent className="w-6 h-6 text-muted-foreground" />
+                    <IconComponent className="w-5 h-5 text-muted-foreground" />
                   </div>
                 </CardContent>
               </Card>

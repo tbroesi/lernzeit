@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { GradeSelector } from '@/components/GradeSelector';
 import { CategorySelector } from '@/components/CategorySelector';
@@ -10,10 +9,12 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { Trophy, Clock, RotateCcw } from 'lucide-react';
 
+type Category = 'math' | 'german' | 'english' | 'geography' | 'history' | 'physics' | 'biology' | 'chemistry' | 'latin';
+
 const Index = () => {
   const { user, loading } = useAuth();
   const [selectedGrade, setSelectedGrade] = useState<number | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<'math' | 'german' | 'english' | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [earnedTime, setEarnedTime] = useState<number>(0);
   const [earnedCategory, setEarnedCategory] = useState<string>('');
   const [showSuccess, setShowSuccess] = useState(false);
@@ -24,7 +25,7 @@ const Index = () => {
     setShowSuccess(false);
   };
 
-  const handleCategorySelect = (category: 'math' | 'german' | 'english') => {
+  const handleCategorySelect = (category: Category) => {
     setSelectedCategory(category);
   };
 
@@ -68,6 +69,12 @@ const Index = () => {
       case 'math': return 'Mathematik';
       case 'german': return 'Deutsch';
       case 'english': return 'Englisch';
+      case 'geography': return 'Geographie';
+      case 'history': return 'Geschichte';
+      case 'physics': return 'Physik';
+      case 'biology': return 'Biologie';
+      case 'chemistry': return 'Chemie';
+      case 'latin': return 'Latein';
       default: return 'Lernen';
     }
   };
@@ -77,6 +84,12 @@ const Index = () => {
       case 'math': return '🔢';
       case 'german': return '📚';
       case 'english': return '🇬🇧';
+      case 'geography': return '🌍';
+      case 'history': return '🏛️';
+      case 'physics': return '⚡';
+      case 'biology': return '🌱';
+      case 'chemistry': return '🧪';
+      case 'latin': return '🏺';
       default: return '📖';
     }
   };
@@ -191,7 +204,7 @@ const Index = () => {
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-4">
-            MathTime 📱⏰
+            LernZeit 📱⏰
           </h1>
           <p className="text-lg text-muted-foreground mb-4">
             Löse Lernaufgaben und verdiene Handyzeit!
@@ -209,14 +222,22 @@ const Index = () => {
         <Card className="max-w-md mx-auto shadow-card">
           <CardContent className="p-6 text-center">
             <div className="text-2xl mb-3">📚</div>
-            <h3 className="font-semibold mb-2">Neue Lernkategorien!</h3>
-            <ul className="text-sm text-muted-foreground space-y-1">
-              <li>🔢 Mathematik - Rechnen und Zahlen</li>
-              <li>📚 Deutsch - Sprache und Wörter</li>
-              <li>🇬🇧 Englisch - English vocabulary</li>
-              <li>✅ Individuelle Belohnungszeiten</li>
-              <li>✅ Fortschritt wird gespeichert</li>
-            </ul>
+            <h3 className="font-semibold mb-2">Alle Schulfächer verfügbar!</h3>
+            <div className="grid grid-cols-3 gap-2 text-sm text-muted-foreground">
+              <div>🔢 Mathematik</div>
+              <div>📚 Deutsch</div>
+              <div>🇬🇧 Englisch</div>
+              <div>🌍 Geographie</div>
+              <div>🏛️ Geschichte</div>
+              <div>⚡ Physik</div>
+              <div>🌱 Biologie</div>
+              <div>🧪 Chemie</div>
+              <div>🏺 Latein</div>
+            </div>
+            <div className="mt-4 space-y-1 text-sm text-muted-foreground">
+              <div>✅ Individuelle Belohnungszeiten</div>
+              <div>✅ Fortschritt wird gespeichert</div>
+            </div>
           </CardContent>
         </Card>
       </div>

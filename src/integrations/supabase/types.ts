@@ -16,37 +16,55 @@ export type Database = {
     Tables: {
       child_settings: {
         Row: {
+          biology_minutes_per_task: number
+          chemistry_minutes_per_task: number
           child_id: string
           created_at: string
           english_minutes_per_task: number
+          geography_minutes_per_task: number
           german_minutes_per_task: number
+          history_minutes_per_task: number
           id: string
+          latin_minutes_per_task: number
           math_minutes_per_task: number
           parent_id: string
+          physics_minutes_per_task: number
           updated_at: string
           weekday_max_minutes: number
           weekend_max_minutes: number
         }
         Insert: {
+          biology_minutes_per_task?: number
+          chemistry_minutes_per_task?: number
           child_id: string
           created_at?: string
           english_minutes_per_task?: number
+          geography_minutes_per_task?: number
           german_minutes_per_task?: number
+          history_minutes_per_task?: number
           id?: string
+          latin_minutes_per_task?: number
           math_minutes_per_task?: number
           parent_id: string
+          physics_minutes_per_task?: number
           updated_at?: string
           weekday_max_minutes?: number
           weekend_max_minutes?: number
         }
         Update: {
+          biology_minutes_per_task?: number
+          chemistry_minutes_per_task?: number
           child_id?: string
           created_at?: string
           english_minutes_per_task?: number
+          geography_minutes_per_task?: number
           german_minutes_per_task?: number
+          history_minutes_per_task?: number
           id?: string
+          latin_minutes_per_task?: number
           math_minutes_per_task?: number
           parent_id?: string
+          physics_minutes_per_task?: number
           updated_at?: string
           weekday_max_minutes?: number
           weekend_max_minutes?: number
@@ -222,33 +240,51 @@ export type Database = {
       }
       parent_settings: {
         Row: {
+          biology_minutes_per_task: number
+          chemistry_minutes_per_task: number
           created_at: string
           english_minutes_per_task: number
+          geography_minutes_per_task: number
           german_minutes_per_task: number
+          history_minutes_per_task: number
           id: string
+          latin_minutes_per_task: number
           math_minutes_per_task: number
+          physics_minutes_per_task: number
           updated_at: string
           user_id: string
           weekday_max_minutes: number
           weekend_max_minutes: number
         }
         Insert: {
+          biology_minutes_per_task?: number
+          chemistry_minutes_per_task?: number
           created_at?: string
           english_minutes_per_task?: number
+          geography_minutes_per_task?: number
           german_minutes_per_task?: number
+          history_minutes_per_task?: number
           id?: string
+          latin_minutes_per_task?: number
           math_minutes_per_task?: number
+          physics_minutes_per_task?: number
           updated_at?: string
           user_id: string
           weekday_max_minutes?: number
           weekend_max_minutes?: number
         }
         Update: {
+          biology_minutes_per_task?: number
+          chemistry_minutes_per_task?: number
           created_at?: string
           english_minutes_per_task?: number
+          geography_minutes_per_task?: number
           german_minutes_per_task?: number
+          history_minutes_per_task?: number
           id?: string
+          latin_minutes_per_task?: number
           math_minutes_per_task?: number
+          physics_minutes_per_task?: number
           updated_at?: string
           user_id?: string
           weekday_max_minutes?: number
