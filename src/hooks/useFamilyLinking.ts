@@ -45,15 +45,20 @@ export function useFamilyLinking() {
         .select('child_id')
         .eq('parent_id', userId);
 
+      console.log('👥 Relationships query result:', { relationships, relationshipsError });
+
       if (relationshipsError) throw relationshipsError;
 
       if (relationships && relationships.length > 0) {
         const childIds = relationships.map(rel => rel.child_id);
+        console.log('🔍 Child IDs to fetch:', childIds);
         
         const { data: children, error: childrenError } = await supabase
           .from('profiles')
           .select('id, name, grade')
           .in('id', childIds);
+
+        console.log('👶 Children query result:', { children, childrenError });
 
         if (childrenError) throw childrenError;
         console.log('👶 Loaded children:', children);
