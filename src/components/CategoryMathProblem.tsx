@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -25,7 +24,6 @@ interface CategoryMathProblemProps {
   userId: string;
 }
 
-// Improved problem generators for each category
 const generateMathProblem = (grade: number): Problem => {
   const problems: Problem[] = [];
   
@@ -570,41 +568,41 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
     setUsedQuestions(new Set()); // Reset used questions for new session
     
     for (let i = 0; i < totalQuestions; i++) {
-      let problem: Problem;
+      let generatedProblem: Problem;
       
       switch (category) {
         case 'Mathematik':
-          problem = generateUniqueQuestion(() => generateMathProblem(grade));
+          generatedProblem = generateUniqueQuestion(() => generateMathProblem(grade));
           break;
         case 'Deutsch':
-          problem = generateUniqueQuestion(() => generateGermanProblem(grade));
+          generatedProblem = generateUniqueQuestion(() => generateGermanProblem(grade));
           break;
         case 'Englisch':
-          problem = generateUniqueQuestion(() => generateEnglishProblem(grade));
+          generatedProblem = generateUniqueQuestion(() => generateEnglishProblem(grade));
           break;
         case 'Geographie':
-          problem = generateUniqueQuestion(() => generateGeographyProblem(grade));
+          generatedProblem = generateUniqueQuestion(() => generateGeographyProblem(grade));
           break;
         case 'Geschichte':
-          problem = generateUniqueQuestion(() => generateHistoryProblem(grade));
+          generatedProblem = generateUniqueQuestion(() => generateHistoryProblem(grade));
           break;
         case 'Physik':
-          problem = generateUniqueQuestion(() => generateOtherSubjectProblem('physics', grade));
+          generatedProblem = generateUniqueQuestion(() => generateOtherSubjectProblem('physics', grade));
           break;
         case 'Biologie':
-          problem = generateUniqueQuestion(() => generateOtherSubjectProblem('biology', grade));
+          generatedProblem = generateUniqueQuestion(() => generateOtherSubjectProblem('biology', grade));
           break;
         case 'Chemie':
-          problem = generateUniqueQuestion(() => generateOtherSubjectProblem('chemistry', grade));
+          generatedProblem = generateUniqueQuestion(() => generateOtherSubjectProblem('chemistry', grade));
           break;
         case 'Latein':
-          problem = generateUniqueQuestion(() => generateOtherSubjectProblem('latin', grade));
+          generatedProblem = generateUniqueQuestion(() => generateOtherSubjectProblem('latin', grade));
           break;
         default:
-          problem = generateUniqueQuestion(() => generateMathProblem(grade));
+          generatedProblem = generateUniqueQuestion(() => generateMathProblem(grade));
       }
       
-      newProblems.push(problem);
+      newProblems.push(generatedProblem);
     }
     
     setProblems(newProblems);
