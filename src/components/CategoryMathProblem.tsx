@@ -20,7 +20,7 @@ interface Problem {
 interface CategoryMathProblemProps {
   category: string;
   grade: number;
-  onComplete: (timeEarned: number) => void;
+  onComplete: (timeEarned: number, category: string) => void;
   onBack: () => void;
   userId: string;
 }
@@ -690,7 +690,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
 
       if (error) throw error;
 
-      onComplete(timeEarned);
+      onComplete(timeEarned, category);
     } catch (error: any) {
       console.error('Fehler beim Speichern der Lernsession:', error);
       toast({
