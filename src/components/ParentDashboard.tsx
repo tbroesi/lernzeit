@@ -27,7 +27,12 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
 
   useEffect(() => {
     loadFamilyData(userId);
-  }, [userId]);
+  }, [userId, loadFamilyData]);
+
+  // Add refresh button functionality
+  const handleRefresh = () => {
+    loadFamilyData(userId);
+  };
 
   const handleGenerateCode = async () => {
     setNewCodeLoading(true);
@@ -137,9 +142,19 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
       {/* Linked Children */}
       <Card className="shadow-card">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="w-5 h-5" />
-            Verknüpfte Kinder ({linkedChildren.length})
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              Verknüpfte Kinder ({linkedChildren.length})
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={loading}
+            >
+              Aktualisieren
+            </Button>
           </CardTitle>
         </CardHeader>
         <CardContent>
