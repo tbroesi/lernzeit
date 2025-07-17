@@ -103,65 +103,75 @@ export function useFamilyLinking() {
     }
   };
 
-  // Use invitation code (for children)
+  // Use invitation code (for children) - NEUE EINFACHE LOGIK
   const useInvitationCode = async (code: string, childId: string): Promise<boolean> => {
     setLoading(true);
-    console.log('🔗 Attempting to use invitation code:', code, 'for child:', childId);
+    console.log('🔗 Starting invitation code claim:', { code, childId });
     
     try {
-      // First, check if code exists and is valid
-      console.log('🔍 Searching for code in database...');
-      const { data: inviteData, error: findError } = await supabase
-        .from('invitation_codes')
-        .select('*')
-        .eq('code', code)
-        .eq('is_used', false)
-        .gt('expires_at', new Date().toISOString())
-        .single();
-
-      console.log('📋 Code search result:', { inviteData, findError });
-
-      if (findError || !inviteData) {
-        console.log('❌ Code not found or error:', findError);
-        const errorMessage = findError?.message || 'Code nicht gefunden';
-        toast({
-          title: "Ungültiger Code",
-          description: `Der Code ist nicht gültig oder abgelaufen. Fehler: ${errorMessage}`,
-          variant: "destructive",
-        });
-        return false;
-      }
-
-      // Update the invitation code
-      console.log('✅ Code found, updating invitation code...');
-      const { error: updateError } = await supabase
+      // SCHRITT 1: Einfach den Code direkt beanspruchen (eine einzige Operation)
+      console.log('⚡ Claiming code directly...');
+      const { data: updatedCode, error: claimError } = await supabase
         .from('invitation_codes')
         .update({
           child_id: childId,
           is_used: true,
           used_at: new Date().toISOString()
         })
-        .eq('id', inviteData.id);
+        .eq('code', code)
+        .eq('is_used', false)
+        .gt('expires_at', new Date().toISOString())
+        .select('*')
+        .single();
 
-      console.log('📝 Update result:', { updateError });
-      if (updateError) throw updateError;
+      console.log('📝 Claim result:', { updatedCode, claimError });
 
-      // Create parent-child relationship
+      if (claimError) {
+        console.log('❌ Claim failed:', claimError.message);
+        toast({
+          title: "Ungültiger Code",
+          description: "Der Code ist nicht gültig, bereits verwendet oder abgelaufen.",
+          variant: "destructive",
+        });
+        return false;
+      }
+
+      if (!updatedCode) {
+        console.log('❌ No code updated - probably invalid');
+        toast({
+          title: "Ungültiger Code",
+          description: "Der Code wurde nicht gefunden oder ist nicht mehr verfügbar.",
+          variant: "destructive",
+        });
+        return false;
+      }
+
+      // SCHRITT 2: Parent-Child Beziehung erstellen
       console.log('🔗 Creating parent-child relationship...');
       const { error: relationshipError } = await supabase
         .from('parent_child_relationships')
         .insert({
-          parent_id: inviteData.parent_id,
+          parent_id: updatedCode.parent_id,
           child_id: childId
         });
 
-      console.log('👨‍👩‍👧‍👦 Relationship result:', { relationshipError });
       if (relationshipError) {
-        console.error('Relationship creation failed:', relationshipError);
+        console.error('❌ Relationship creation failed:', relationshipError);
+        
+        // Rollback: Code wieder freigeben
+        await supabase
+          .from('invitation_codes')
+          .update({
+            child_id: null,
+            is_used: false,
+            used_at: null
+          })
+          .eq('id', updatedCode.id);
+
         throw relationshipError;
       }
 
-      console.log('🎉 All operations successful!');
+      console.log('🎉 Successfully linked!');
       toast({
         title: "Erfolgreich verknüpft!",
         description: "Du bist jetzt mit einem Elternteil verbunden.",
