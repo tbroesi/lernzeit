@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      achievements_template: {
+        Row: {
+          category: Database["public"]["Enums"]["achievement_category"]
+          color: string
+          created_at: string
+          description: string
+          icon: string
+          id: string
+          name: string
+          requirement_value: number
+          reward_minutes: number
+          type: Database["public"]["Enums"]["achievement_type"]
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["achievement_category"]
+          color?: string
+          created_at?: string
+          description: string
+          icon?: string
+          id?: string
+          name: string
+          requirement_value: number
+          reward_minutes?: number
+          type: Database["public"]["Enums"]["achievement_type"]
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["achievement_category"]
+          color?: string
+          created_at?: string
+          description?: string
+          icon?: string
+          id?: string
+          name?: string
+          requirement_value?: number
+          reward_minutes?: number
+          type?: Database["public"]["Enums"]["achievement_type"]
+        }
+        Relationships: []
+      }
       child_settings: {
         Row: {
           biology_minutes_per_task: number
@@ -319,6 +358,44 @@ export type Database = {
         }
         Relationships: []
       }
+      user_achievements: {
+        Row: {
+          achievement_id: string
+          created_at: string
+          current_progress: number
+          earned_at: string
+          id: string
+          is_completed: boolean
+          user_id: string
+        }
+        Insert: {
+          achievement_id: string
+          created_at?: string
+          current_progress?: number
+          earned_at?: string
+          id?: string
+          is_completed?: boolean
+          user_id: string
+        }
+        Update: {
+          achievement_id?: string
+          created_at?: string
+          current_progress?: number
+          earned_at?: string
+          id?: string
+          is_completed?: boolean
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_achievements_achievement_id_fkey"
+            columns: ["achievement_id"]
+            isOneToOne: false
+            referencedRelation: "achievements_template"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -336,9 +413,35 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      update_achievement_progress: {
+        Args: {
+          p_user_id: string
+          p_category: string
+          p_type: string
+          p_increment?: number
+        }
+        Returns: Json
+      }
     }
     Enums: {
-      [_ in never]: never
+      achievement_category:
+        | "math"
+        | "german"
+        | "english"
+        | "geography"
+        | "history"
+        | "physics"
+        | "biology"
+        | "chemistry"
+        | "latin"
+        | "general"
+      achievement_type:
+        | "questions_solved"
+        | "time_earned"
+        | "streak"
+        | "accuracy"
+        | "speed"
+        | "milestone"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -465,6 +568,27 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      achievement_category: [
+        "math",
+        "german",
+        "english",
+        "geography",
+        "history",
+        "physics",
+        "biology",
+        "chemistry",
+        "latin",
+        "general",
+      ],
+      achievement_type: [
+        "questions_solved",
+        "time_earned",
+        "streak",
+        "accuracy",
+        "speed",
+        "milestone",
+      ],
+    },
   },
 } as const

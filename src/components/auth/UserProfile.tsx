@@ -13,6 +13,7 @@ import { ParentDashboard } from '@/components/ParentDashboard';
 import { ChildLinking } from '@/components/ChildLinking';
 import { ChildSettingsMenu } from '@/components/ChildSettingsMenu';
 import { ParentSettingsMenu } from '@/components/ParentSettingsMenu';
+import { AchievementsBadge } from '@/components/AchievementsBadge';
 import { useChildSettings } from '@/hooks/useChildSettings';
 import { useScreenTimeLimit } from '@/hooks/useScreenTimeLimit';
 
@@ -318,6 +319,9 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
               </CardContent>
             </Card>
           </div>
+
+          {/* Achievements Badge */}
+          <AchievementsBadge userId={user.id} />
 
           {/* Quick Actions */}
           <div className="grid grid-cols-2 gap-4">

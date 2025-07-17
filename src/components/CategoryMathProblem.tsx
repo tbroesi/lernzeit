@@ -8,6 +8,8 @@ import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { useChildSettings } from '@/hooks/useChildSettings';
 import { useScreenTimeLimit } from '@/hooks/useScreenTimeLimit';
+import { useAchievements, NewAchievement } from '@/hooks/useAchievements';
+import { AchievementPopup } from '@/components/AchievementPopup';
 
 interface Problem {
   id: number;
@@ -625,9 +627,12 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [gameStarted, setGameStarted] = useState(false);
   const [usedQuestions, setUsedQuestions] = useState<Set<string>>(new Set());
+  const [newAchievements, setNewAchievements] = useState<NewAchievement[]>([]);
+  const [showAchievementPopup, setShowAchievementPopup] = useState(false);
   const { toast } = useToast();
   const { settings } = useChildSettings(userId);
   const { canEarnMoreTime, isAtLimit, remainingMinutes, getDailyLimit } = useScreenTimeLimit(userId);
+  const { updateProgress } = useAchievements(userId);
 
   const totalQuestions = 5;
 
@@ -807,6 +812,9 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
 
       if (error) throw error;
 
+      // Update achievements after successful session save
+      await updateAchievements();
+
       onComplete(timeEarned, category);
     } catch (error: any) {
       console.error('Fehler beim Speichern der Lernsession:', error);
@@ -816,6 +824,64 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
         variant: "destructive",
       });
     }
+  };
+
+  const updateAchievements = async () => {
+    // Map category names to achievement categories
+    const categoryMap: { [key: string]: string } = {
+      'Mathematik': 'math',
+      'Deutsch': 'german',
+      'Englisch': 'english',
+      'Geographie': 'geography',
+      'Geschichte': 'history',
+      'Physik': 'physics',
+      'Biologie': 'biology',
+      'Chemie': 'chemistry',
+      'Latein': 'latin'
+    };
+
+    const achievementCategory = categoryMap[category] || 'general';
+    
+    try {
+      const achievements: NewAchievement[] = [];
+
+      // Update questions solved achievements
+      const questionAchievements = await updateProgress(
+        achievementCategory, 
+        'questions_solved', 
+        correctAnswers
+      );
+      achievements.push(...questionAchievements);
+
+      // Update time earned achievements (only if time was actually earned)
+      if (correctAnswers > 0) {
+        const timeAchievements = await updateProgress(
+          'general', 
+          'time_earned', 
+          Math.max(0, correctAnswers * (settings?.[categoryMapping[category] as keyof typeof settings] || 5))
+        );
+        achievements.push(...timeAchievements);
+      }
+
+      if (achievements.length > 0) {
+        setNewAchievements(achievements);
+        setShowAchievementPopup(true);
+      }
+    } catch (error) {
+      console.error('Error updating achievements:', error);
+    }
+  };
+
+  const categoryMapping: { [key: string]: keyof typeof settings } = {
+    'Mathematik': 'math_minutes_per_task',
+    'Deutsch': 'german_minutes_per_task',
+    'Englisch': 'english_minutes_per_task',
+    'Geographie': 'geography_minutes_per_task',
+    'Geschichte': 'history_minutes_per_task',
+    'Physik': 'physics_minutes_per_task',
+    'Biologie': 'biology_minutes_per_task',
+    'Chemie': 'chemistry_minutes_per_task',
+    'Latein': 'latin_minutes_per_task'
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -841,8 +907,16 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
   }
 
   return (
-    <div className="min-h-screen bg-gradient-bg p-4">
-      <div className="max-w-2xl mx-auto space-y-6">
+    <>
+      {showAchievementPopup && (
+        <AchievementPopup 
+          achievements={newAchievements}
+          onClose={() => setShowAchievementPopup(false)}
+        />
+      )}
+      
+      <div className="min-h-screen bg-gradient-bg p-4">
+        <div className="max-w-2xl mx-auto space-y-6">
         {/* Header */}
         <Card className="shadow-card">
           <CardHeader>
@@ -950,7 +1024,8 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
             </div>
           </CardContent>
         </Card>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

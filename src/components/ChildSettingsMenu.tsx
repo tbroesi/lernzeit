@@ -23,6 +23,7 @@ import { ScreenTimeWidget } from '@/components/ScreenTimeWidget';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { useChildSettings } from '@/hooks/useChildSettings';
+import { useAchievements } from '@/hooks/useAchievements';
 
 interface ChildSettingsMenuProps {
   user: any;
@@ -46,6 +47,7 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack }: ChildSet
   
   // Use the existing useChildSettings hook 
   const { settings, loading: settingsLoading } = useChildSettings(user?.id || '');
+  const { userAchievements, getCompletedAchievements, getTotalRewardMinutes, loading: achievementsLoading } = useAchievements(user?.id);
 
   useEffect(() => {
     if (user?.id && !settingsLoading) {
@@ -404,39 +406,117 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack }: ChildSet
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
-                    <Star className="w-8 h-8 text-yellow-500" />
-                    <div>
-                      <div className="font-medium">Lern-Einsteiger</div>
-                      <div className="text-sm text-muted-foreground">Erste Aufgabe gelöst!</div>
+                {achievementsLoading ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+                    <p>Lade deine Erfolge...</p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Achievement Statistics */}
+                    <div className="grid grid-cols-2 gap-4 mb-6">
+                      <div className="p-3 bg-gradient-to-r from-green-100 to-blue-100 rounded-lg text-center">
+                        <div className="text-2xl font-bold text-green-800">
+                          {getCompletedAchievements().length}
+                        </div>
+                        <div className="text-sm text-green-700">Erfolge erreicht</div>
+                      </div>
+                      <div className="p-3 bg-gradient-to-r from-purple-100 to-pink-100 rounded-lg text-center">
+                        <div className="text-2xl font-bold text-purple-800">
+                          {getTotalRewardMinutes()}
+                        </div>
+                        <div className="text-sm text-purple-700">Bonus-Minuten</div>
+                      </div>
                     </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg opacity-50">
-                    <Target className="w-8 h-8 text-muted-foreground" />
-                    <div>
-                      <div className="font-medium text-muted-foreground">Mathe-Meister</div>
-                      <div className="text-sm text-muted-foreground">10 Mathe-Aufgaben lösen</div>
+
+                    {/* Achievement Categories */}
+                    <div className="space-y-6">
+                      {['math', 'german', 'english', 'general'].map(category => {
+                        const categoryAchievements = userAchievements.filter(ach => ach.category === category);
+                        const categoryName = {
+                          'math': 'Mathematik 🧮',
+                          'german': 'Deutsch 📚',
+                          'english': 'English 🇬🇧',
+                          'general': 'Allgemein 🎯'
+                        }[category];
+
+                        if (categoryAchievements.length === 0) return null;
+
+                        return (
+                          <div key={category}>
+                            <h4 className="font-medium text-sm mb-3 text-muted-foreground">
+                              {categoryName}
+                            </h4>
+                            <div className="space-y-2">
+                              {categoryAchievements.map((achievement) => (
+                                <div 
+                                  key={achievement.id}
+                                  className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                                    achievement.is_completed 
+                                      ? 'bg-muted/30 border-primary/20' 
+                                      : 'bg-muted/10 border-muted/30 opacity-60'
+                                  }`}
+                                  style={achievement.is_completed ? { 
+                                    borderLeftColor: achievement.color,
+                                    borderLeftWidth: '3px'
+                                  } : {}}
+                                >
+                                  <div className="text-2xl">{achievement.icon}</div>
+                                  <div className="flex-1">
+                                    <div className={`font-medium ${achievement.is_completed ? '' : 'text-muted-foreground'}`}>
+                                      {achievement.name}
+                                    </div>
+                                    <div className="text-sm text-muted-foreground">
+                                      {achievement.description}
+                                    </div>
+                                    {!achievement.is_completed && achievement.current_progress !== undefined && (
+                                      <div className="text-xs text-muted-foreground mt-1">
+                                        Fortschritt: {achievement.current_progress} / {achievement.requirement_value}
+                                      </div>
+                                    )}
+                                    {achievement.is_completed && achievement.reward_minutes > 0 && (
+                                      <div className="text-xs font-medium text-primary mt-1">
+                                        +{achievement.reward_minutes} Minuten Belohnung!
+                                      </div>
+                                    )}
+                                  </div>
+                                  {achievement.is_completed && (
+                                    <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                                      <Star className="w-4 h-4 text-white fill-current" />
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg opacity-50">
-                    <Clock className="w-8 h-8 text-muted-foreground" />
-                    <div>
-                      <div className="font-medium text-muted-foreground">Zeit-Sammler</div>
-                      <div className="text-sm text-muted-foreground">100 Minuten sammeln</div>
+
+                    {userAchievements.length === 0 && (
+                      <div className="text-center py-8">
+                        <div className="text-4xl mb-4">🎯</div>
+                        <div className="font-medium mb-2">Noch keine Erfolge</div>
+                        <div className="text-sm text-muted-foreground">
+                          Löse deine ersten Aufgaben, um Erfolge zu sammeln!
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
+                      <div className="text-center">
+                        <div className="text-2xl mb-2">🎯</div>
+                        <div className="font-medium text-blue-900">Weiter so!</div>
+                        <div className="text-sm text-blue-700">
+                          {getCompletedAchievements().length > 0 
+                            ? `Du hast bereits ${getCompletedAchievements().length} Erfolge erreicht!`
+                            : 'Du bist auf einem guten Weg!'
+                          }
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-                
-                <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
-                  <div className="text-center">
-                    <div className="text-2xl mb-2">🎯</div>
-                    <div className="font-medium text-blue-900">Weiter so!</div>
-                    <div className="text-sm text-blue-700">Du bist auf einem guten Weg!</div>
-                  </div>
-                </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           )}
