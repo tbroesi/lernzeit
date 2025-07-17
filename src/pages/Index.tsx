@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { GradeSelector } from '@/components/GradeSelector';
 import { CategorySelector } from '@/components/CategorySelector';
-import { CategoryLearningProblem } from '@/components/CategoryLearningProblem';
+import { CategoryMathProblem as CategoryLearningProblem } from '@/components/CategoryMathProblem';
 import { AuthForm } from '@/components/auth/AuthForm';
 import { UserProfile } from '@/components/auth/UserProfile';
 import { AchievementsBadge } from '@/components/AchievementsBadge';
