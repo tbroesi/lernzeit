@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Clock, Star, CheckCircle, XCircle, ArrowLeft } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 interface Problem {
   question: string;
@@ -16,6 +17,7 @@ interface MathProblemProps {
   grade: number;
   onBack: () => void;
   onComplete: (earnedMinutes: number) => void;
+  userId?: string;
 }
 
 const generateProblem = (grade: number): Problem => {
@@ -130,7 +132,7 @@ const generateUniqueProblems = (grade: number, count: number = 10): Problem[] =>
   return problems;
 };
 
-export function MathProblem({ grade, onBack, onComplete }: MathProblemProps) {
+export function MathProblem({ grade, onBack, onComplete, userId }: MathProblemProps) {
   const [problems] = useState<Problem[]>(() => generateUniqueProblems(grade, 10));
   const [currentProblemIndex, setCurrentProblemIndex] = useState(0);
   const [userAnswer, setUserAnswer] = useState('');
@@ -159,6 +161,24 @@ export function MathProblem({ grade, onBack, onComplete }: MathProblemProps) {
     return { earnedMinutes, timeSpentMinutes, netMinutes };
   };
 
+  const saveGameSession = async (netMinutes: number) => {
+    if (!userId) return;
+
+    try {
+      await supabase.from('game_sessions').insert([{
+        user_id: userId,
+        grade: grade,
+        correct_answers: correctAnswers,
+        total_questions: targetQuestions,
+        time_spent: totalTimeSpent,
+        time_earned: netMinutes,
+        session_date: new Date().toISOString(),
+      }]);
+    } catch (error) {
+      console.error('Fehler beim Speichern der Spielsession:', error);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const answer = parseInt(userAnswer);
@@ -176,8 +196,9 @@ export function MathProblem({ grade, onBack, onComplete }: MathProblemProps) {
       
       if (totalQuestions + 1 >= targetQuestions) {
         // Session beendet
-        setTimeout(() => {
+        setTimeout(async () => {
           const { netMinutes } = calculateReward();
+          await saveGameSession(netMinutes);
           onComplete(netMinutes);
         }, 1500);
         return;
