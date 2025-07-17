@@ -19,7 +19,7 @@ interface Problem {
   explanation?: string;
 }
 
-interface CategoryMathProblemProps {
+interface CategoryLearningProblemProps {
   category: string;
   grade: number;
   onComplete: (timeEarned: number, category: string) => void;
@@ -618,7 +618,7 @@ const generateOtherSubjectProblem = (category: string, grade: number): Problem =
   };
 };
 
-export function CategoryMathProblem({ category, grade, onComplete, onBack, userId }: CategoryMathProblemProps) {
+export function CategoryLearningProblem({ category, grade, onComplete, onBack, userId }: CategoryLearningProblemProps) {
   const [problems, setProblems] = useState<Problem[]>([]);
   const [currentProblem, setCurrentProblem] = useState(0);
   const [userAnswer, setUserAnswer] = useState('');

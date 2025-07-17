@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { GradeSelector } from '@/components/GradeSelector';
 import { CategorySelector } from '@/components/CategorySelector';
-import { CategoryMathProblem } from '@/components/CategoryMathProblem';
+import { CategoryLearningProblem } from '@/components/CategoryLearningProblem';
 import { AuthForm } from '@/components/auth/AuthForm';
 import { UserProfile } from '@/components/auth/UserProfile';
 import { AchievementsBadge } from '@/components/AchievementsBadge';
@@ -203,7 +203,7 @@ const Index = () => {
     console.log('🔄 Converting category:', selectedCategory, '→', germanCategoryName);
     
     return (
-      <CategoryMathProblem 
+      <CategoryLearningProblem 
         grade={selectedGrade}
         category={germanCategoryName}
         onBack={handleBackToGradeSelection}

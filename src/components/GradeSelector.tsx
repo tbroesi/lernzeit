@@ -29,7 +29,7 @@ export function GradeSelector({ onSelectGrade }: GradeSelectorProps) {
             MathTime 📱⏰
           </h1>
           <p className="text-lg text-muted-foreground mb-2">
-            Löse Mathe-Aufgaben und verdiene Handyzeit!
+            Löse Lernaufgaben und verdiene Handyzeit!
           </p>
           <div className="flex items-center justify-center gap-6 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">

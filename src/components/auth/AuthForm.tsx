@@ -96,7 +96,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
             MathTime 📱⏰
           </CardTitle>
           <p className="text-muted-foreground">
-            Dein persönlicher Mathe-Assistent
+            Dein persönlicher Lern-Assistent
           </p>
         </CardHeader>
         <CardContent>
