@@ -108,6 +108,12 @@ export function useFamilyLinking() {
     setLoading(true);
     console.log('🔗 Starting invitation code claim:', { code, childId });
     
+    // ERSTE DEBUG: Aktuelle User-ID prüfen
+    const { data: { user } } = await supabase.auth.getUser();
+    console.log('🔍 Current authenticated user:', user?.id);
+    console.log('🔍 Provided childId:', childId);
+    console.log('🔍 User match:', user?.id === childId);
+    
     try {
       // SCHRITT 1: Einfach den Code direkt beanspruchen (eine einzige Operation)
       console.log('⚡ Claiming code directly...');
