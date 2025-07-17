@@ -130,10 +130,7 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
   if (profile?.role === 'parent' && showSettingsMenu) {
     return (
       <ParentSettingsMenu 
-        user={user} 
-        profile={profile} 
-        onSignOut={onSignOut} 
-        onBack={() => setShowSettingsMenu(false)} 
+        userId={user.id}
       />
     );
   }

@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      child_settings: {
+        Row: {
+          child_id: string
+          created_at: string
+          id: string
+          parent_id: string
+          updated_at: string
+          weekday_max_minutes: number
+          weekend_max_minutes: number
+        }
+        Insert: {
+          child_id: string
+          created_at?: string
+          id?: string
+          parent_id: string
+          updated_at?: string
+          weekday_max_minutes?: number
+          weekend_max_minutes?: number
+        }
+        Update: {
+          child_id?: string
+          created_at?: string
+          id?: string
+          parent_id?: string
+          updated_at?: string
+          weekday_max_minutes?: number
+          weekend_max_minutes?: number
+        }
+        Relationships: []
+      }
       game_sessions: {
         Row: {
           correct_answers: number

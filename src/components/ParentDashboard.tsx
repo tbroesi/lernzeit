@@ -1,12 +1,9 @@
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useFamilyLinking } from '@/hooks/useFamilyLinking';
-import { Copy, Plus, Trash2, Users, Clock, QrCode } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { RefreshCw, Settings, Users, Clock, TrendingUp } from 'lucide-react';
 
 interface ParentDashboardProps {
   userId: string;
@@ -15,214 +12,163 @@ interface ParentDashboardProps {
 export function ParentDashboard({ userId }: ParentDashboardProps) {
   const {
     loading,
-    invitationCodes,
     linkedChildren,
     loadFamilyData,
-    generateInvitationCode,
-    removeChildLink,
   } = useFamilyLinking();
-  
-  const [newCodeLoading, setNewCodeLoading] = useState(false);
-  const { toast } = useToast();
 
+  // Load family data when component mounts
   useEffect(() => {
     console.log('🔄 ParentDashboard: Loading family data for userId:', userId);
-    loadFamilyData(userId);
-  }, [userId]); // Removed loadFamilyData from dependencies to prevent infinite rerenders
+    if (userId) {
+      loadFamilyData(userId);
+    }
+  }, [userId, loadFamilyData]);
 
-  // Add refresh button functionality
+  // Event handlers
   const handleRefresh = () => {
     loadFamilyData(userId);
   };
 
-  const handleGenerateCode = async () => {
-    setNewCodeLoading(true);
-    await generateInvitationCode(userId);
-    setNewCodeLoading(false);
-  };
-
-  const copyToClipboard = (code: string) => {
-    navigator.clipboard.writeText(code);
-    toast({
-      title: "Code kopiert!",
-      description: `Code ${code} wurde in die Zwischenablage kopiert.`,
-    });
-  };
-
-  const formatTimeRemaining = (expiresAt: string) => {
-    const now = new Date();
-    const expiry = new Date(expiresAt);
-    const diffMs = expiry.getTime() - now.getTime();
-    const diffMins = Math.floor(diffMs / (1000 * 60));
-    
-    if (diffMins <= 0) return "Abgelaufen";
-    if (diffMins < 60) return `${diffMins} Min`;
-    return `${Math.floor(diffMins / 60)}h ${diffMins % 60}m`;
-  };
-
-  const activeInvitationCodes = invitationCodes.filter(
-    code => !code.is_used && new Date(code.expires_at) > new Date()
-  );
-
-  const usedInvitationCodes = invitationCodes.filter(code => code.is_used);
-
   return (
     <div className="space-y-6">
-      {/* Generate Invitation Code */}
-      <Card className="shadow-card">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <QrCode className="w-5 h-5" />
-            Einladungscode erstellen
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-muted-foreground text-sm">
-            Erstellen Sie einen 6-stelligen Code, den Ihr Kind eingeben kann, um sein Konto zu verknüpfen.
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Eltern-Dashboard</h1>
+          <p className="text-muted-foreground">
+            Übersicht über Ihre verknüpften Kinder
           </p>
-          <Button 
-            onClick={handleGenerateCode}
-            disabled={newCodeLoading}
-            className="w-full"
-            variant="default"
-          >
-            {newCodeLoading ? (
-              "Code wird erstellt..."
-            ) : (
-              <>
-                <Plus className="w-4 h-4 mr-2" />
-                Neuen Code erstellen
-              </>
-            )}
-          </Button>
-        </CardContent>
-      </Card>
+        </div>
+        <Button 
+          variant="outline" 
+          onClick={handleRefresh}
+          disabled={loading}
+        >
+          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+          Aktualisieren
+        </Button>
+      </div>
 
-      {/* Active Invitation Codes */}
-      {activeInvitationCodes.length > 0 && (
-        <Card className="shadow-card">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="w-5 h-5" />
-              Aktive Einladungscodes
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {activeInvitationCodes.map((code) => (
-              <div
-                key={code.id}
-                className="flex items-center justify-between p-4 border rounded-lg bg-primary/5"
-              >
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl font-mono font-bold text-primary">
-                      {code.code}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => copyToClipboard(code.code)}
-                    >
-                      <Copy className="w-4 h-4" />
-                    </Button>
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    Läuft ab in: {formatTimeRemaining(code.expires_at)}
-                  </div>
-                </div>
-                <Badge variant="default">Aktiv</Badge>
-              </div>
-            ))}
-            <p className="text-xs text-muted-foreground">
-              💡 Geben Sie diesen Code an Ihr Kind weiter, damit es sein Konto verknüpfen kann.
-            </p>
+      {/* Quick Stats */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardContent className="flex items-center p-6">
+            <Users className="h-8 w-8 text-primary" />
+            <div className="ml-4">
+              <div className="text-2xl font-bold">{linkedChildren.length}</div>
+              <div className="text-sm text-muted-foreground">Verknüpfte Kinder</div>
+            </div>
           </CardContent>
         </Card>
-      )}
 
-      {/* Linked Children */}
-      <Card className="shadow-card">
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Users className="w-5 h-5" />
-              Verknüpfte Kinder ({linkedChildren.length})
+        <Card>
+          <CardContent className="flex items-center p-6">
+            <Clock className="h-8 w-8 text-blue-500" />
+            <div className="ml-4">
+              <div className="text-2xl font-bold">30</div>
+              <div className="text-sm text-muted-foreground">Minuten heute</div>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleRefresh}
-              disabled={loading}
-            >
-              Aktualisieren
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="flex items-center p-6">
+            <TrendingUp className="h-8 w-8 text-green-500" />
+            <div className="ml-4">
+              <div className="text-2xl font-bold">85%</div>
+              <div className="text-sm text-muted-foreground">Fortschritt</div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Kinder verwalten
+            </CardTitle>
+            <CardDescription>
+              Neue Kinder hinzufügen oder bestehende Verbindungen verwalten
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button variant="outline" className="w-full">
+              <Settings className="h-4 w-4 mr-2" />
+              Zu den Einstellungen
             </Button>
-          </CardTitle>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              Zeitlimits
+            </CardTitle>
+            <CardDescription>
+              Individuelle Bildschirmzeiten für jedes Kind festlegen
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button variant="outline" className="w-full">
+              <Settings className="h-4 w-4 mr-2" />
+              Limits konfigurieren
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Linked Children Overview */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Verknüpfte Kinder</CardTitle>
+          <CardDescription>
+            Übersicht über alle mit Ihrem Konto verbundenen Kinder
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {linkedChildren.length === 0 ? (
             <div className="text-center py-8">
-              <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">
+              <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground mb-4">
                 Noch keine Kinder verknüpft.
               </p>
-              <p className="text-sm text-muted-foreground mt-2">
-                Erstellen Sie einen Einladungscode, damit Ihr Kind sein Konto verbinden kann.
-              </p>
+              <Button variant="outline">
+                <Settings className="h-4 w-4 mr-2" />
+                Kind hinzufügen
+              </Button>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="grid gap-4">
               {linkedChildren.map((child) => (
-                <div
-                  key={child.id}
-                  className="flex items-center justify-between p-4 border rounded-lg"
-                >
-                  <div className="space-y-1">
-                    <div className="font-medium">{child.name}</div>
-                    <div className="text-sm text-muted-foreground">
-                      Klasse {child.grade}
+                <Card key={child.id} className="border border-border">
+                  <CardContent className="flex items-center justify-between p-4">
+                    <div className="flex items-center gap-4">
+                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Users className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <div className="font-medium">{child.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          Klasse {child.grade}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary">Verknüpft</Badge>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeChildLink(userId, child.id)}
-                      disabled={loading}
-                    >
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </Button>
-                  </div>
-                </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary">Verknüpft</Badge>
+                      <Button variant="ghost" size="sm">
+                        <Settings className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
               ))}
             </div>
           )}
         </CardContent>
       </Card>
-
-      {/* Used Codes History */}
-      {usedInvitationCodes.length > 0 && (
-        <Card className="shadow-card">
-          <CardHeader>
-            <CardTitle className="text-sm text-muted-foreground">
-              Verwendete Codes
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {usedInvitationCodes.slice(0, 3).map((code) => (
-                <div
-                  key={code.id}
-                  className="flex items-center justify-between p-2 text-sm"
-                >
-                  <span className="font-mono">{code.code}</span>
-                  <Badge variant="outline">Verwendet</Badge>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }
