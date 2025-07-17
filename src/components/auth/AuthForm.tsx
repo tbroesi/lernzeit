@@ -29,9 +29,9 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     setLoading(true);
 
     try {
-      // Für Username-Modus verwenden wir eine echte Test-Domain
+      // Für Username-Modus generieren wir eine konsistente E-Mail
       const authEmail = authMode === 'username' 
-        ? `${username}@example.com` 
+        ? `${username}@mathtime.internal` 
         : email;
 
       const { data, error } = await supabase.auth.signUp({
@@ -80,9 +80,9 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     setLoading(true);
 
     try {
-      // Für Username-Modus verwenden wir die Test-Domain
+      // Für Username-Modus verwenden wir die gleiche Domain wie bei der Registrierung
       const authEmail = authMode === 'username' 
-        ? `${username}@example.com` 
+        ? `${username}@mathtime.internal` 
         : email;
 
       const { data, error } = await supabase.auth.signInWithPassword({
