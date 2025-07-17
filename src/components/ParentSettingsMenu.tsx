@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { useFamilyLinking } from '@/hooks/useFamilyLinking';
 import { supabase } from '@/lib/supabase';
-import { Loader2, Save, Plus, Copy, Users, Key, Trash2, RefreshCw, Settings, Calendar, Clock } from 'lucide-react';
+import { Loader2, Save, Plus, Copy, Users, Key, Trash2, RefreshCw, Settings, Calendar, Clock, ArrowLeft } from 'lucide-react';
 
 interface ParentSettings {
   weekday_max_minutes: number;
@@ -25,9 +25,10 @@ interface ChildSettings {
 
 interface ParentSettingsMenuProps {
   userId: string;
+  onBack?: () => void;
 }
 
-export function ParentSettingsMenu({ userId }: ParentSettingsMenuProps) {
+export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) {
   const [settings, setSettings] = useState<ParentSettings>({
     weekday_max_minutes: 30,
     weekend_max_minutes: 60,
@@ -284,6 +285,16 @@ export function ParentSettingsMenu({ userId }: ParentSettingsMenuProps) {
 
   return (
     <div className="max-w-4xl mx-auto">
+      <div className="flex items-center gap-4 mb-6">
+        {onBack && (
+          <Button variant="ghost" onClick={onBack}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Zurück
+          </Button>
+        )}
+        <h1 className="text-2xl font-bold">Einstellungen</h1>
+      </div>
+
       <Tabs defaultValue="family" className="space-y-6">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="family">Familie</TabsTrigger>

@@ -131,6 +131,7 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
     return (
       <ParentSettingsMenu 
         userId={user.id}
+        onBack={() => setShowSettingsMenu(false)}
       />
     );
   }
