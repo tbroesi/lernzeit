@@ -18,7 +18,10 @@ export type Database = {
         Row: {
           child_id: string
           created_at: string
+          english_minutes_per_task: number
+          german_minutes_per_task: number
           id: string
+          math_minutes_per_task: number
           parent_id: string
           updated_at: string
           weekday_max_minutes: number
@@ -27,7 +30,10 @@ export type Database = {
         Insert: {
           child_id: string
           created_at?: string
+          english_minutes_per_task?: number
+          german_minutes_per_task?: number
           id?: string
+          math_minutes_per_task?: number
           parent_id: string
           updated_at?: string
           weekday_max_minutes?: number
@@ -36,7 +42,10 @@ export type Database = {
         Update: {
           child_id?: string
           created_at?: string
+          english_minutes_per_task?: number
+          german_minutes_per_task?: number
           id?: string
+          math_minutes_per_task?: number
           parent_id?: string
           updated_at?: string
           weekday_max_minutes?: number
@@ -136,6 +145,45 @@ export type Database = {
           },
         ]
       }
+      learning_sessions: {
+        Row: {
+          category: string
+          correct_answers: number
+          created_at: string
+          grade: number
+          id: string
+          session_date: string
+          time_earned: number
+          time_spent: number
+          total_questions: number
+          user_id: string
+        }
+        Insert: {
+          category: string
+          correct_answers?: number
+          created_at?: string
+          grade: number
+          id?: string
+          session_date?: string
+          time_earned?: number
+          time_spent?: number
+          total_questions?: number
+          user_id: string
+        }
+        Update: {
+          category?: string
+          correct_answers?: number
+          created_at?: string
+          grade?: number
+          id?: string
+          session_date?: string
+          time_earned?: number
+          time_spent?: number
+          total_questions?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       parent_child_relationships: {
         Row: {
           child_id: string | null
@@ -175,7 +223,10 @@ export type Database = {
       parent_settings: {
         Row: {
           created_at: string
+          english_minutes_per_task: number
+          german_minutes_per_task: number
           id: string
+          math_minutes_per_task: number
           updated_at: string
           user_id: string
           weekday_max_minutes: number
@@ -183,7 +234,10 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          english_minutes_per_task?: number
+          german_minutes_per_task?: number
           id?: string
+          math_minutes_per_task?: number
           updated_at?: string
           user_id: string
           weekday_max_minutes?: number
@@ -191,7 +245,10 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          english_minutes_per_task?: number
+          german_minutes_per_task?: number
           id?: string
+          math_minutes_per_task?: number
           updated_at?: string
           user_id?: string
           weekday_max_minutes?: number

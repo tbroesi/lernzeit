@@ -1,6 +1,8 @@
+
 import React, { useState } from 'react';
 import { GradeSelector } from '@/components/GradeSelector';
-import { MathProblem } from '@/components/MathProblem';
+import { CategorySelector } from '@/components/CategorySelector';
+import { CategoryMathProblem } from '@/components/CategoryMathProblem';
 import { AuthForm } from '@/components/auth/AuthForm';
 import { UserProfile } from '@/components/auth/UserProfile';
 import { Card, CardContent } from '@/components/ui/card';
@@ -11,13 +13,19 @@ import { Trophy, Clock, RotateCcw } from 'lucide-react';
 const Index = () => {
   const { user, loading } = useAuth();
   const [selectedGrade, setSelectedGrade] = useState<number | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<'math' | 'german' | 'english' | null>(null);
   const [earnedTime, setEarnedTime] = useState<number>(0);
+  const [earnedCategory, setEarnedCategory] = useState<string>('');
   const [showSuccess, setShowSuccess] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
 
   const handleGradeSelect = (grade: number) => {
     setSelectedGrade(grade);
     setShowSuccess(false);
+  };
+
+  const handleCategorySelect = (category: 'math' | 'german' | 'english') => {
+    setSelectedCategory(category);
   };
 
   const handleStartGame = (grade: number) => {
@@ -30,18 +38,47 @@ const Index = () => {
 
   const handleSignOut = () => {
     setSelectedGrade(null);
+    setSelectedCategory(null);
     setShowSuccess(false);
     setEarnedTime(0);
+    setEarnedCategory('');
   };
 
-  const handleProblemComplete = (minutes: number) => {
-    setEarnedTime(prev => prev + minutes);
+  const handleProblemComplete = (minutes: number, category: string) => {
+    setEarnedTime(minutes);
+    setEarnedCategory(category);
     setShowSuccess(true);
   };
 
   const handleBack = () => {
-    setSelectedGrade(null);
+    if (selectedCategory) {
+      setSelectedCategory(null);
+    } else if (selectedGrade) {
+      setSelectedGrade(null);
+    }
     setShowSuccess(false);
+  };
+
+  const handleBackToGradeSelection = () => {
+    setSelectedCategory(null);
+  };
+
+  const getCategoryName = (category: string) => {
+    switch (category) {
+      case 'math': return 'Mathematik';
+      case 'german': return 'Deutsch';
+      case 'english': return 'Englisch';
+      default: return 'Lernen';
+    }
+  };
+
+  const getCategoryEmoji = (category: string) => {
+    switch (category) {
+      case 'math': return '🔢';
+      case 'german': return '📚';
+      case 'english': return '🇬🇧';
+      default: return '📖';
+    }
   };
 
   // Loading state
@@ -91,13 +128,15 @@ const Index = () => {
             <div className="bg-gradient-success text-success-foreground p-6 rounded-lg mb-6">
               <div className="flex items-center justify-center gap-2 mb-2">
                 <Trophy className="w-6 h-6" />
-                <span className="text-lg font-semibold">Neue Handyzeit</span>
+                <span className="text-lg font-semibold">
+                  {getCategoryEmoji(earnedCategory)} {getCategoryName(earnedCategory)}
+                </span>
               </div>
               <div className="text-3xl font-bold mb-1">
-                +{earnedTime > 0 ? earnedTime : 15} Minuten
+                +{earnedTime} Minuten
               </div>
               <div className="text-sm opacity-90">
-                Gesamt verdient heute: {earnedTime} Minuten
+                Bildschirmzeit verdient!
               </div>
             </div>
 
@@ -122,14 +161,26 @@ const Index = () => {
     );
   }
 
-  // Show math problems if grade is selected
-  if (selectedGrade) {
+  // Show math problems if grade and category are selected
+  if (selectedGrade && selectedCategory) {
     return (
-      <MathProblem 
-        grade={selectedGrade} 
-        onBack={handleBack}
+      <CategoryMathProblem 
+        grade={selectedGrade}
+        category={selectedCategory}
+        onBack={handleBackToGradeSelection}
         onComplete={handleProblemComplete}
         userId={user?.id}
+      />
+    );
+  }
+
+  // Show category selector if grade is selected but not category
+  if (selectedGrade) {
+    return (
+      <CategorySelector
+        grade={selectedGrade}
+        onCategorySelect={handleCategorySelect}
+        onBack={handleBack}
       />
     );
   }
@@ -143,7 +194,7 @@ const Index = () => {
             MathTime 📱⏰
           </h1>
           <p className="text-lg text-muted-foreground mb-4">
-            Löse Mathe-Aufgaben und verdiene Handyzeit!
+            Löse Lernaufgaben und verdiene Handyzeit!
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button onClick={() => setShowAuth(true)} variant="default" size="lg">
@@ -158,12 +209,13 @@ const Index = () => {
         <Card className="max-w-md mx-auto shadow-card">
           <CardContent className="p-6 text-center">
             <div className="text-2xl mb-3">📚</div>
-            <h3 className="font-semibold mb-2">Warum ein Konto erstellen?</h3>
+            <h3 className="font-semibold mb-2">Neue Lernkategorien!</h3>
             <ul className="text-sm text-muted-foreground space-y-1">
+              <li>🔢 Mathematik - Rechnen und Zahlen</li>
+              <li>📚 Deutsch - Sprache und Wörter</li>
+              <li>🇬🇧 Englisch - English vocabulary</li>
+              <li>✅ Individuelle Belohnungszeiten</li>
               <li>✅ Fortschritt wird gespeichert</li>
-              <li>✅ Keine Klassenauswahl bei jedem Start</li>
-              <li>✅ Statistiken und Erfolge</li>
-              <li>✅ Family Link Integration (bald)</li>
             </ul>
           </CardContent>
         </Card>

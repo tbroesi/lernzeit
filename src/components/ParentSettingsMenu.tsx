@@ -9,11 +9,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { useFamilyLinking } from '@/hooks/useFamilyLinking';
 import { supabase } from '@/lib/supabase';
-import { Loader2, Save, Plus, Copy, Users, Key, Trash2, RefreshCw, Settings, Calendar, Clock, ArrowLeft } from 'lucide-react';
+import { Loader2, Save, Plus, Copy, Users, Key, Trash2, RefreshCw, Settings, Calendar, Clock, ArrowLeft, BookOpen, GraduationCap, Languages } from 'lucide-react';
 
 interface ParentSettings {
   weekday_max_minutes: number;
   weekend_max_minutes: number;
+  math_minutes_per_task: number;
+  german_minutes_per_task: number;
+  english_minutes_per_task: number;
 }
 
 interface ChildSettings {
@@ -21,6 +24,9 @@ interface ChildSettings {
   child_id: string;
   weekday_max_minutes: number;
   weekend_max_minutes: number;
+  math_minutes_per_task: number;
+  german_minutes_per_task: number;
+  english_minutes_per_task: number;
 }
 
 interface ParentSettingsMenuProps {
@@ -32,6 +38,9 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
   const [settings, setSettings] = useState<ParentSettings>({
     weekday_max_minutes: 30,
     weekend_max_minutes: 60,
+    math_minutes_per_task: 5,
+    german_minutes_per_task: 5,
+    english_minutes_per_task: 5,
   });
   const [childSettings, setChildSettings] = useState<ChildSettings[]>([]);
   const [newPassword, setNewPassword] = useState('');
@@ -76,6 +85,9 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
         setSettings({
           weekday_max_minutes: data.weekday_max_minutes,
           weekend_max_minutes: data.weekend_max_minutes,
+          math_minutes_per_task: data.math_minutes_per_task,
+          german_minutes_per_task: data.german_minutes_per_task,
+          english_minutes_per_task: data.english_minutes_per_task,
         });
       }
     } catch (error: any) {
@@ -108,6 +120,9 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
           child_id: child.id,
           weekday_max_minutes: settings.weekday_max_minutes,
           weekend_max_minutes: settings.weekend_max_minutes,
+          math_minutes_per_task: settings.math_minutes_per_task,
+          german_minutes_per_task: settings.german_minutes_per_task,
+          english_minutes_per_task: settings.english_minutes_per_task,
         };
       });
 
@@ -131,6 +146,9 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
           user_id: userId,
           weekday_max_minutes: settings.weekday_max_minutes,
           weekend_max_minutes: settings.weekend_max_minutes,
+          math_minutes_per_task: settings.math_minutes_per_task,
+          german_minutes_per_task: settings.german_minutes_per_task,
+          english_minutes_per_task: settings.english_minutes_per_task,
         });
 
       if (error) throw error;
@@ -162,6 +180,9 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
             child_id: childSetting.child_id,
             weekday_max_minutes: childSetting.weekday_max_minutes,
             weekend_max_minutes: childSetting.weekend_max_minutes,
+            math_minutes_per_task: childSetting.math_minutes_per_task,
+            german_minutes_per_task: childSetting.german_minutes_per_task,
+            english_minutes_per_task: childSetting.english_minutes_per_task,
           });
 
         if (error) throw error;
@@ -283,6 +304,12 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
     );
   }
 
+  const categoryIcons = {
+    math: BookOpen,
+    german: Languages,
+    english: GraduationCap,
+  };
+
   return (
     <div className="max-w-4xl mx-auto">
       <div className="flex items-center gap-4 mb-6">
@@ -353,40 +380,99 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
         <TabsContent value="time-limits" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Standard-Bildschirmzeiten</CardTitle>
+              <CardTitle>Standard-Einstellungen</CardTitle>
               <CardDescription>
-                Standard-Limits für neue Kinder
+                Standard-Limits und Belohnungen für neue Kinder
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="weekday">Wochentage (Minuten)</Label>
-                  <Input
-                    id="weekday"
-                    type="number"
-                    min="1"
-                    max="480"
-                    value={settings.weekday_max_minutes}
-                    onChange={(e) => setSettings({
-                      ...settings,
-                      weekday_max_minutes: parseInt(e.target.value) || 30
-                    })}
-                  />
+            <CardContent className="space-y-6">
+              <div>
+                <h4 className="font-medium mb-3">Tägliche Bildschirmzeit-Limits</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="weekday">Wochentage (Minuten)</Label>
+                    <Input
+                      id="weekday"
+                      type="number"
+                      min="1"
+                      max="480"
+                      value={settings.weekday_max_minutes}
+                      onChange={(e) => setSettings({
+                        ...settings,
+                        weekday_max_minutes: parseInt(e.target.value) || 30
+                      })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="weekend">Wochenende (Minuten)</Label>
+                    <Input
+                      id="weekend"
+                      type="number"
+                      min="1"
+                      max="720"
+                      value={settings.weekend_max_minutes}
+                      onChange={(e) => setSettings({
+                        ...settings,
+                        weekend_max_minutes: parseInt(e.target.value) || 60
+                      })}
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="weekend">Wochenende (Minuten)</Label>
-                  <Input
-                    id="weekend"
-                    type="number"
-                    min="1"
-                    max="720"
-                    value={settings.weekend_max_minutes}
-                    onChange={(e) => setSettings({
-                      ...settings,
-                      weekend_max_minutes: parseInt(e.target.value) || 60
-                    })}
-                  />
+              </div>
+
+              <Separator />
+
+              <div>
+                <h4 className="font-medium mb-3">Belohnungszeiten pro Aufgabe</h4>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <BookOpen className="w-4 h-4" />
+                      Mathematik (Min)
+                    </Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="60"
+                      value={settings.math_minutes_per_task}
+                      onChange={(e) => setSettings({
+                        ...settings,
+                        math_minutes_per_task: parseInt(e.target.value) || 5
+                      })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <Languages className="w-4 h-4" />
+                      Deutsch (Min)
+                    </Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="60"
+                      value={settings.german_minutes_per_task}
+                      onChange={(e) => setSettings({
+                        ...settings,
+                        german_minutes_per_task: parseInt(e.target.value) || 5
+                      })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <GraduationCap className="w-4 h-4" />
+                      Englisch (Min)
+                    </Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="60"
+                      value={settings.english_minutes_per_task}
+                      onChange={(e) => setSettings({
+                        ...settings,
+                        english_minutes_per_task: parseInt(e.target.value) || 5
+                      })}
+                    />
+                  </div>
                 </div>
               </div>
               
@@ -413,9 +499,9 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
           {linkedChildren.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Individuelle Zeitlimits</CardTitle>
+                <CardTitle>Individuelle Einstellungen</CardTitle>
                 <CardDescription>
-                  Spezifische Limits für jedes Kind
+                  Spezifische Limits und Belohnungen für jedes Kind
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -426,34 +512,95 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
                   return (
                     <div key={child.id} className="space-y-4 p-4 border rounded-lg">
                       <h4 className="font-medium">{child.name} (Klasse {child.grade})</h4>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label>Wochentage (Minuten)</Label>
-                          <Input
-                            type="number"
-                            min="1"
-                            max="480"
-                            value={childSetting.weekday_max_minutes}
-                            onChange={(e) => updateChildSetting(
-                              child.id, 
-                              'weekday_max_minutes', 
-                              parseInt(e.target.value) || 30
-                            )}
-                          />
+                      
+                      <div>
+                        <h5 className="text-sm font-medium mb-2">Tägliche Bildschirmzeit-Limits</h5>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Wochentage (Minuten)</Label>
+                            <Input
+                              type="number"
+                              min="1"
+                              max="480"
+                              value={childSetting.weekday_max_minutes}
+                              onChange={(e) => updateChildSetting(
+                                child.id, 
+                                'weekday_max_minutes', 
+                                parseInt(e.target.value) || 30
+                              )}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Wochenende (Minuten)</Label>
+                            <Input
+                              type="number"
+                              min="1"
+                              max="720"
+                              value={childSetting.weekend_max_minutes}
+                              onChange={(e) => updateChildSetting(
+                                child.id, 
+                                'weekend_max_minutes', 
+                                parseInt(e.target.value) || 60
+                              )}
+                            />
+                          </div>
                         </div>
-                        <div className="space-y-2">
-                          <Label>Wochenende (Minuten)</Label>
-                          <Input
-                            type="number"
-                            min="1"
-                            max="720"
-                            value={childSetting.weekend_max_minutes}
-                            onChange={(e) => updateChildSetting(
-                              child.id, 
-                              'weekend_max_minutes', 
-                              parseInt(e.target.value) || 60
-                            )}
-                          />
+                      </div>
+
+                      <div>
+                        <h5 className="text-sm font-medium mb-2">Belohnungszeiten pro Aufgabe</h5>
+                        <div className="grid grid-cols-3 gap-4">
+                          <div className="space-y-2">
+                            <Label className="flex items-center gap-2">
+                              <BookOpen className="w-4 h-4" />
+                              Mathematik
+                            </Label>
+                            <Input
+                              type="number"
+                              min="1"
+                              max="60"
+                              value={childSetting.math_minutes_per_task}
+                              onChange={(e) => updateChildSetting(
+                                child.id, 
+                                'math_minutes_per_task', 
+                                parseInt(e.target.value) || 5
+                              )}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="flex items-center gap-2">
+                              <Languages className="w-4 h-4" />
+                              Deutsch
+                            </Label>
+                            <Input
+                              type="number"
+                              min="1"
+                              max="60"
+                              value={childSetting.german_minutes_per_task}
+                              onChange={(e) => updateChildSetting(
+                                child.id, 
+                                'german_minutes_per_task', 
+                                parseInt(e.target.value) || 5
+                              )}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="flex items-center gap-2">
+                              <GraduationCap className="w-4 h-4" />
+                              Englisch
+                            </Label>
+                            <Input
+                              type="number"
+                              min="1"
+                              max="60"
+                              value={childSetting.english_minutes_per_task}
+                              onChange={(e) => updateChildSetting(
+                                child.id, 
+                                'english_minutes_per_task', 
+                                parseInt(e.target.value) || 5
+                              )}
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>
