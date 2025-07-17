@@ -58,6 +58,54 @@ export type Database = {
           },
         ]
       }
+      invitation_codes: {
+        Row: {
+          child_id: string | null
+          code: string
+          created_at: string | null
+          expires_at: string
+          id: string
+          is_used: boolean | null
+          parent_id: string
+          used_at: string | null
+        }
+        Insert: {
+          child_id?: string | null
+          code: string
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          is_used?: boolean | null
+          parent_id: string
+          used_at?: string | null
+        }
+        Update: {
+          child_id?: string | null
+          code?: string
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          is_used?: boolean | null
+          parent_id?: string
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invitation_codes_child_id_fkey"
+            columns: ["child_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invitation_codes_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       parent_child_relationships: {
         Row: {
           child_id: string | null
@@ -126,7 +174,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      cleanup_expired_codes: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      generate_invitation_code: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never

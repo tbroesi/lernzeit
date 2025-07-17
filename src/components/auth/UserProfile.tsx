@@ -8,6 +8,8 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { User, Settings, LogOut, Baby, Shield, Clock, Award } from 'lucide-react';
 import { ScreenTimeWidget } from '@/components/ScreenTimeWidget';
+import { ParentDashboard } from '@/components/ParentDashboard';
+import { ChildLinking } from '@/components/ChildLinking';
 
 interface UserProfileProps {
   user: any;
@@ -289,27 +291,17 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
           </Card>
         )}
 
+        {/* Family Linking for Children */}
+        {profile?.role === 'child' && (
+          <ChildLinking userId={user.id} />
+        )}
+
         {/* Screen Time Widget */}
         <ScreenTimeWidget />
 
         {/* Parent Dashboard */}
         {profile?.role === 'parent' && (
-          <Card className="shadow-card">
-            <CardHeader>
-              <CardTitle>Eltern-Dashboard</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground mb-4">
-                Hier können Sie in Zukunft die Fortschritte Ihrer Kinder verfolgen und Einstellungen verwalten.
-              </p>
-              <div className="bg-muted/50 p-4 rounded-lg">
-                <p className="text-sm">
-                  🚧 <strong>Bald verfügbar:</strong> Kinder verwalten, Fortschritte einsehen, 
-                  Zeitlimits festlegen und Family Link Integration.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          <ParentDashboard userId={user.id} />
         )}
       </div>
     </div>
