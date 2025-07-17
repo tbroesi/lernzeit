@@ -22,12 +22,12 @@ interface MathProblemProps {
 
 const generateProblem = (grade: number): Problem => {
   switch (grade) {
-    case 1:
-    case 2: {
+    case 1: {
+      // Klasse 1: Zahlen 1-20, Addition und Subtraktion
       const a = Math.floor(Math.random() * 10) + 1;
       const b = Math.floor(Math.random() * 10) + 1;
-      const isAddition = Math.random() > 0.5;
-      if (isAddition) {
+      const isAddition = Math.random() > 0.3; // Mehr Addition für Anfänger
+      if (isAddition && a + b <= 20) {
         return {
           question: `${a} + ${b} = ?`,
           answer: a + b,
@@ -43,72 +43,277 @@ const generateProblem = (grade: number): Problem => {
         };
       }
     }
-    case 3:
-    case 4: {
-      const operations = ['multiply', 'divide', 'add', 'subtract'];
-      const operation = operations[Math.floor(Math.random() * operations.length)];
-      
-      if (operation === 'multiply') {
-        const a = Math.floor(Math.random() * 10) + 1;
-        const b = Math.floor(Math.random() * 10) + 1;
-        return {
-          question: `${a} × ${b} = ?`,
-          answer: a * b,
-          type: 'Multiplikation'
-        };
-      } else if (operation === 'divide') {
-        const answer = Math.floor(Math.random() * 12) + 1;
-        const divisor = Math.floor(Math.random() * 10) + 2;
-        return {
-          question: `${answer * divisor} ÷ ${divisor} = ?`,
-          answer: answer,
-          type: 'Division'
-        };
-      } else {
-        const a = Math.floor(Math.random() * 50) + 10;
-        const b = Math.floor(Math.random() * 30) + 5;
-        if (operation === 'add') {
-          return {
-            question: `${a} + ${b} = ?`,
-            answer: a + b,
-            type: 'Addition'
-          };
-        } else {
-          return {
-            question: `${a} - ${b} = ?`,
-            answer: a - b,
-            type: 'Subtraktion'
-          };
-        }
-      }
-    }
-    default: {
+    case 2: {
+      // Klasse 2: Zahlen 1-100, Einmaleins 1x1 bis 5x5
       const operations = ['add', 'subtract', 'multiply'];
       const operation = operations[Math.floor(Math.random() * operations.length)];
       
       if (operation === 'multiply') {
-        const a = Math.floor(Math.random() * 15) + 5;
-        const b = Math.floor(Math.random() * 15) + 5;
+        const a = Math.floor(Math.random() * 5) + 1; // 1-5
+        const b = Math.floor(Math.random() * 5) + 1; // 1-5
         return {
           question: `${a} × ${b} = ?`,
           answer: a * b,
           type: 'Multiplikation'
         };
       } else if (operation === 'add') {
-        const a = Math.floor(Math.random() * 100) + 20;
-        const b = Math.floor(Math.random() * 100) + 20;
+        const a = Math.floor(Math.random() * 50) + 10; // 10-59
+        const b = Math.floor(Math.random() * 30) + 5;  // 5-34
         return {
           question: `${a} + ${b} = ?`,
           answer: a + b,
           type: 'Addition'
         };
       } else {
-        const a = Math.floor(Math.random() * 200) + 50;
-        const b = Math.floor(Math.random() * 50) + 10;
+        const a = Math.floor(Math.random() * 80) + 20; // 20-99
+        const b = Math.floor(Math.random() * 20) + 5;  // 5-24
         return {
           question: `${a} - ${b} = ?`,
           answer: a - b,
           type: 'Subtraktion'
+        };
+      }
+    }
+    case 3: {
+      // Klasse 3: Einmaleins bis 10x10, Division, größere Zahlen
+      const operations = ['add', 'subtract', 'multiply', 'divide'];
+      const operation = operations[Math.floor(Math.random() * operations.length)];
+      
+      if (operation === 'multiply') {
+        const a = Math.floor(Math.random() * 10) + 1; // 1-10
+        const b = Math.floor(Math.random() * 10) + 1; // 1-10
+        return {
+          question: `${a} × ${b} = ?`,
+          answer: a * b,
+          type: 'Multiplikation'
+        };
+      } else if (operation === 'divide') {
+        const answer = Math.floor(Math.random() * 10) + 1; // 1-10
+        const divisor = Math.floor(Math.random() * 9) + 2; // 2-10
+        return {
+          question: `${answer * divisor} ÷ ${divisor} = ?`,
+          answer: answer,
+          type: 'Division'
+        };
+      } else if (operation === 'add') {
+        const a = Math.floor(Math.random() * 400) + 100; // 100-499
+        const b = Math.floor(Math.random() * 200) + 50;  // 50-249
+        return {
+          question: `${a} + ${b} = ?`,
+          answer: a + b,
+          type: 'Addition'
+        };
+      } else {
+        const a = Math.floor(Math.random() * 500) + 200; // 200-699
+        const b = Math.floor(Math.random() * 150) + 25;  // 25-174
+        return {
+          question: `${a} - ${b} = ?`,
+          answer: a - b,
+          type: 'Subtraktion'
+        };
+      }
+    }
+    case 4: {
+      // Klasse 4: Große Zahlen, schwierigere Multiplikation/Division, Brucheinführung
+      const operations = ['add', 'subtract', 'multiply', 'divide'];
+      const operation = operations[Math.floor(Math.random() * operations.length)];
+      
+      if (operation === 'multiply') {
+        const a = Math.floor(Math.random() * 25) + 10; // 10-34
+        const b = Math.floor(Math.random() * 20) + 5;  // 5-24
+        return {
+          question: `${a} × ${b} = ?`,
+          answer: a * b,
+          type: 'Multiplikation'
+        };
+      } else if (operation === 'divide') {
+        const divisors = [5, 10, 25, 50, 100];
+        const divisor = divisors[Math.floor(Math.random() * divisors.length)];
+        const answer = Math.floor(Math.random() * 20) + 5; // 5-24
+        return {
+          question: `${answer * divisor} ÷ ${divisor} = ?`,
+          answer: answer,
+          type: 'Division'
+        };
+      } else if (operation === 'add') {
+        const a = Math.floor(Math.random() * 5000) + 1000; // 1000-5999
+        const b = Math.floor(Math.random() * 3000) + 500;  // 500-3499
+        return {
+          question: `${a} + ${b} = ?`,
+          answer: a + b,
+          type: 'Addition'
+        };
+      } else {
+        const a = Math.floor(Math.random() * 8000) + 2000; // 2000-9999
+        const b = Math.floor(Math.random() * 1500) + 200;  // 200-1699
+        return {
+          question: `${a} - ${b} = ?`,
+          answer: a - b,
+          type: 'Subtraktion'
+        };
+      }
+    }
+    case 5: {
+      // Klasse 5: Dezimalzahlen, Prozente, größere Operationen
+      const operations = ['add', 'subtract', 'multiply', 'divide', 'decimal'];
+      const operation = operations[Math.floor(Math.random() * operations.length)];
+      
+      if (operation === 'decimal') {
+        const isAddition = Math.random() > 0.5;
+        const a = Math.round((Math.random() * 50 + 10) * 10) / 10; // 1.0-60.0
+        const b = Math.round((Math.random() * 20 + 5) * 10) / 10;  // 0.5-25.0
+        if (isAddition) {
+          return {
+            question: `${a} + ${b} = ?`,
+            answer: Math.round((a + b) * 10) / 10,
+            type: 'Dezimal-Addition'
+          };
+        } else {
+          return {
+            question: `${a} - ${b} = ?`,
+            answer: Math.round((a - b) * 10) / 10,
+            type: 'Dezimal-Subtraktion'
+          };
+        }
+      } else if (operation === 'multiply') {
+        const a = Math.floor(Math.random() * 50) + 20; // 20-69
+        const b = Math.floor(Math.random() * 30) + 10; // 10-39
+        return {
+          question: `${a} × ${b} = ?`,
+          answer: a * b,
+          type: 'Multiplikation'
+        };
+      } else if (operation === 'divide') {
+        const divisors = [10, 20, 25, 50, 100];
+        const divisor = divisors[Math.floor(Math.random() * divisors.length)];
+        const answer = Math.floor(Math.random() * 50) + 10; // 10-59
+        return {
+          question: `${answer * divisor} ÷ ${divisor} = ?`,
+          answer: answer,
+          type: 'Division'
+        };
+      } else if (operation === 'add') {
+        const a = Math.floor(Math.random() * 50000) + 10000; // 10000-59999
+        const b = Math.floor(Math.random() * 20000) + 5000;  // 5000-24999
+        return {
+          question: `${a} + ${b} = ?`,
+          answer: a + b,
+          type: 'Addition'
+        };
+      } else {
+        const a = Math.floor(Math.random() * 80000) + 20000; // 20000-99999
+        const b = Math.floor(Math.random() * 15000) + 2000;  // 2000-16999
+        return {
+          question: `${a} - ${b} = ?`,
+          answer: a - b,
+          type: 'Subtraktion'
+        };
+      }
+    }
+    case 6: {
+      // Klasse 6: Negative Zahlen, Brüche, Algebra-Basics
+      const operations = ['add', 'subtract', 'multiply', 'divide', 'negative', 'fraction'];
+      const operation = operations[Math.floor(Math.random() * operations.length)];
+      
+      if (operation === 'negative') {
+        const isAddition = Math.random() > 0.5;
+        const a = Math.floor(Math.random() * 30) - 15; // -15 bis 14
+        const b = Math.floor(Math.random() * 20) - 10; // -10 bis 9
+        if (isAddition) {
+          return {
+            question: `${a} + (${b}) = ?`,
+            answer: a + b,
+            type: 'Negative Zahlen'
+          };
+        } else {
+          return {
+            question: `${a} - (${b}) = ?`,
+            answer: a - b,
+            type: 'Negative Zahlen'
+          };
+        }
+      } else if (operation === 'fraction') {
+        // Einfache Bruchaddition mit gleichem Nenner
+        const denominator = [2, 3, 4, 5, 6, 8, 10][Math.floor(Math.random() * 7)];
+        const a = Math.floor(Math.random() * (denominator - 1)) + 1;
+        const b = Math.floor(Math.random() * (denominator - a)) + 1;
+        return {
+          question: `${a}/${denominator} + ${b}/${denominator} = ? (als Dezimal)`,
+          answer: Math.round(((a + b) / denominator) * 100) / 100,
+          type: 'Bruchrechnung'
+        };
+      } else if (operation === 'multiply') {
+        const a = Math.floor(Math.random() * 80) + 40; // 40-119
+        const b = Math.floor(Math.random() * 40) + 20; // 20-59
+        return {
+          question: `${a} × ${b} = ?`,
+          answer: a * b,
+          type: 'Multiplikation'
+        };
+      } else if (operation === 'divide') {
+        const divisors = [12, 15, 20, 24, 30, 40, 50];
+        const divisor = divisors[Math.floor(Math.random() * divisors.length)];
+        const answer = Math.floor(Math.random() * 25) + 15; // 15-39
+        return {
+          question: `${answer * divisor} ÷ ${divisor} = ?`,
+          answer: answer,
+          type: 'Division'
+        };
+      } else if (operation === 'add') {
+        const a = Math.floor(Math.random() * 100000) + 50000; // 50000-149999
+        const b = Math.floor(Math.random() * 50000) + 10000;  // 10000-59999
+        return {
+          question: `${a} + ${b} = ?`,
+          answer: a + b,
+          type: 'Addition'
+        };
+      } else {
+        const a = Math.floor(Math.random() * 150000) + 50000; // 50000-199999
+        const b = Math.floor(Math.random() * 30000) + 5000;   // 5000-34999
+        return {
+          question: `${a} - ${b} = ?`,
+          answer: a - b,
+          type: 'Subtraktion'
+        };
+      }
+    }
+    default: {
+      // Klasse 7+: Erweiterte Algebra, Gleichungen, Geometrie
+      const operations = ['algebra', 'multiply', 'square', 'percentage'];
+      const operation = operations[Math.floor(Math.random() * operations.length)];
+      
+      if (operation === 'algebra') {
+        // Einfache Gleichungen: x + a = b
+        const a = Math.floor(Math.random() * 50) + 10; // 10-59
+        const x = Math.floor(Math.random() * 30) + 5;  // 5-34
+        const b = x + a;
+        return {
+          question: `x + ${a} = ${b}, x = ?`,
+          answer: x,
+          type: 'Algebra'
+        };
+      } else if (operation === 'square') {
+        const base = Math.floor(Math.random() * 15) + 5; // 5-19
+        return {
+          question: `${base}² = ?`,
+          answer: base * base,
+          type: 'Quadratzahl'
+        };
+      } else if (operation === 'percentage') {
+        const base = [100, 200, 500, 1000][Math.floor(Math.random() * 4)];
+        const percent = [10, 20, 25, 50, 75][Math.floor(Math.random() * 5)];
+        return {
+          question: `${percent}% von ${base} = ?`,
+          answer: (base * percent) / 100,
+          type: 'Prozentrechnung'
+        };
+      } else {
+        const a = Math.floor(Math.random() * 200) + 50; // 50-249
+        const b = Math.floor(Math.random() * 100) + 25; // 25-124
+        return {
+          question: `${a} × ${b} = ?`,
+          answer: a * b,
+          type: 'Multiplikation'
         };
       }
     }
