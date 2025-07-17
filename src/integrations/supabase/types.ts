@@ -201,6 +201,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_invitation_code: {
+        Args: { code_to_claim: string; claiming_child_id: string }
+        Returns: Json
+      }
       cleanup_expired_codes: {
         Args: Record<PropertyKey, never>
         Returns: undefined

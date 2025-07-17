@@ -163,113 +163,41 @@ export function useFamilyLinking() {
         return false;
       }
 
-      // STEP 3: Test UPDATE permission with correct data format
-      console.log('🔍 STEP 3: Testing UPDATE permissions...');
-      const testUpdateData = {
-        child_id: childId,
-        is_used: true,
-        used_at: new Date().toISOString()
-      };
-      console.log('🧪 Test update data:', testUpdateData);
+      // STEP 3: Use SECURITY DEFINER function to bypass RLS completely
+      console.log('🔍 STEP 3: Using database function to claim code...');
       
-      const { data: permissionTest, error: permError } = await supabase
-        .from('invitation_codes')
-        .update(testUpdateData)
-        .eq('code', code)
-        .eq('is_used', false)
-        .gt('expires_at', new Date().toISOString())
-        .select('*');
-      
-      console.log('🔒 Permission test result:', { permissionTest, permError });
-      
-      if (permError) {
-        console.log('❌ Permission test failed:', permError);
+      const { data: functionResult, error: functionError } = await supabase.rpc(
+        'claim_invitation_code',
+        {
+          code_to_claim: code,
+          claiming_child_id: childId
+        }
+      );
+
+      console.log('🎯 Function result:', { functionResult, functionError });
+
+      if (functionError) {
+        console.log('❌ Function call failed:', functionError);
         toast({
-          title: "Berechtigung fehlt",
-          description: "Keine Berechtigung zum Aktualisieren des Codes.",
+          title: "Fehler",
+          description: `Database-Fehler: ${functionError.message}`,
           variant: "destructive",
         });
         return false;
       }
 
-      // STEP 4: Perform the actual claim update
-      console.log('🔍 STEP 4: Performing actual claim update...');
-      const updateData = {
-        child_id: childId,
-        is_used: true,
-        used_at: new Date().toISOString()
-      };
-      console.log('📝 Update data:', updateData);
-      
-      const { data: updatedCode, error: claimError } = await supabase
-        .from('invitation_codes')
-        .update(updateData)
-        .eq('code', code)
-        .eq('is_used', false)
-        .gt('expires_at', new Date().toISOString())
-        .select('*')
-        .single();
-
-      console.log('📝 Claim update result:', { updatedCode, claimError });
-
-      if (claimError) {
-        console.log('❌ Claim update failed with error:', claimError);
-        console.log('❌ Error details:', JSON.stringify(claimError, null, 2));
+      const result = functionResult as any;
+      if (!result?.success) {
+        console.log('❌ Function returned error:', result?.error);
         toast({
-          title: "Update Fehler", 
-          description: `Code Update fehlgeschlagen: ${claimError.message}`,
+          title: "Ungültiger Code",
+          description: result?.error || 'Unbekannter Fehler',
           variant: "destructive",
         });
         return false;
       }
 
-      if (!updatedCode) {
-        console.log('❌ No code was updated (null result)');
-        toast({
-          title: "Kein Update",
-          description: "Der Code wurde nicht aktualisiert - möglicherweise zwischenzeitlich verwendet.",
-          variant: "destructive",
-        });
-        return false;
-      }
-
-      console.log('✅ Code successfully claimed!');
-
-      // STEP 5: Create parent-child relationship
-      console.log('🔍 STEP 5: Creating parent-child relationship...');
-      const relationshipData = {
-        parent_id: updatedCode.parent_id,
-        child_id: childId
-      };
-      console.log('👨‍👧‍👦 Relationship data:', relationshipData);
-      
-      const { data: relationship, error: relationshipError } = await supabase
-        .from('parent_child_relationships')
-        .insert(relationshipData)
-        .select('*');
-
-      console.log('👨‍👧‍👦 Relationship result:', { relationship, relationshipError });
-
-      if (relationshipError) {
-        console.error('❌ Relationship creation failed:', relationshipError);
-        
-        // STEP 6: Rollback the code claim
-        console.log('🔄 STEP 6: Rolling back code claim...');
-        const { error: rollbackError } = await supabase
-          .from('invitation_codes')
-          .update({
-            child_id: null,
-            is_used: false,
-            used_at: null
-          })
-          .eq('id', updatedCode.id);
-        
-        console.log('🔄 Rollback result:', { rollbackError });
-        
-        throw relationshipError;
-      }
-
-      console.log('🎉🎉🎉 COMPLETE SUCCESS! Family linking completed!');
+      console.log('🎉🎉🎉 SUCCESS! Code claimed via database function!');
       toast({
         title: "Erfolgreich verknüpft!",
         description: "Du bist jetzt mit einem Elternteil verbunden.",
