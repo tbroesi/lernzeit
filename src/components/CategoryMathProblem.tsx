@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,22 +9,22 @@ import { ArrowLeft, CheckCircle2, XCircle, Trophy, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 
-interface MathProblem {
+interface Problem {
   question: string;
-  answer: number;
+  answer: number | string;
   options?: (string | number)[];
 }
 
 interface CategoryMathProblemProps {
   grade: number;
-  category: 'math' | 'german' | 'english';
+  category: 'math' | 'german' | 'english' | 'geography' | 'history' | 'physics' | 'biology' | 'chemistry' | 'latin';
   onBack: () => void;
   onComplete: (timeEarned: number, category: string) => void;
   userId?: string;
 }
 
 export function CategoryMathProblem({ grade, category, onBack, onComplete, userId }: CategoryMathProblemProps) {
-  const [currentProblem, setCurrentProblem] = useState<MathProblem | null>(null);
+  const [currentProblem, setCurrentProblem] = useState<Problem | null>(null);
   const [userAnswer, setUserAnswer] = useState('');
   const [currentQuestion, setCurrentQuestion] = useState(1);
   const [correctAnswers, setCorrectAnswers] = useState(0);
@@ -82,7 +83,7 @@ export function CategoryMathProblem({ grade, category, onBack, onComplete, userI
     }
   };
 
-  const generateMathProblem = (): MathProblem => {
+  const generateMathProblem = (): Problem => {
     let num1: number, num2: number, operation: string, answer: number, question: string;
 
     switch (grade) {
@@ -137,7 +138,7 @@ export function CategoryMathProblem({ grade, category, onBack, onComplete, userI
     return { question, answer };
   };
 
-  const generateGermanProblem = (): MathProblem => {
+  const generateGermanProblem = (): Problem => {
     const words = {
       1: [
         { word: 'Hund', options: ['Hun_', 'Hu_d', 'H_nd'], correct: 2, answer: 'Hund' },
@@ -165,7 +166,7 @@ export function CategoryMathProblem({ grade, category, onBack, onComplete, userI
     };
   };
 
-  const generateEnglishProblem = (): MathProblem => {
+  const generateEnglishProblem = (): Problem => {
     const words = {
       1: [
         { word: 'cat', german: 'Katze', options: ['dog', 'cat', 'bird'], correct: 1 },
@@ -193,8 +194,110 @@ export function CategoryMathProblem({ grade, category, onBack, onComplete, userI
     };
   };
 
+  const generateGeographyProblem = (): Problem => {
+    const facts = [
+      { question: 'Wie heißt die Hauptstadt von Deutschland?', options: ['Berlin', 'München', 'Hamburg'], correct: 0 },
+      { question: 'Welcher ist der längste Fluss in Deutschland?', options: ['Elbe', 'Rhein', 'Donau'], correct: 1 },
+      { question: 'Wie viele Bundesländer hat Deutschland?', options: ['14', '16', '18'], correct: 1 },
+      { question: 'Welches ist das größte Bundesland?', options: ['Bayern', 'Niedersachsen', 'Brandenburg'], correct: 0 },
+      { question: 'An wie viele Länder grenzt Deutschland?', options: ['7', '9', '11'], correct: 1 },
+    ];
+    
+    const fact = facts[Math.floor(Math.random() * facts.length)];
+    return {
+      question: fact.question,
+      answer: fact.correct,
+      options: fact.options
+    };
+  };
+
+  const generateHistoryProblem = (): Problem => {
+    const events = [
+      { question: 'In welchem Jahr fiel die Berliner Mauer?', options: ['1987', '1989', '1991'], correct: 1 },
+      { question: 'Wer war der erste deutsche Kaiser?', options: ['Wilhelm I.', 'Wilhelm II.', 'Friedrich III.'], correct: 0 },
+      { question: 'Wann begann der Erste Weltkrieg?', options: ['1912', '1914', '1916'], correct: 1 },
+      { question: 'Wie lange dauerte der Zweite Weltkrieg?', options: ['5 Jahre', '6 Jahre', '7 Jahre'], correct: 1 },
+      { question: 'Wann wurde die Bundesrepublik Deutschland gegründet?', options: ['1947', '1949', '1951'], correct: 1 },
+    ];
+    
+    const event = events[Math.floor(Math.random() * events.length)];
+    return {
+      question: event.question,
+      answer: event.correct,
+      options: event.options
+    };
+  };
+
+  const generatePhysicsProblem = (): Problem => {
+    const concepts = [
+      { question: 'Was ist die Geschwindigkeit des Lichts?', options: ['300.000 km/s', '150.000 km/s', '450.000 km/s'], correct: 0 },
+      { question: 'Wie viele Aggregatzustände gibt es?', options: ['2', '3', '4'], correct: 2 },
+      { question: 'Was ist schwerer: 1kg Federn oder 1kg Steine?', options: ['Federn', 'Steine', 'Gleich schwer'], correct: 2 },
+      { question: 'Bei welcher Temperatur gefriert Wasser?', options: ['-1°C', '0°C', '1°C'], correct: 1 },
+      { question: 'Was ist ein Magnet?', options: ['Metall', 'Kraft', 'Objekt mit Magnetfeld'], correct: 2 },
+    ];
+    
+    const concept = concepts[Math.floor(Math.random() * concepts.length)];
+    return {
+      question: concept.question,
+      answer: concept.correct,
+      options: concept.options
+    };
+  };
+
+  const generateBiologyProblem = (): Problem => {
+    const topics = [
+      { question: 'Wie viele Beine hat eine Spinne?', options: ['6', '8', '10'], correct: 1 },
+      { question: 'Was produzieren Pflanzen bei der Photosynthese?', options: ['CO2', 'Sauerstoff', 'Stickstoff'], correct: 1 },
+      { question: 'Welches Organ pumpt Blut durch den Körper?', options: ['Lunge', 'Herz', 'Leber'], correct: 1 },
+      { question: 'Wie heißt der größte Knochen im menschlichen Körper?', options: ['Oberschenkelknochen', 'Schienbein', 'Oberarmknochen'], correct: 0 },
+      { question: 'Was ist ein Säugetier?', options: ['Fisch', 'Warmblütiges Wirbeltier', 'Insekt'], correct: 1 },
+    ];
+    
+    const topic = topics[Math.floor(Math.random() * topics.length)];
+    return {
+      question: topic.question,
+      answer: topic.correct,
+      options: topic.options
+    };
+  };
+
+  const generateChemistryProblem = (): Problem => {
+    const elements = [
+      { question: 'Was ist das chemische Symbol für Wasser?', options: ['H2O', 'CO2', 'O2'], correct: 0 },
+      { question: 'Aus welchen Gasen besteht Luft hauptsächlich?', options: ['CO2 und O2', 'N2 und O2', 'H2 und O2'], correct: 1 },
+      { question: 'Was passiert beim Rosten?', options: ['Verbrennung', 'Oxidation', 'Verdampfung'], correct: 1 },
+      { question: 'Welches Element hat das Symbol "Fe"?', options: ['Fluor', 'Eisen', 'Phosphor'], correct: 1 },
+      { question: 'Was ist ein Atom?', options: ['Kleinstes Teilchen', 'Molekül', 'Verbindung'], correct: 0 },
+    ];
+    
+    const element = elements[Math.floor(Math.random() * elements.length)];
+    return {
+      question: element.question,
+      answer: element.correct,
+      options: element.options
+    };
+  };
+
+  const generateLatinProblem = (): Problem => {
+    const words = [
+      { question: 'Was bedeutet "aqua" auf Deutsch?', options: ['Luft', 'Wasser', 'Erde'], correct: 1 },
+      { question: 'Was bedeutet "terra" auf Deutsch?', options: ['Himmel', 'Meer', 'Erde'], correct: 2 },
+      { question: 'Was bedeutet "vita" auf Deutsch?', options: ['Leben', 'Tod', 'Zeit'], correct: 0 },
+      { question: 'Was bedeutet "stella" auf Deutsch?', options: ['Sonne', 'Stern', 'Mond'], correct: 1 },
+      { question: 'Was bedeutet "rosa" auf Deutsch?', options: ['Rot', 'Rose', 'Blume'], correct: 1 },
+    ];
+    
+    const word = words[Math.floor(Math.random() * words.length)];
+    return {
+      question: word.question,
+      answer: word.correct,
+      options: word.options
+    };
+  };
+
   const generateProblem = () => {
-    let problem: MathProblem;
+    let problem: Problem;
     
     switch (category) {
       case 'math':
@@ -205,6 +308,24 @@ export function CategoryMathProblem({ grade, category, onBack, onComplete, userI
         break;
       case 'english':
         problem = generateEnglishProblem();
+        break;
+      case 'geography':
+        problem = generateGeographyProblem();
+        break;
+      case 'history':
+        problem = generateHistoryProblem();
+        break;
+      case 'physics':
+        problem = generatePhysicsProblem();
+        break;
+      case 'biology':
+        problem = generateBiologyProblem();
+        break;
+      case 'chemistry':
+        problem = generateChemistryProblem();
+        break;
+      case 'latin':
+        problem = generateLatinProblem();
         break;
       default:
         problem = generateMathProblem();
@@ -284,6 +405,18 @@ export function CategoryMathProblem({ grade, category, onBack, onComplete, userI
         return { name: 'Deutsch', icon: '📚', color: 'bg-green-500' };
       case 'english':
         return { name: 'Englisch', icon: '🇬🇧', color: 'bg-purple-500' };
+      case 'geography':
+        return { name: 'Geographie', icon: '🌍', color: 'bg-teal-500' };
+      case 'history':
+        return { name: 'Geschichte', icon: '🏛️', color: 'bg-amber-500' };
+      case 'physics':
+        return { name: 'Physik', icon: '⚡', color: 'bg-cyan-500' };
+      case 'biology':
+        return { name: 'Biologie', icon: '🌱', color: 'bg-emerald-500' };
+      case 'chemistry':
+        return { name: 'Chemie', icon: '🧪', color: 'bg-orange-500' };
+      case 'latin':
+        return { name: 'Latein', icon: '🏺', color: 'bg-rose-500' };
       default:
         return { name: 'Lernen', icon: '📖', color: 'bg-gray-500' };
     }
