@@ -36,6 +36,8 @@ interface ParentInfo {
   id: string;
   name: string;
   email: string;
+  role?: string;
+  displayName?: string;
 }
 
 export function ChildSettingsMenu({ user, profile, onSignOut, onBack }: ChildSettingsMenuProps) {
@@ -94,7 +96,7 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack }: ChildSet
         // Load parent profile
         const { data: parentProfile, error: parentError } = await supabase
           .from('profiles')
-          .select('id, name')
+          .select('id, name, role')
           .eq('id', relationship.parent_id)
           .maybeSingle();
 
@@ -104,7 +106,9 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack }: ChildSet
           const parentData = {
             id: parentProfile.id,
             name: parentProfile.name || 'Elternteil',
-            email: ''
+            email: '',
+            role: parentProfile.role || 'parent',
+            displayName: parentProfile.name || 'Elternteil'
           };
           console.log('✅ Setting parent info:', parentData);
           setParentInfo(parentData);
@@ -270,7 +274,10 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack }: ChildSet
                         <div className="flex-1">
                           <div className="font-medium text-green-800">Mit Eltern verknüpft</div>
                           <div className="text-sm text-green-600">
-                            Verbunden mit: {parentInfo.name}
+                            Verbunden mit: <span className="font-semibold">{parentInfo.displayName || parentInfo.name}</span>
+                          </div>
+                          <div className="text-xs text-green-500 mt-1">
+                            {parentInfo.role === 'parent' ? '👨‍👩‍👧‍👦 Elternteil' : 'Verknüpfter Nutzer'}
                           </div>
                         </div>
                       </div>
@@ -315,19 +322,32 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack }: ChildSet
                     </CardContent>
                   </Card>
 
-                  {/* New Link Option */}
+                  {/* Multiple Parent Support */}
                   <Card className="shadow-card">
                     <CardHeader>
-                      <CardTitle className="text-lg">Neue Verknüpfung erstellen</CardTitle>
+                      <CardTitle className="text-lg">Weiteren Elternteil hinzufügen</CardTitle>
                       <p className="text-sm text-muted-foreground">
-                        Falls du dich mit einem anderen Elternteil verknüpfen möchtest
+                        Du kannst dich auch mit Mama oder Papa separat verknüpfen
                       </p>
                     </CardHeader>
                     <CardContent>
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                        <div className="flex items-start gap-3">
+                          <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />
+                          <div className="space-y-2">
+                            <h4 className="font-medium text-blue-900">Mehrere Verknüpfungen</h4>
+                            <p className="text-sm text-blue-800">
+                              Du kannst sowohl mit Mama als auch mit Papa verknüpft sein. 
+                              Beide können dann deine Fortschritte sehen und Einstellungen verwalten.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      
                       <ChildLinking 
                         userId={user.id} 
                         onLinked={() => {
-                          console.log('✅ Child linked successfully, refreshing parent info');
+                          console.log('✅ Additional parent linked successfully');
                           loadParentInfo();
                           setActiveSection(null);
                         }}
@@ -384,8 +404,8 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack }: ChildSet
                           <Loader2 className="w-4 h-4 animate-spin" />
                           Prüfe...
                         </span>
-                      ) : hasParentLink ? (
-                        '👨‍👩‍👧‍👦 Mit Eltern verknüpft' 
+                      ) : hasParentLink && parentInfo ? (
+                        `👨‍👩‍👧‍👦 Mit ${parentInfo.name} verknüpft` 
                       ) : (
                         '🔓 Unabhängig'
                       )}
