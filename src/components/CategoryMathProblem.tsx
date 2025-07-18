@@ -217,6 +217,19 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
       'Latein': 'latin_minutes_per_task'
     };
 
+    // Mapping für deutsche zu englische Kategorienamen für die Datenbank
+    const categoryToDbMapping: { [key: string]: string } = {
+      'Mathematik': 'math',
+      'Deutsch': 'german',
+      'Englisch': 'english',
+      'Geographie': 'geography',
+      'Geschichte': 'history',
+      'Physik': 'physics',
+      'Biologie': 'biology',
+      'Chemie': 'chemistry',
+      'Latein': 'latin'
+    };
+
     const minutesPerTask = settings?.[categoryMapping[category]] || 5;
     let timeEarned = 0;
 
@@ -228,7 +241,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
     try {
       const { error } = await supabase.from('learning_sessions').insert({
         user_id: userId,
-        category: category.toLowerCase(),
+        category: categoryToDbMapping[category] || category.toLowerCase(),
         grade: grade,
         total_questions: totalQuestions,
         correct_answers: correctAnswers,
