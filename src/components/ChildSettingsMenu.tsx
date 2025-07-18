@@ -105,10 +105,10 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack }: ChildSet
         if (parentProfile && !parentError) {
           const parentData = {
             id: parentProfile.id,
-            name: parentProfile.name || 'Elternteil',
+            name: parentProfile.name || 'Betreuungsperson',
             email: '',
             role: parentProfile.role || 'parent',
-            displayName: parentProfile.name || 'Elternteil'
+            displayName: parentProfile.name || 'Betreuungsperson'
           };
           console.log('✅ Setting parent info:', parentData);
           setParentInfo(parentData);
@@ -116,7 +116,7 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack }: ChildSet
           console.error('❌ Error fetching parent profile:', parentError);
           setParentInfo({
             id: relationship.parent_id,
-            name: 'Elternteil',
+            name: 'Betreuungsperson',
             email: ''
           });
         }
@@ -272,12 +272,12 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack }: ChildSet
                       <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
                         <Check className="w-6 h-6 text-green-600" />
                         <div className="flex-1">
-                          <div className="font-medium text-green-800">Mit Eltern verknüpft</div>
+                          <div className="font-medium text-green-800">Mit Betreuungsperson verknüpft</div>
                           <div className="text-sm text-green-600">
                             Verbunden mit: <span className="font-semibold">{parentInfo.displayName || parentInfo.name}</span>
                           </div>
                           <div className="text-xs text-green-500 mt-1">
-                            {parentInfo.role === 'parent' ? '👨‍👩‍👧‍👦 Elternteil' : 'Verknüpfter Nutzer'}
+                            👨‍👩‍👧‍👦 Erziehungsberechtigte/r
                           </div>
                         </div>
                       </div>
@@ -325,9 +325,9 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack }: ChildSet
                   {/* Multiple Parent Support */}
                   <Card className="shadow-card">
                     <CardHeader>
-                      <CardTitle className="text-lg">Weiteren Elternteil hinzufügen</CardTitle>
+                      <CardTitle className="text-lg">Weitere Betreuungsperson hinzufügen</CardTitle>
                       <p className="text-sm text-muted-foreground">
-                        Du kannst dich auch mit Mama oder Papa separat verknüpfen
+                        Du kannst dich mit mehreren Erziehungsberechtigten verknüpfen
                       </p>
                     </CardHeader>
                     <CardContent>
@@ -337,8 +337,8 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack }: ChildSet
                           <div className="space-y-2">
                             <h4 className="font-medium text-blue-900">Mehrere Verknüpfungen</h4>
                             <p className="text-sm text-blue-800">
-                              Du kannst sowohl mit Mama als auch mit Papa verknüpft sein. 
-                              Beide können dann deine Fortschritte sehen und Einstellungen verwalten.
+                              Du kannst dich mit mehreren Erziehungsberechtigten verknüpfen. 
+                              Alle können dann deine Fortschritte sehen und Einstellungen verwalten.
                             </p>
                           </div>
                         </div>
