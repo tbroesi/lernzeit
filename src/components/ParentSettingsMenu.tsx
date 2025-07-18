@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { useFamilyLinking } from '@/hooks/useFamilyLinking';
 import { supabase } from '@/lib/supabase';
+import { GradeManagement } from '@/components/GradeManagement';
 import { Loader2, Save, Plus, Copy, Users, Key, Trash2, RefreshCw, Settings, Calendar, Clock, ArrowLeft, BookOpen, GraduationCap, Languages, Globe, FlaskConical, Atom, Leaf, Columns3 } from 'lucide-react';
 
 interface ParentSettings {
@@ -372,8 +373,9 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
       </div>
 
       <Tabs defaultValue="family" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="family">Familie</TabsTrigger>
+          <TabsTrigger value="grades">Klassen</TabsTrigger>
           <TabsTrigger value="time-limits">Zeitlimits</TabsTrigger>
           <TabsTrigger value="account">Konto</TabsTrigger>
           <TabsTrigger value="codes">Codes</TabsTrigger>
@@ -424,6 +426,13 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="grades" className="space-y-6">
+          <GradeManagement 
+            linkedChildren={linkedChildren} 
+            onGradeUpdate={() => loadFamilyData(userId)} 
+          />
         </TabsContent>
 
         <TabsContent value="time-limits" className="space-y-6">
