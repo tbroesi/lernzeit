@@ -170,12 +170,20 @@ ANTWORTFORMAT (JSON):
 
     console.log('🚀 Making Gemini API request with prompt:', systemPrompt);
     console.log('🔑 Using Gemini API key exists:', !!geminiApiKey);
+    console.log('🔑 API key length:', geminiApiKey?.length || 0);
     
-    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent', {
+    if (!geminiApiKey) {
+      console.error('❌ GEMINI_API_KEY environment variable not set');
+      throw new Error('GEMINI_API_KEY not configured');
+    }
+    
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${geminiApiKey}`;
+    console.log('🌐 Making request to Gemini API');
+    
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-goog-api-key': geminiApiKey,
       },
       body: JSON.stringify({
         contents: [{
