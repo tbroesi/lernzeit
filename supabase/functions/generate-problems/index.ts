@@ -283,10 +283,11 @@ ANTWORTFORMAT (JSON):
           }]
         }],
         generationConfig: {
-          temperature: Math.min(0.95, 0.7 + (excludeQuestions.length * 0.05)), // Dynamic temperature based on exclusions
+          temperature: Math.min(1.2, 0.95 + (excludeQuestions.length * 0.05)), // Much higher temperature for creativity
           maxOutputTokens: 3000,
-          topP: 0.95,
-          topK: 40, // Add diversity
+          topP: 0.98,
+          topK: 50, // More diversity
+          candidateCount: 1
         }
       }),
     });

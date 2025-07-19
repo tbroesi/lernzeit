@@ -33,13 +33,12 @@ export function useQuestionGeneration(category: string, grade: number, userId: s
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationSource, setGenerationSource] = useState<'ai' | 'fallback' | null>(null);
   const [sessionId] = useState(() => {
+    // Immer neue Session-ID für mehr Varianz
+    const newSessionId = `session_${Date.now()}_${Math.random()}`;
     const storageKey = SESSION_KEY(category, grade, userId);
-    let existingSessionId = localStorage.getItem(storageKey);
-    if (!existingSessionId) {
-      existingSessionId = `session_${Date.now()}_${Math.random()}`;
-      localStorage.setItem(storageKey, existingSessionId);
-    }
-    return existingSessionId;
+    localStorage.setItem(storageKey, newSessionId);
+    console.log('🆕 New session ID created:', newSessionId);
+    return newSessionId;
   });
 
   useEffect(() => {
