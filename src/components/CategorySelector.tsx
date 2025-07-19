@@ -18,6 +18,8 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
   const { settings, loading } = useChildSettings(user?.id || '');
   const [visibleSubjects, setVisibleSubjects] = useState<Set<string>>(new Set());
 
+  console.log('🔍 CategorySelector render:', { user: user?.id, settings, loading });
+
   useEffect(() => {
     if (user?.id) {
       loadSubjectVisibility();
@@ -66,20 +68,26 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
   };
 
   const getMinutesForCategory = (categoryId: string) => {
+    console.log('🔍 CategorySelector getMinutesForCategory:', { categoryId, settings, loading });
     if (!settings) return 1; // Default: 1 minute per task
     
-    switch (categoryId) {
-      case 'math': return settings.math_minutes_per_task;
-      case 'german': return settings.german_minutes_per_task;
-      case 'english': return settings.english_minutes_per_task;
-      case 'geography': return settings.geography_minutes_per_task;
-      case 'history': return settings.history_minutes_per_task;
-      case 'physics': return settings.physics_minutes_per_task;
-      case 'biology': return settings.biology_minutes_per_task;
-      case 'chemistry': return settings.chemistry_minutes_per_task;
-      case 'latin': return settings.latin_minutes_per_task;
-      default: return 1; // Default: 1 minute per task
-    }
+    const minutes = (() => {
+      switch (categoryId) {
+        case 'math': return settings.math_minutes_per_task;
+        case 'german': return settings.german_minutes_per_task;
+        case 'english': return settings.english_minutes_per_task;
+        case 'geography': return settings.geography_minutes_per_task;
+        case 'history': return settings.history_minutes_per_task;
+        case 'physics': return settings.physics_minutes_per_task;
+        case 'biology': return settings.biology_minutes_per_task;
+        case 'chemistry': return settings.chemistry_minutes_per_task;
+        case 'latin': return settings.latin_minutes_per_task;
+        default: return 1; // Default: 1 minute per task
+      }
+    })();
+    
+    console.log(`🔍 CategorySelector ${categoryId}: ${minutes} minutes`);
+    return minutes;
   };
 
   const categories = [
