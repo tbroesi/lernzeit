@@ -542,7 +542,7 @@ export function ChildManagement({ linkedChildren, parentId, onChildUpdate }: Chi
               <CardHeader>
                 <CardTitle>Belohnungen pro richtige Antwort</CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  Legen Sie fest, wie viele Minuten {selectedChild.name} pro richtig gelöster Aufgabe bekommt.
+                  Legen Sie fest, wie viele Sekunden {selectedChild.name} pro richtig gelöster Aufgabe bekommt.
                 </p>
               </CardHeader>
               <CardContent>
@@ -554,7 +554,7 @@ export function ChildManagement({ linkedChildren, parentId, onChildUpdate }: Chi
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {subjects.map((subject) => {
                       const IconComponent = subject.icon;
-                      const fieldKey = `${subject.key}_minutes_per_task` as keyof ChildSettings;
+                      const fieldKey = `${subject.key}_seconds_per_task` as keyof ChildSettings;
                       const value = childSettings[fieldKey] as number;
                       
                       return (
@@ -580,7 +580,7 @@ export function ChildManagement({ linkedChildren, parentId, onChildUpdate }: Chi
                                placeholder="0"
                                className="w-20"
                              />
-                             <span className="text-sm text-muted-foreground">Min/Aufgabe</span>
+                             <span className="text-sm text-muted-foreground">Sek/Aufgabe</span>
                            </div>
                         </div>
                       );
