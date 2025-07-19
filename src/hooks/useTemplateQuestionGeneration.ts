@@ -6,13 +6,18 @@ import {
   questionTemplates, 
   getTemplatesForCategory, 
   generateQuestionFromTemplate,
+  selectTemplateIntelligently,
+  getTemplatesByDifficulty,
   QuestionTemplate,
   GeneratedQuestion
 } from '@/utils/questionTemplates';
 
-// Storage utilities for template combinations
+// Storage utilities for template combinations and usage tracking
 const TEMPLATE_COMBINATIONS_KEY = (category: string, grade: number, userId: string) => 
   `template_combinations_${category}_${grade}_${userId}`;
+
+const TEMPLATE_USAGE_KEY = (category: string, grade: number, userId: string) => 
+  `template_usage_${category}_${grade}_${userId}`;
 
 const getUsedCombinations = (category: string, grade: number, userId: string): Set<string> => {
   try {
@@ -20,6 +25,16 @@ const getUsedCombinations = (category: string, grade: number, userId: string): S
     return new Set(stored ? JSON.parse(stored) : []);
   } catch {
     return new Set();
+  }
+};
+
+const getTemplateUsage = (category: string, grade: number, userId: string): Map<string, number> => {
+  try {
+    const stored = localStorage.getItem(TEMPLATE_USAGE_KEY(category, grade, userId));
+    const usageObj = stored ? JSON.parse(stored) : {};
+    return new Map(Object.entries(usageObj).map(([key, value]) => [key, value as number]));
+  } catch {
+    return new Map();
   }
 };
 
@@ -33,6 +48,16 @@ const storeUsedCombinations = (category: string, grade: number, userId: string, 
   }
 };
 
+const storeTemplateUsage = (category: string, grade: number, userId: string, usage: Map<string, number>) => {
+  try {
+    const usageObj = Object.fromEntries(usage);
+    localStorage.setItem(TEMPLATE_USAGE_KEY(category, grade, userId), JSON.stringify(usageObj));
+    console.log(`📊 Stored template usage statistics:`, usageObj);
+  } catch (e) {
+    console.warn('Failed to store template usage:', e);
+  }
+};
+
 export function useTemplateQuestionGeneration(
   category: string, 
   grade: number, 
@@ -41,14 +66,18 @@ export function useTemplateQuestionGeneration(
 ) {
   const [problems, setProblems] = useState<SelectionQuestion[]>([]);
   const [usedCombinations, setUsedCombinations] = useState<Set<string>>(new Set());
+  const [templateUsage, setTemplateUsage] = useState<Map<string, number>>(new Map());
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationSource, setGenerationSource] = useState<'template' | 'ai' | 'fallback' | null>(null);
   const [sessionId] = useState(() => `template_session_${Date.now()}_${Math.random()}`);
 
   useEffect(() => {
     const storedCombinations = getUsedCombinations(category, grade, userId);
+    const storedUsage = getTemplateUsage(category, grade, userId);
     setUsedCombinations(storedCombinations);
+    setTemplateUsage(storedUsage);
     console.log(`🔄 Loaded ${storedCombinations.size} used template combinations for ${category} Grade ${grade}`);
+    console.log(`📊 Loaded template usage statistics:`, Object.fromEntries(storedUsage));
   }, [category, grade, userId]);
 
   const generateProblems = async () => {
@@ -57,6 +86,7 @@ export function useTemplateQuestionGeneration(
     try {
       console.log(`🎯 Generating template-based problems for ${category}, Grade ${grade}`);
       console.log(`📝 Used combinations: ${usedCombinations.size}`);
+      console.log(`📊 Template usage:`, Object.fromEntries(templateUsage));
 
       // Get available templates for this category and grade
       const availableTemplates = getTemplatesForCategory(category, grade);
@@ -67,8 +97,8 @@ export function useTemplateQuestionGeneration(
         return await fallbackToAI();
       }
 
-      // Generate questions using templates
-      const templateProblems = await generateTemplateProblems(availableTemplates);
+      // Generate questions using intelligent template selection
+      const templateProblems = await generateTemplateProblemsIntelligently(availableTemplates);
       
       if (templateProblems.length >= totalQuestions) {
         const selectedProblems = templateProblems.slice(0, totalQuestions);
@@ -92,43 +122,53 @@ export function useTemplateQuestionGeneration(
     }
   };
 
-  const generateTemplateProblems = async (templates: QuestionTemplate[]): Promise<SelectionQuestion[]> => {
+  const generateTemplateProblemsIntelligently = async (templates: QuestionTemplate[]): Promise<SelectionQuestion[]> => {
     const problems: SelectionQuestion[] = [];
     const updatedCombinations = new Set(usedCombinations);
-    const templateUsage = new Map<string, number>();
+    const updatedUsage = new Map(templateUsage);
 
-    // Track template usage to ensure variety
-    templates.forEach(t => templateUsage.set(t.id, 0));
+    // Determine difficulty progression (start easier, get harder)
+    const getDifficultyForQuestion = (questionIndex: number): 'easy' | 'medium' | 'hard' | undefined => {
+      if (questionIndex < 2) return 'easy';
+      if (questionIndex < 4) return 'medium';
+      return 'hard';
+    };
 
-    const maxAttempts = totalQuestions * 10;
+    const maxAttempts = totalQuestions * 15; // Increased attempts for better variety
     let attempts = 0;
 
     while (problems.length < totalQuestions && attempts < maxAttempts) {
       attempts++;
 
-      // Select template with preference for less used ones
-      const sortedTemplates = templates.sort((a, b) => {
-        const usageA = templateUsage.get(a.id) || 0;
-        const usageB = templateUsage.get(b.id) || 0;
-        if (usageA !== usageB) return usageA - usageB;
-        return Math.random() - 0.5; // Random if usage is equal
-      });
+      // Get preferred difficulty for current question
+      const preferredDifficulty = getDifficultyForQuestion(problems.length);
+      
+      // Select template intelligently
+      const selectedTemplate = selectTemplateIntelligently(templates, updatedUsage, preferredDifficulty);
+      
+      if (!selectedTemplate) {
+        console.warn('⚠️ No template could be selected');
+        break;
+      }
 
-      const selectedTemplate = sortedTemplates[0];
       const generatedQuestion = generateQuestionFromTemplate(selectedTemplate, updatedCombinations);
 
       if (generatedQuestion) {
         const selectionQuestion = convertToSelectionQuestion(generatedQuestion);
         problems.push(selectionQuestion);
-        templateUsage.set(selectedTemplate.id, (templateUsage.get(selectedTemplate.id) || 0) + 1);
         
-        console.log(`✅ Generated: "${generatedQuestion.question.substring(0, 40)}..." (Template: ${selectedTemplate.id})`);
+        // Update usage statistics
+        updatedUsage.set(selectedTemplate.id, (updatedUsage.get(selectedTemplate.id) || 0) + 1);
+        
+        console.log(`✅ Generated: "${generatedQuestion.question.substring(0, 40)}..." (Template: ${selectedTemplate.id}, Difficulty: ${selectedTemplate.difficulty})`);
       }
     }
 
-    // Store updated combinations
+    // Store updated data
     setUsedCombinations(updatedCombinations);
+    setTemplateUsage(updatedUsage);
     storeUsedCombinations(category, grade, userId, updatedCombinations);
+    storeTemplateUsage(category, grade, userId, updatedUsage);
 
     return problems;
   };
@@ -228,25 +268,47 @@ export function useTemplateQuestionGeneration(
     console.log('⚡ Using simple fallback generation...');
     const fallbackProblems: SelectionQuestion[] = [];
     
-    // Generate simple math problems as ultimate fallback
+    // Generate contextual fallback problems based on category
     for (let i = 0; i < totalQuestions; i++) {
-      const a = Math.floor(Math.random() * 20) + 5;
-      const b = Math.floor(Math.random() * 15) + 2;
-      const operation = Math.random() > 0.5 ? '+' : '-';
-      const answer = operation === '+' ? a + b : a - b;
-      
-      // Ensure positive results for subtraction
-      const [first, second] = operation === '-' && answer < 0 ? [b, a] : [a, b];
-      const finalAnswer = operation === '+' ? first + second : first - second;
-      
-      fallbackProblems.push({
-        id: Math.floor(Math.random() * 1000000),
-        questionType: 'text-input',
-        question: `${first} ${operation} ${second} = ?`,
-        answer: finalAnswer,
-        type: 'math',
-        explanation: `${first} ${operation} ${second} = ${finalAnswer}`
-      });
+      if (category === 'Mathematik') {
+        const a = Math.floor(Math.random() * 20) + 5;
+        const b = Math.floor(Math.random() * 15) + 2;
+        const operation = Math.random() > 0.5 ? '+' : '-';
+        const answer = operation === '+' ? a + b : Math.max(0, a - b);
+        
+        fallbackProblems.push({
+          id: Math.floor(Math.random() * 1000000),
+          questionType: 'text-input',
+          question: `${operation === '+' ? a : Math.max(a, b)} ${operation} ${operation === '+' ? b : Math.min(a, b)} = ?`,
+          answer: answer,
+          type: 'math',
+          explanation: `Einfache ${operation === '+' ? 'Addition' : 'Subtraktion'}`
+        });
+      } else if (category === 'Deutsch') {
+        const words = ['Hund', 'Katze', 'Baum', 'Haus', 'Auto'];
+        const word = words[Math.floor(Math.random() * words.length)];
+        const syllableCount = Math.max(1, Math.floor(word.length / 2));
+        
+        fallbackProblems.push({
+          id: Math.floor(Math.random() * 1000000),
+          questionType: 'text-input',
+          question: `Wie viele Silben hat das Wort "${word}"?`,
+          answer: syllableCount,
+          type: 'german',
+          explanation: 'Silben zählen'
+        });
+      } else {
+        // Generic fallback for other subjects
+        const num = Math.floor(Math.random() * 100) + 1;
+        fallbackProblems.push({
+          id: Math.floor(Math.random() * 1000000),
+          questionType: 'text-input',
+          question: `Was ist ${num} + 1?`,
+          answer: num + 1,
+          type: category.toLowerCase(),
+          explanation: 'Einfache Rechnung'
+        });
+      }
     }
     
     setProblems(fallbackProblems);
@@ -254,12 +316,24 @@ export function useTemplateQuestionGeneration(
     setIsGenerating(false);
   };
 
+  // Utility function to get generation statistics
+  const getGenerationStats = () => {
+    return {
+      totalCombinations: usedCombinations.size,
+      templateUsage: Object.fromEntries(templateUsage),
+      availableTemplates: getTemplatesForCategory(category, grade).length,
+      generationSource
+    };
+  };
+
   return {
     problems,
     usedCombinations,
+    templateUsage,
     sessionId,
     isGenerating,
     generationSource,
-    generateProblems
+    generateProblems,
+    getGenerationStats
   };
 }
