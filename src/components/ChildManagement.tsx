@@ -246,11 +246,16 @@ export function ChildManagement({ linkedChildren, parentId, onChildUpdate }: Chi
         .update({ grade: newGrade })
         .eq('id', childId)
         .select('id, name, grade')
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('❌ Database error:', error);
         throw error;
+      }
+
+      if (!data) {
+        console.error('❌ No data returned from update');
+        throw new Error('Profile not found or update failed');
       }
 
       console.log('✅ Database update successful:', data);
