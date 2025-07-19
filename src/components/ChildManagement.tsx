@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -75,6 +76,7 @@ export function ChildManagement({ linkedChildren, parentId, onChildUpdate }: Chi
   const [childSettings, setChildSettings] = useState<ChildSettings | null>(null);
   const [visibleSubjects, setVisibleSubjects] = useState<VisibleSubjects>({});
   const [pendingGrades, setPendingGrades] = useState<{[key: string]: number}>({});
+  const [savingGrade, setSavingGrade] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   
@@ -161,6 +163,7 @@ export function ChildManagement({ linkedChildren, parentId, onChildUpdate }: Chi
       setVisibleSubjects(defaultVisible);
 
     } catch (error: any) {
+      console.error('Error loading child data:', error);
       toast({
         title: "Fehler",
         description: "Einstellungen konnten nicht geladen werden.",
@@ -222,32 +225,64 @@ export function ChildManagement({ linkedChildren, parentId, onChildUpdate }: Chi
   };
 
   const saveGradeChange = async (childId: string, newGrade: number) => {
+    console.log(`🎓 Attempting to save grade change for child ${childId} to grade ${newGrade}`);
+    
+    if (!selectedChild) {
+      console.error('❌ No selected child found');
+      toast({
+        title: "Fehler",
+        description: "Kein Kind ausgewählt.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
-      const { error } = await supabase
+      setSavingGrade(childId);
+      console.log(`🔄 Starting grade update process...`);
+      
+      const { data, error } = await supabase
         .from('profiles')
         .update({ grade: newGrade })
-        .eq('id', childId);
+        .eq('id', childId)
+        .select('id, name, grade')
+        .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Database error:', error);
+        throw error;
+      }
 
+      console.log('✅ Database update successful:', data);
+
+      // Clear pending grade
       setPendingGrades(prev => {
         const updated = { ...prev };
         delete updated[childId];
         return updated;
       });
 
+      // Show success toast
       toast({
         title: "Klasse aktualisiert",
-        description: `${selectedChild?.name} ist jetzt in Klasse ${newGrade}.`,
+        description: `${selectedChild.name} ist jetzt in Klasse ${newGrade}.`,
       });
 
-      onChildUpdate?.();
+      console.log('🔄 Calling onChildUpdate to refresh data...');
+      // Refresh parent data
+      if (onChildUpdate) {
+        onChildUpdate();
+      }
+
     } catch (error: any) {
+      console.error('❌ Error saving grade change:', error);
       toast({
-        title: "Fehler",
-        description: "Klasse konnte nicht aktualisiert werden.",
+        title: "Fehler beim Speichern",
+        description: `Die Klasse für ${selectedChild.name} konnte nicht aktualisiert werden: ${error.message}`,
         variant: "destructive",
       });
+    } finally {
+      setSavingGrade(null);
     }
   };
 
@@ -356,34 +391,52 @@ export function ChildManagement({ linkedChildren, parentId, onChildUpdate }: Chi
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="grade">Klassenstufe</Label>
-                  <Select
-                    value={pendingGrades[selectedChild.id]?.toString() || selectedChild.grade.toString()}
-                    onValueChange={(value) => {
-                      const newGrade = parseInt(value);
-                      setPendingGrades(prev => ({
-                        ...prev,
-                        [selectedChild.id]: newGrade
-                      }));
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Array.from({ length: 13 }, (_, i) => i + 1).map((grade) => (
-                        <SelectItem key={grade} value={grade.toString()}>
-                          Klasse {grade}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {pendingGrades[selectedChild.id] && (
-                    <Button
-                      size="sm"
-                      onClick={() => saveGradeChange(selectedChild.id, pendingGrades[selectedChild.id])}
+                  <div className="flex items-center gap-3">
+                    <Select
+                      value={pendingGrades[selectedChild.id]?.toString() || selectedChild.grade.toString()}
+                      onValueChange={(value) => {
+                        const newGrade = parseInt(value);
+                        console.log(`📝 Grade selection changed to: ${newGrade} for child: ${selectedChild.name}`);
+                        setPendingGrades(prev => ({
+                          ...prev,
+                          [selectedChild.id]: newGrade
+                        }));
+                      }}
                     >
-                      Klasse speichern
-                    </Button>
+                      <SelectTrigger className="w-48">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 13 }, (_, i) => i + 1).map((grade) => (
+                          <SelectItem key={grade} value={grade.toString()}>
+                            Klasse {grade}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    
+                    {pendingGrades[selectedChild.id] && (
+                      <Button
+                        size="sm"
+                        disabled={savingGrade === selectedChild.id}
+                        onClick={() => saveGradeChange(selectedChild.id, pendingGrades[selectedChild.id])}
+                      >
+                        {savingGrade === selectedChild.id ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Speichere...
+                          </>
+                        ) : (
+                          'Klasse speichern'
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                  
+                  {pendingGrades[selectedChild.id] && (
+                    <div className="text-sm text-muted-foreground">
+                      Aktuelle Klasse: {selectedChild.grade} → Neue Klasse: {pendingGrades[selectedChild.id]}
+                    </div>
                   )}
                 </div>
               </CardContent>
@@ -541,7 +594,7 @@ export function ChildManagement({ linkedChildren, parentId, onChildUpdate }: Chi
           <Button onClick={saveChildSettings} disabled={saving || loading}>
             {saving ? (
               <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader2 className="w-4 w-4 mr-2 animate-spin" />
                 Speichere...
               </>
             ) : (
