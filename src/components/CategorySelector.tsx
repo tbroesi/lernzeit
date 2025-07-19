@@ -51,22 +51,22 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
           );
           setVisibleSubjects(visible);
         } else {
-          // If no settings exist, show all subjects
+          // If no settings exist, show all subjects (default behavior)
           setVisibleSubjects(new Set(['math', 'german', 'english', 'geography', 'history', 'physics', 'biology', 'chemistry', 'latin']));
         }
       } else {
-        // If no parent relationship, show all subjects
+        // If no parent relationship, show all subjects (default behavior)
         setVisibleSubjects(new Set(['math', 'german', 'english', 'geography', 'history', 'physics', 'biology', 'chemistry', 'latin']));
       }
     } catch (error) {
       console.error('Error loading subject visibility:', error);
-      // On error, show all subjects
+      // On error, show all subjects (default behavior)
       setVisibleSubjects(new Set(['math', 'german', 'english', 'geography', 'history', 'physics', 'biology', 'chemistry', 'latin']));
     }
   };
 
   const getMinutesForCategory = (categoryId: string) => {
-    if (!settings) return 5;
+    if (!settings) return 1; // Default: 1 minute per task
     
     switch (categoryId) {
       case 'math': return settings.math_minutes_per_task;
@@ -78,7 +78,7 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
       case 'biology': return settings.biology_minutes_per_task;
       case 'chemistry': return settings.chemistry_minutes_per_task;
       case 'latin': return settings.latin_minutes_per_task;
-      default: return 5;
+      default: return 1; // Default: 1 minute per task
     }
   };
 

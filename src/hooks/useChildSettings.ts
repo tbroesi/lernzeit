@@ -43,7 +43,7 @@ export function useChildSettings(childId: string) {
       setLoading(true);
       console.log('🔧 Loading child settings for:', childId);
       
-      // First try to get child-specific settings
+      // Get child-specific settings (only source of truth now)
       console.log('🔍 Querying child_settings with child_id:', childId);
       const { data: childSettings, error: childError } = await supabase
         .from('child_settings')
@@ -64,43 +64,18 @@ export function useChildSettings(childId: string) {
         return;
       }
 
-      // If no child-specific settings, try to get parent settings
-      const { data: relationships, error: relError } = await supabase
-        .from('parent_child_relationships')
-        .select('parent_id')
-        .eq('child_id', childId)
-        .maybeSingle();
-
-      console.log('🔧 Parent relationship result:', { relationships, relError });
-
-      if (relationships && !relError && relationships.parent_id) {
-        const { data: parentSettings, error: parentError } = await supabase
-          .from('parent_settings')
-          .select('*')
-          .eq('user_id', relationships.parent_id)
-          .maybeSingle();
-
-        console.log('🔧 Parent settings result:', { parentSettings, parentError });
-
-        if (parentSettings && !parentError) {
-          console.log('✅ Found parent settings');
-          setSettings(parentSettings);
-          return;
-        }
-      }
-
-      // If no settings found, use defaults
-      console.log('🔧 Using default settings');
+      // If no child settings found, use default settings (1 minute per task)
+      console.log('🔧 No child settings found, using default settings (1 minute per task)');
       const defaultSettings = {
-        math_minutes_per_task: 5,
-        german_minutes_per_task: 5,
-        english_minutes_per_task: 5,
-        geography_minutes_per_task: 5,
-        history_minutes_per_task: 5,
-        physics_minutes_per_task: 5,
-        biology_minutes_per_task: 5,
-        chemistry_minutes_per_task: 5,
-        latin_minutes_per_task: 5,
+        math_minutes_per_task: 1,
+        german_minutes_per_task: 1,
+        english_minutes_per_task: 1,
+        geography_minutes_per_task: 1,
+        history_minutes_per_task: 1,
+        physics_minutes_per_task: 1,
+        biology_minutes_per_task: 1,
+        chemistry_minutes_per_task: 1,
+        latin_minutes_per_task: 1,
         weekday_max_minutes: 30,
         weekend_max_minutes: 60,
       };
@@ -110,17 +85,17 @@ export function useChildSettings(childId: string) {
     } catch (error) {
       console.error('❌ Error loading child settings:', error);
       
-      // Use defaults on error
+      // Use defaults on error (1 minute per task)
       const defaultSettings = {
-        math_minutes_per_task: 5,
-        german_minutes_per_task: 5,
-        english_minutes_per_task: 5,
-        geography_minutes_per_task: 5,
-        history_minutes_per_task: 5,
-        physics_minutes_per_task: 5,
-        biology_minutes_per_task: 5,
-        chemistry_minutes_per_task: 5,
-        latin_minutes_per_task: 5,
+        math_minutes_per_task: 1,
+        german_minutes_per_task: 1,
+        english_minutes_per_task: 1,
+        geography_minutes_per_task: 1,
+        history_minutes_per_task: 1,
+        physics_minutes_per_task: 1,
+        biology_minutes_per_task: 1,
+        chemistry_minutes_per_task: 1,
+        latin_minutes_per_task: 1,
         weekday_max_minutes: 30,
         weekend_max_minutes: 60,
       };

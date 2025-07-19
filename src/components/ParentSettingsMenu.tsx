@@ -52,15 +52,15 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
   const [settings, setSettings] = useState<ParentSettings>({
     weekday_max_minutes: 30,
     weekend_max_minutes: 60,
-    math_minutes_per_task: 2,
-    german_minutes_per_task: 2,
-    english_minutes_per_task: 2,
-    geography_minutes_per_task: 2,
-    history_minutes_per_task: 2,
-    physics_minutes_per_task: 2,
-    biology_minutes_per_task: 2,
-    chemistry_minutes_per_task: 2,
-    latin_minutes_per_task: 2,
+    math_minutes_per_task: 1,
+    german_minutes_per_task: 1,
+    english_minutes_per_task: 1,
+    geography_minutes_per_task: 1,
+    history_minutes_per_task: 1,
+    physics_minutes_per_task: 1,
+    biology_minutes_per_task: 1,
+    chemistry_minutes_per_task: 1,
+    latin_minutes_per_task: 1,
   });
   const [childSettings, setChildSettings] = useState<ChildSettings[]>([]);
   const [newPassword, setNewPassword] = useState('');
@@ -82,7 +82,7 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
   } = useFamilyLinking();
 
   useEffect(() => {
-    loadSettings();
+    // No need to load parent settings anymore - we work directly with child settings
     loadFamilyData(userId);
     loadProfileName();
   }, [userId]);
@@ -91,80 +91,8 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
     loadChildSettings();
   }, [linkedChildren]);
 
-  const loadSettings = async () => {
-    console.log('🔧 ParentSettingsMenu: Loading settings for userId:', userId);
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('parent_settings')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
-
-      console.log('🔧 ParentSettingsMenu query result:', { data, error });
-
-      if (error) {
-        throw error;
-      }
-
-      if (data) {
-        console.log('✅ ParentSettingsMenu: Found existing settings');
-        setSettings({
-          weekday_max_minutes: data.weekday_max_minutes,
-          weekend_max_minutes: data.weekend_max_minutes,
-          math_minutes_per_task: data.math_minutes_per_task,
-          german_minutes_per_task: data.german_minutes_per_task,
-          english_minutes_per_task: data.english_minutes_per_task,
-          geography_minutes_per_task: data.geography_minutes_per_task,
-          history_minutes_per_task: data.history_minutes_per_task,
-          physics_minutes_per_task: data.physics_minutes_per_task,
-          biology_minutes_per_task: data.biology_minutes_per_task,
-          chemistry_minutes_per_task: data.chemistry_minutes_per_task,
-          latin_minutes_per_task: data.latin_minutes_per_task,
-        });
-      } else {
-        // No settings found, save current defaults to database
-        console.log('🔧 ParentSettingsMenu: No settings found, creating defaults');
-        await saveInitialSettings();
-      }
-    } catch (error: any) {
-      console.error('❌ Error loading parent settings:', error);
-      toast({
-        title: "Fehler",
-        description: "Einstellungen konnten nicht geladen werden.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const saveInitialSettings = async () => {
-    console.log('🔧 ParentSettingsMenu: Creating initial settings with:', settings);
-    try {
-      const { error } = await supabase
-        .from('parent_settings')
-        .insert({
-          user_id: userId,
-          weekday_max_minutes: settings.weekday_max_minutes,
-          weekend_max_minutes: settings.weekend_max_minutes,
-          math_minutes_per_task: settings.math_minutes_per_task,
-          german_minutes_per_task: settings.german_minutes_per_task,
-          english_minutes_per_task: settings.english_minutes_per_task,
-          geography_minutes_per_task: settings.geography_minutes_per_task,
-          history_minutes_per_task: settings.history_minutes_per_task,
-          physics_minutes_per_task: settings.physics_minutes_per_task,
-          biology_minutes_per_task: settings.biology_minutes_per_task,
-          chemistry_minutes_per_task: settings.chemistry_minutes_per_task,
-          latin_minutes_per_task: settings.latin_minutes_per_task,
-        });
-
-      if (error) throw error;
-      console.log('✅ ParentSettingsMenu: Initial settings created successfully');
-    } catch (error) {
-      console.error('❌ ParentSettingsMenu: Error creating initial settings:', error);
-    }
-  };
+  // Removed loadSettings and saveInitialSettings - no longer needed
+  // Parent settings are now handled entirely through child_settings
 
   const loadChildSettings = async () => {
     if (linkedChildren.length === 0) return;
@@ -183,17 +111,17 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
         const existing = settingsMap.get(child.id);
         return existing || {
           child_id: child.id,
-          weekday_max_minutes: settings.weekday_max_minutes,
-          weekend_max_minutes: settings.weekend_max_minutes,
-          math_minutes_per_task: settings.math_minutes_per_task,
-          german_minutes_per_task: settings.german_minutes_per_task,
-          english_minutes_per_task: settings.english_minutes_per_task,
-          geography_minutes_per_task: settings.geography_minutes_per_task,
-          history_minutes_per_task: settings.history_minutes_per_task,
-          physics_minutes_per_task: settings.physics_minutes_per_task,
-          biology_minutes_per_task: settings.biology_minutes_per_task,
-          chemistry_minutes_per_task: settings.chemistry_minutes_per_task,
-          latin_minutes_per_task: settings.latin_minutes_per_task,
+          weekday_max_minutes: 30, // Default values (1 minute per task)
+          weekend_max_minutes: 60,
+          math_minutes_per_task: 1,
+          german_minutes_per_task: 1,
+          english_minutes_per_task: 1,
+          geography_minutes_per_task: 1,
+          history_minutes_per_task: 1,
+          physics_minutes_per_task: 1,
+          biology_minutes_per_task: 1,
+          chemistry_minutes_per_task: 1,
+          latin_minutes_per_task: 1,
         };
       });
 
@@ -207,43 +135,7 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
     }
   };
 
-  const saveSettings = async () => {
-    try {
-      setSaving(true);
-      
-      const { error } = await supabase
-        .from('parent_settings')
-        .upsert({
-          user_id: userId,
-          weekday_max_minutes: settings.weekday_max_minutes,
-          weekend_max_minutes: settings.weekend_max_minutes,
-          math_minutes_per_task: settings.math_minutes_per_task,
-          german_minutes_per_task: settings.german_minutes_per_task,
-          english_minutes_per_task: settings.english_minutes_per_task,
-          geography_minutes_per_task: settings.geography_minutes_per_task,
-          history_minutes_per_task: settings.history_minutes_per_task,
-          physics_minutes_per_task: settings.physics_minutes_per_task,
-          biology_minutes_per_task: settings.biology_minutes_per_task,
-          chemistry_minutes_per_task: settings.chemistry_minutes_per_task,
-          latin_minutes_per_task: settings.latin_minutes_per_task,
-        });
-
-      if (error) throw error;
-
-      toast({
-        title: "Erfolgreich gespeichert",
-        description: "Ihre Einstellungen wurden aktualisiert.",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Fehler",
-        description: "Einstellungen konnten nicht gespeichert werden.",
-        variant: "destructive",
-      });
-    } finally {
-      setSaving(false);
-    }
-  };
+  // Removed saveSettings - no longer saving to parent_settings table
 
   const saveChildSettings = async () => {
     try {
