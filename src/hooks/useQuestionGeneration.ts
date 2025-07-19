@@ -21,7 +21,9 @@ const getStoredQuestions = (category: string, grade: number, userId: string): Se
 
 const storeQuestions = (category: string, grade: number, userId: string, questions: Set<string>) => {
   try {
-    localStorage.setItem(GLOBAL_QUESTIONS_KEY(category, grade, userId), JSON.stringify(Array.from(questions)));
+    const questionsArray = Array.from(questions);
+    localStorage.setItem(GLOBAL_QUESTIONS_KEY(category, grade, userId), JSON.stringify(questionsArray));
+    console.log(`💾 Stored ${questionsArray.length} questions to localStorage:`, questionsArray.slice(0, 3));
   } catch (e) {
     console.warn('Failed to store questions:', e);
   }
@@ -53,6 +55,7 @@ export function useQuestionGeneration(category: string, grade: number, userId: s
     try {
       console.log(`🔄 Generating problems for ${category}, Grade ${grade}`);
       console.log(`📝 Global questions stored: ${globalQuestions.size}`);
+      console.log(`📋 Current global questions:`, Array.from(globalQuestions).slice(0, 3));
 
       // Try AI generation first
       const aiProblems = await generateAIProblems();
@@ -61,18 +64,21 @@ export function useQuestionGeneration(category: string, grade: number, userId: s
         const selectedProblems = aiProblems.slice(0, totalQuestions);
         setProblems(selectedProblems);
         
-        // Update global question tracking
+        // Update global question tracking SOFORT
         const updatedGlobalQuestions = new Set(globalQuestions);
         selectedProblems.forEach(problem => {
           updatedGlobalQuestions.add(problem.question);
+          console.log(`➕ Adding question to global store: "${problem.question.substring(0, 30)}..."`);
         });
+        
+        // Sofort speichern und state updaten
         setGlobalQuestions(updatedGlobalQuestions);
         storeQuestions(category, grade, userId, updatedGlobalQuestions);
         
         console.log(`✅ Using AI-generated problems: ${selectedProblems.length}`);
         console.log(`📊 Total questions now stored: ${updatedGlobalQuestions.size}`);
         setGenerationSource('ai');
-        setIsGenerating(false); // WICHTIG: Status hier setzen
+        setIsGenerating(false);
         return;
       }
     } catch (error) {

@@ -192,11 +192,11 @@ serve(async (req) => {
     
     // Enhanced exclusion text with stronger language
     const excludeText = excludeQuestions.length > 0 
-      ? `\n\n🚫 KRITISCH WICHTIG - VERMEIDE DIESE ${excludeQuestions.length} BEREITS GESTELLTEN FRAGEN:\n${excludeQuestions.slice(0, 10).map((q, i) => `${i+1}. "${q.substring(0, 60)}..."`).join('\n')}\n\n⚡ ERSTELLE KOMPLETT ANDERE FRAGEN MIT:\n- Unterschiedlichen Zahlen/Werten\n- Anderen Themen/Unterthemen\n- Verschiedenen Formulierungen\n- Neuen Beispielen und Begriffen\n\n${excludeQuestions.length > 10 ? `... und ${excludeQuestions.length - 10} weitere bereits verwendete Fragen` : ''}`
+      ? `\n\n🚫 ABSOLUT KRITISCH - VERMEIDE DIESE ${excludeQuestions.length} BEREITS GESTELLTEN FRAGEN:\n${excludeQuestions.slice(0, 15).map((q, i) => `${i+1}. "${q}"`).join('\n')}\n\n⚡ ERSTELLE KOMPLETT ANDERE FRAGEN MIT:\n- VÖLLIG unterschiedlichen Zahlen/Werten (keine ähnlichen wie ${excludeQuestions.filter(q => q.includes('+')).slice(0, 3).map(q => q.split(' ')[0] + '+' + q.split(' ')[2]).join(', ')})\n- Anderen Themen/Unterthemen\n- Verschiedenen Formulierungen\n- Neuen Beispielen und Begriffen\n- Anderen Operationen (nicht nur Addition bei Mathe)\n\n${excludeQuestions.length > 15 ? `... und ${excludeQuestions.length - 15} weitere bereits verwendete Fragen` : ''}`
       : '\n\n✨ Erste Sitzung - erstelle völlig neue und einzigartige Aufgaben!';
 
-    const creativityBoost = excludeQuestions.length > 5 ? 
-      '\n\n🎨 KREATIVITÄTS-BOOST ERFORDERLICH: Da bereits viele Fragen gestellt wurden, sei besonders kreativ und nutze völlig neue Ansätze, andere Themenbereiche und innovative Fragestellungen!' : '';
+    const creativityBoost = excludeQuestions.length > 3 ? 
+      '\n\n🎨 MAXIMALE KREATIVITÄT ERFORDERLICH: Da bereits Fragen gestellt wurden, sei extrem kreativ und nutze völlig neue Ansätze, andere Themenbereiche und innovative Fragestellungen! KEINE WIEDERHOLUNGEN!' : '';
 
     const enhancedPrompt = `Du bist ein erfahrener Lehrer für interaktives Lernen. Erstelle genau ${count} VÖLLIG NEUE UND EINZIGARTIGE Aufgaben mit verschiedenen Fragetypen.${excludeText}${creativityBoost}
 
