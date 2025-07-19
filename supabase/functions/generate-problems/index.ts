@@ -12,6 +12,7 @@ interface ProblemRequest {
   category: string;
   grade: number;
   count: number;
+  excludeQuestions?: string[]; // Array of question texts to exclude
 }
 
 interface BaseQuestion {
@@ -168,12 +169,16 @@ serve(async (req) => {
   }
 
   try {
-    const { category, grade, count = 5 }: ProblemRequest = await req.json();
+    const { category, grade, count = 5, excludeQuestions = [] }: ProblemRequest = await req.json();
     console.log(`Generating ${count} problems for ${category}, Grade ${grade}`);
 
     const subjectPrompt = getSubjectPrompt(category, grade);
     
-    const systemPrompt = `Du bist ein erfahrener Lehrer für interaktives Lernen. Erstelle genau ${count} Aufgaben mit verschiedenen Fragetypen.
+    const excludeText = excludeQuestions.length > 0 
+      ? `\n\nWICHTIG: VERMEIDE diese bereits gestellten Fragen und erstelle VÖLLIG NEUE Aufgaben:\n${excludeQuestions.map(q => `- "${q}"`).join('\n')}\n`
+      : '';
+
+    const systemPrompt = `Du bist ein erfahrener Lehrer für interaktives Lernen. Erstelle genau ${count} VÖLLIG NEUE UND EINZIGARTIGE Aufgaben mit verschiedenen Fragetypen.${excludeText}
 
 NEUE FRAGETYPEN FÜR BESSERE UX:
 1. "multiple-choice": 4 Antwortoptionen (A, B, C, D)
@@ -191,13 +196,13 @@ Verwende immer dieses exakte Format für drag-drop:
 {
   "questionType": "drag-drop",
   "question": "Ordne die Elemente zu:",
-  "words": [
-    {"word": "Element1", "category": "Kategorie1"},
-    {"word": "Element2", "category": "Kategorie2"}
+  "items": [
+    {"id": "item-1", "content": "Element1", "category": "Kategorie1"},
+    {"id": "item-2", "content": "Element2", "category": "Kategorie2"}
   ],
   "categories": [
-    {"name": "Kategorie1"},
-    {"name": "Kategorie2"}
+    {"id": "Kategorie1", "name": "Kategorie1", "acceptsItems": ["item-1"]},
+    {"id": "Kategorie2", "name": "Kategorie2", "acceptsItems": ["item-2"]}
   ]
 }
 
@@ -319,16 +324,21 @@ ANTWORTFORMAT (JSON):
         selectableWords: problem.selectableWords || []
       }),
       ...(problem.questionType === 'drag-drop' && {
-        items: problem.words?.map((word: any, wordIndex: number) => ({
+        items: problem.items?.map((item: any, itemIndex: number) => ({
+          id: item.id || `item-${itemIndex}`,
+          content: item.content || item.word,
+          category: item.category
+        })) || problem.words?.map((word: any, wordIndex: number) => ({
           id: `item-${wordIndex}`,
           content: word.word,
           category: word.category
-        })) || problem.items || [],
+        })) || [],
         categories: problem.categories?.map((category: any, catIndex: number) => ({
-          id: category.name || `category-${catIndex}`,
+          id: category.id || category.name || `category-${catIndex}`,
           name: category.name,
-          acceptsItems: problem.words?.filter((word: any) => word.category === category.name)
-            .map((_: any, wordIndex: number) => `item-${problem.words.findIndex((w: any) => w.word === _.word)}`) || []
+          acceptsItems: category.acceptsItems || (problem.items || problem.words)
+            ?.filter((item: any) => item.category === category.name)
+            .map((item: any, itemIndex: number) => item.id || `item-${(problem.items || problem.words).findIndex((i: any) => i === item)}`) || []
         })) || []
       }),
       ...(problem.questionType === 'text-input' && {

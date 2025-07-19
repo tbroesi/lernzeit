@@ -387,6 +387,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
   const [gameStarted, setGameStarted] = useState(false);
   const [newAchievements, setNewAchievements] = useState<NewAchievement[]>([]);
   const [showAchievementPopup, setShowAchievementPopup] = useState(false);
+  const [usedQuestions, setUsedQuestions] = useState<string[]>([]);
   const { toast } = useToast();
   const { settings } = useChildSettings(userId);
   const { canEarnMoreTime, isAtLimit, remainingMinutes, getDailyLimit } = useScreenTimeLimit(userId);
@@ -414,7 +415,10 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
       // Try to generate AI problems first
       const aiProblems = await generateAIProblems();
       if (aiProblems.length >= totalQuestions) {
-        setProblems(aiProblems.slice(0, totalQuestions));
+        const selectedProblems = aiProblems.slice(0, totalQuestions);
+        setProblems(selectedProblems);
+        // Track used questions to avoid repetition
+        setUsedQuestions(prev => [...prev, ...selectedProblems.map(p => p.question)]);
         setGameStarted(true);
         return;
       }
@@ -441,7 +445,8 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
         body: {
           category,
           grade,
-          count: totalQuestions
+          count: totalQuestions,
+          excludeQuestions: usedQuestions
         }
       });
 
