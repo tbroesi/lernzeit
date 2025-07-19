@@ -31,6 +31,7 @@ export function useQuestionGeneration(category: string, grade: number, userId: s
   const [problems, setProblems] = useState<SelectionQuestion[]>([]);
   const [globalQuestions, setGlobalQuestions] = useState<Set<string>>(new Set());
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generationSource, setGenerationSource] = useState<'ai' | 'fallback' | null>(null);
   const [sessionId] = useState(() => {
     const storageKey = SESSION_KEY(category, grade, userId);
     let existingSessionId = localStorage.getItem(storageKey);
@@ -71,6 +72,7 @@ export function useQuestionGeneration(category: string, grade: number, userId: s
         
         console.log(`✅ Using AI-generated problems: ${selectedProblems.length}`);
         console.log(`📊 Total questions now stored: ${updatedGlobalQuestions.size}`);
+        setGenerationSource('ai');
         setIsGenerating(false); // WICHTIG: Status hier setzen
         return;
       }
@@ -82,6 +84,7 @@ export function useQuestionGeneration(category: string, grade: number, userId: s
     console.log('🔄 Using fallback problem generation...');
     const fallbackProblems = generateFallbackProblems();
     setProblems(fallbackProblems);
+    setGenerationSource('fallback');
 
     setIsGenerating(false);
   };
@@ -92,6 +95,7 @@ export function useQuestionGeneration(category: string, grade: number, userId: s
       
       const excludeQuestions = Array.from(globalQuestions);
       console.log(`📝 Excluding ${excludeQuestions.length} global questions`);
+      console.log(`📋 Sample excluded questions:`, excludeQuestions.slice(0, 3));
       
       const response = await supabase.functions.invoke('generate-problems', {
         body: {
@@ -105,6 +109,8 @@ export function useQuestionGeneration(category: string, grade: number, userId: s
         }
       });
 
+      console.log('📡 Full Supabase response:', response);
+
       if (response.error) {
         console.error('❌ Supabase function error:', response.error);
         return [];
@@ -112,13 +118,20 @@ export function useQuestionGeneration(category: string, grade: number, userId: s
 
       const problems = response.data?.problems || [];
       console.log(`🎯 AI generated ${problems.length} problems`);
+      console.log(`📋 Sample AI questions:`, problems.slice(0, 2).map(p => p.question));
       
-      return problems.filter((problem: SelectionQuestion) => {
+      const filteredProblems = problems.filter((problem: SelectionQuestion) => {
         const isDuplicate = Array.from(globalQuestions).some(existingQ => 
           similarity(problem.question.toLowerCase(), existingQ.toLowerCase()) > 0.7
         );
+        if (isDuplicate) {
+          console.log(`🚫 Filtered duplicate: "${problem.question}"`);
+        }
         return !isDuplicate;
       });
+      
+      console.log(`✅ After filtering: ${filteredProblems.length} unique problems`);
+      return filteredProblems;
     } catch (error) {
       console.error('❌ Error calling AI generation:', error);
       return [];
@@ -185,6 +198,7 @@ export function useQuestionGeneration(category: string, grade: number, userId: s
     globalQuestions,
     sessionId,
     isGenerating,
+    generationSource,
     generateProblems
   };
 }

@@ -45,7 +45,8 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
     problems, 
     globalQuestions, 
     sessionId, 
-    isGenerating, 
+    isGenerating,
+    generationSource,
     generateProblems 
   } = useQuestionGeneration(category, grade, userId, totalQuestions);
 
@@ -374,6 +375,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
             grade={grade}
             problemsLength={problems.length}
             currentQuestionType={currentQuestionData?.questionType}
+            generationSource={generationSource}
           />
 
           <Card className="shadow-card">
