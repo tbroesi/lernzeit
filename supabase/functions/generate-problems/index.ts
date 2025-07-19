@@ -168,6 +168,9 @@ ANTWORTFORMAT (JSON):
   ]
 }`;
 
+    console.log('🚀 Making Gemini API request with prompt:', systemPrompt);
+    console.log('🔑 Using Gemini API key exists:', !!geminiApiKey);
+    
     const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent', {
       method: 'POST',
       headers: {
@@ -187,22 +190,36 @@ ANTWORTFORMAT (JSON):
       }),
     });
 
+    console.log('📡 Gemini API response status:', response.status);
+    console.log('📡 Gemini API response ok:', response.ok);
+
     if (!response.ok) {
-      throw new Error(`Gemini API error: ${response.status}`);
+      const errorText = await response.text();
+      console.error('❌ Gemini API error details:', errorText);
+      throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
-    const content = data.candidates[0].content.parts[0].text;
+    console.log('📦 Raw Gemini response data:', JSON.stringify(data, null, 2));
     
-    console.log('Gemini Response:', content);
+    const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    
+    console.log('📝 Gemini Response content:', content);
+    console.log('📝 Content type:', typeof content);
+    console.log('📝 Content length:', content?.length);
     
     // Parse JSON response
     let parsedContent;
     try {
+      if (!content) {
+        throw new Error('No content received from Gemini');
+      }
       parsedContent = JSON.parse(content);
+      console.log('✅ JSON parsing successful:', parsedContent);
     } catch (e) {
       // Fallback if JSON parsing fails
-      console.error('JSON parsing failed, using fallback');
+      console.error('❌ JSON parsing failed:', e);
+      console.error('❌ Raw content that failed to parse:', content);
       parsedContent = { problems: [] };
     }
 
