@@ -535,11 +535,13 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
         return;
       case 'text-input':
       default:
-        const userValue = parseFloat(userAnswer.trim());
-        const correctValue = typeof problem.answer === 'number' ? problem.answer : parseFloat(problem.answer.toString());
-        isCorrect = typeof problem.answer === 'number' 
-          ? Math.abs(userValue - correctValue) < 0.01
-          : userAnswer.trim().toLowerCase() === problem.answer.toString().toLowerCase();
+        if (problem.questionType === 'text-input') {
+          const userValue = parseFloat(userAnswer.trim());
+          const correctValue = typeof problem.answer === 'number' ? problem.answer : parseFloat(problem.answer.toString());
+          isCorrect = typeof problem.answer === 'number' 
+            ? Math.abs(userValue - correctValue) < 0.01
+            : userAnswer.trim().toLowerCase() === problem.answer.toString().toLowerCase();
+        }
         break;
     }
 
@@ -789,9 +791,9 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
 
             <div className="max-w-sm mx-auto">
               <Input
-                type={typeof currentQuestionData.answer === 'number' ? "number" : "text"}
-                inputMode={typeof currentQuestionData.answer === 'number' ? "numeric" : "text"}
-                pattern={typeof currentQuestionData.answer === 'number' ? "[0-9]*" : undefined}
+                type={currentQuestionData.questionType === 'text-input' && typeof currentQuestionData.answer === 'number' ? "number" : "text"}
+                inputMode={currentQuestionData.questionType === 'text-input' && typeof currentQuestionData.answer === 'number' ? "numeric" : "text"}
+                pattern={currentQuestionData.questionType === 'text-input' && typeof currentQuestionData.answer === 'number' ? "[0-9]*" : undefined}
                 value={userAnswer}
                 onChange={(e) => setUserAnswer(e.target.value)}
                 onKeyPress={(e) => {
