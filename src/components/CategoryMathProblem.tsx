@@ -137,6 +137,141 @@ const generateMathProblem = (grade: number): Problem => {
   }
 };
 
+const generateCategoryProblem = (category: string, grade: number): Problem => {
+  const problemId = Math.floor(Math.random() * 1000000);
+  
+  switch (category) {
+    case 'Deutsch':
+      const germanWords = ['Haus', 'Auto', 'Schule', 'Buch', 'Freund', 'Familie', 'Garten', 'Wasser', 'Sonne', 'Mond'];
+      const word = germanWords[Math.floor(Math.random() * germanWords.length)];
+      return {
+        id: problemId,
+        question: `Wie viele Silben hat das Wort "${word}"?`,
+        answer: word.toLowerCase().split(/[aeiouäöü]/).length - 1 || 1,
+        type: 'german',
+        explanation: `Das Wort "${word}" hat ${word.toLowerCase().split(/[aeiouäöü]/).length - 1 || 1} Silbe(n).`
+      };
+      
+    case 'Englisch':
+      const englishPairs = [
+        { german: 'Haus', english: 'house' },
+        { german: 'Auto', english: 'car' },
+        { german: 'Schule', english: 'school' },
+        { german: 'Buch', english: 'book' },
+        { german: 'Freund', english: 'friend' },
+        { german: 'Familie', english: 'family' },
+        { german: 'Wasser', english: 'water' }
+      ];
+      const pair = englishPairs[Math.floor(Math.random() * englishPairs.length)];
+      return {
+        id: problemId,
+        question: `Wie heißt "${pair.german}" auf Englisch?`,
+        answer: pair.english,
+        type: 'english',
+        explanation: `"${pair.german}" heißt auf Englisch "${pair.english}".`
+      };
+      
+    case 'Geographie':
+      const countries = [
+        { country: 'Deutschland', capital: 'Berlin' },
+        { country: 'Frankreich', capital: 'Paris' },
+        { country: 'Italien', capital: 'Rom' },
+        { country: 'Spanien', capital: 'Madrid' },
+        { country: 'England', capital: 'London' }
+      ];
+      const countryPair = countries[Math.floor(Math.random() * countries.length)];
+      return {
+        id: problemId,
+        question: `Was ist die Hauptstadt von ${countryPair.country}?`,
+        answer: countryPair.capital,
+        type: 'geography',
+        explanation: `Die Hauptstadt von ${countryPair.country} ist ${countryPair.capital}.`
+      };
+      
+    case 'Geschichte':
+      const historicalDates = [
+        { event: 'Fall der Berliner Mauer', year: 1989 },
+        { event: 'Erster Weltkrieg begann', year: 1914 },
+        { event: 'Entdeckung Amerikas', year: 1492 },
+        { event: 'Französische Revolution', year: 1789 }
+      ];
+      const historical = historicalDates[Math.floor(Math.random() * historicalDates.length)];
+      return {
+        id: problemId,
+        question: `In welchem Jahr war ${historical.event}?`,
+        answer: historical.year,
+        type: 'history',
+        explanation: `${historical.event} war im Jahr ${historical.year}.`
+      };
+      
+    case 'Physik':
+      const physicsQuestions = [
+        { question: 'Bei welcher Temperatur gefriert Wasser?', answer: 0, unit: '°C' },
+        { question: 'Bei welcher Temperatur kocht Wasser?', answer: 100, unit: '°C' },
+        { question: 'Wie viele Planeten hat unser Sonnensystem?', answer: 8, unit: '' }
+      ];
+      const physics = physicsQuestions[Math.floor(Math.random() * physicsQuestions.length)];
+      return {
+        id: problemId,
+        question: physics.question,
+        answer: physics.answer,
+        type: 'physics',
+        explanation: `${physics.question} ${physics.answer}${physics.unit}`
+      };
+      
+    case 'Biologie':
+      const biologyQuestions = [
+        { question: 'Wie viele Beine hat eine Spinne?', answer: 8 },
+        { question: 'Wie viele Herzen hat ein Krake?', answer: 3 },
+        { question: 'Wie viele Flügel hat ein Schmetterling?', answer: 4 }
+      ];
+      const biology = biologyQuestions[Math.floor(Math.random() * biologyQuestions.length)];
+      return {
+        id: problemId,
+        question: biology.question,
+        answer: biology.answer,
+        type: 'biology',
+        explanation: `${biology.question} ${biology.answer}`
+      };
+      
+    case 'Chemie':
+      const chemistryQuestions = [
+        { question: 'Welches chemische Symbol hat Gold?', answer: 'Au' },
+        { question: 'Welches chemische Symbol hat Wasser?', answer: 'H2O' },
+        { question: 'Welches chemische Symbol hat Sauerstoff?', answer: 'O' }
+      ];
+      const chemistry = chemistryQuestions[Math.floor(Math.random() * chemistryQuestions.length)];
+      return {
+        id: problemId,
+        question: chemistry.question,
+        answer: chemistry.answer,
+        type: 'chemistry',
+        explanation: `${chemistry.question} ${chemistry.answer}`
+      };
+      
+    case 'Latein':
+      const latinWords = [
+        { latin: 'aqua', german: 'Wasser' },
+        { latin: 'vita', german: 'Leben' },
+        { latin: 'terra', german: 'Erde' },
+        { latin: 'luna', german: 'Mond' },
+        { latin: 'sol', german: 'Sonne' }
+      ];
+      const latin = latinWords[Math.floor(Math.random() * latinWords.length)];
+      return {
+        id: problemId,
+        question: `Was bedeutet "${latin.latin}" auf Deutsch?`,
+        answer: latin.german,
+        type: 'latin',
+        explanation: `"${latin.latin}" bedeutet "${latin.german}" auf Deutsch.`
+      };
+      
+    default:
+      // Fallback to math problem
+      return generateMathProblem(grade);
+  }
+};
+
 export function CategoryMathProblem({ category, grade, onComplete, onBack, userId }: CategoryMathProblemProps) {
   const [problems, setProblems] = useState<Problem[]>([]);
   const [currentProblem, setCurrentProblem] = useState(0);
@@ -170,7 +305,12 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
   const generateProblems = () => {
     const newProblems: Problem[] = [];
     for (let i = 0; i < totalQuestions; i++) {
-      newProblems.push(generateMathProblem(grade));
+      // Generate problems based on category
+      if (category === 'Mathematik') {
+        newProblems.push(generateMathProblem(grade));
+      } else {
+        newProblems.push(generateCategoryProblem(category, grade));
+      }
     }
     setProblems(newProblems);
     setGameStarted(true);
