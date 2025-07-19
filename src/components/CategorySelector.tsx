@@ -46,14 +46,21 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
           .eq('child_id', user.id);
 
         if (visibilitySettings && visibilitySettings.length > 0) {
-          const visible = new Set(
-            visibilitySettings
-              .filter(setting => setting.is_visible)
-              .map(setting => setting.subject)
-          );
-          setVisibleSubjects(visible);
+          // Create a set of all subjects (default: all visible)
+          const allSubjects = new Set(['math', 'german', 'english', 'geography', 'history', 'physics', 'biology', 'chemistry', 'latin']);
+          
+          // Remove subjects that are explicitly set to invisible
+          visibilitySettings.forEach(setting => {
+            if (!setting.is_visible) {
+              allSubjects.delete(setting.subject);
+            }
+          });
+          
+          console.log('🔍 Subject visibility logic:', { visibilitySettings, allSubjects });
+          setVisibleSubjects(allSubjects);
         } else {
           // If no settings exist, show all subjects (default behavior)
+          console.log('🔍 No visibility settings found, showing all subjects');
           setVisibleSubjects(new Set(['math', 'german', 'english', 'geography', 'history', 'physics', 'biology', 'chemistry', 'latin']));
         }
       } else {
