@@ -149,7 +149,7 @@ export function useFamilyLinking() {
         .from('invitation_codes')
         .select('*')
         .eq('code', code)
-        .single();
+        .maybeSingle();
       
       console.log('📋 Current code state:', { currentCodeState, queryError });
       
