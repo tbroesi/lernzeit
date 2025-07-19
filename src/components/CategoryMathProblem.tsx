@@ -54,9 +54,30 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
     currentProblem,
     problemsLength: problems.length,
     currentQuestionType: problems[currentProblem]?.questionType,
+    currentQuestionId: problems[currentProblem]?.id,
     gameStarted,
-    isGenerating
+    isGenerating,
+    feedback,
+    isQuestionComplete
   });
+
+  // Log when currentProblem changes
+  useEffect(() => {
+    console.log('📋 Current problem changed to:', currentProblem);
+    if (problems[currentProblem]) {
+      console.log('📋 New question:', problems[currentProblem].question);
+      console.log('📋 Question type:', problems[currentProblem].questionType);
+      console.log('📋 Question ID:', problems[currentProblem].id);
+    }
+  }, [currentProblem, problems]);
+
+  // Log when problems array changes
+  useEffect(() => {
+    console.log('📊 Problems array updated:', {
+      length: problems.length,
+      questions: problems.map(p => ({ id: p.id, question: p.question.substring(0, 50) + '...' }))
+    });
+  }, [problems]);
 
   useEffect(() => {
     if (gameStarted) {
@@ -74,6 +95,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
   }, []);
 
   const resetAnswerState = () => {
+    console.log('🔄 Resetting answer state');
     setUserAnswer('');
     setSelectedMultipleChoice(null);
     setSelectedWords([]);
@@ -100,10 +122,15 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
   };
 
   const handleNextQuestion = () => {
+    console.log('➡️ Moving to next question from:', currentProblem);
+    
     if (currentProblem + 1 >= totalQuestions) {
+      console.log('🏁 Game completing - all questions answered');
       completeGame();
     } else {
-      setCurrentProblem(prev => prev + 1);
+      const nextProblem = currentProblem + 1;
+      console.log('➡️ Setting next problem to:', nextProblem);
+      setCurrentProblem(nextProblem);
       resetAnswerState();
       setFeedback(null);
     }
@@ -116,6 +143,8 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
     let isCorrect = false;
 
     console.log('🔍 Checking answer for question type:', problem.questionType);
+    console.log('🔍 Question ID:', problem.id);
+    console.log('🔍 Question:', problem.question);
 
     switch (problem.questionType) {
       case 'multiple-choice':
@@ -138,7 +167,8 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
         break;
         
       case 'matching':
-        return; // Handled by MatchingQuestion component
+        console.log('⚠️ Matching questions should not reach checkAnswer - handled by component');
+        return;
         
       case 'text-input':
       default:

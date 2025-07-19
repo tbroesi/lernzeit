@@ -32,18 +32,18 @@ interface MatchingQuestionProps {
 
 export function MatchingQuestion({ question, onComplete, disabled = false }: MatchingQuestionProps) {
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [matches, setMatches] = useState<Record<string, string>>({});
   const [wrongAttempts, setWrongAttempts] = useState<string[]>([]);
   const [feedback, setFeedback] = useState<Record<string, 'correct' | 'incorrect' | null>>({});
+  const [hasCompleted, setHasCompleted] = useState(false);
 
   // Debug logging
-  console.log('🎯 MatchingQuestion rendered:', {
+  console.log('🎯 MatchingQuestion state:', {
     question: question.question,
-    items: question.items,
-    categories: question.categories,
-    matches,
-    disabled
+    matchesCount: Object.keys(matches).length,
+    totalItems: question.items.length,
+    disabled,
+    hasCompleted
   });
 
   // Check if game is complete
@@ -51,32 +51,36 @@ export function MatchingQuestion({ question, onComplete, disabled = false }: Mat
     const totalItems = question.items.length;
     const matchedItems = Object.keys(matches).length;
     
-    if (matchedItems === totalItems && !disabled) {
+    if (matchedItems === totalItems && !hasCompleted && !disabled) {
+      console.log('🎯 Game completing with matches:', matches);
+      
       // Check if all matches are correct
       const allCorrect = question.items.every(item => {
         const matchedCategory = matches[item.id];
-        return matchedCategory === item.category;
+        const isCorrect = matchedCategory === item.category;
+        console.log(`🔍 Item ${item.id} -> ${matchedCategory}, expected: ${item.category}, correct: ${isCorrect}`);
+        return isCorrect;
       });
       
-      console.log('🎯 Game complete:', { allCorrect, matches });
+      console.log('🎯 Final result:', { allCorrect, matches });
+      setHasCompleted(true);
       
-      // Delay to show final feedback
+      // Delay to show final feedback before completing
       setTimeout(() => {
         onComplete(allCorrect);
       }, 1000);
     }
-  }, [matches, question.items, disabled, onComplete]);
+  }, [matches, question.items, hasCompleted, disabled, onComplete]);
 
   const handleItemClick = (itemId: string) => {
-    if (disabled || matches[itemId]) return;
+    if (disabled || matches[itemId] || hasCompleted) return;
     
     console.log('🎯 Item clicked:', itemId);
     setSelectedItem(selectedItem === itemId ? null : itemId);
-    setSelectedCategory(null);
   };
 
   const handleCategoryClick = (categoryId: string) => {
-    if (disabled || !selectedItem) return;
+    if (disabled || !selectedItem || hasCompleted) return;
     
     console.log('🎯 Category clicked:', categoryId, 'with selected item:', selectedItem);
     
@@ -101,7 +105,6 @@ export function MatchingQuestion({ question, onComplete, disabled = false }: Mat
     
     // Reset selections
     setSelectedItem(null);
-    setSelectedCategory(null);
     
     // Clear feedback after delay
     setTimeout(() => {
@@ -130,7 +133,7 @@ export function MatchingQuestion({ question, onComplete, disabled = false }: Mat
   };
 
   const getCategoryFeedbackClass = (categoryId: string) => {
-    if (!selectedItem) return '';
+    if (!selectedItem || hasCompleted) return '';
     
     const matchKey = `${selectedItem}-${categoryId}`;
     const feedbackState = feedback[matchKey];
@@ -150,9 +153,17 @@ export function MatchingQuestion({ question, onComplete, disabled = false }: Mat
         {question.question}
       </p>
       
-      <p className="text-sm text-muted-foreground text-center mb-4">
-        Klicke auf ein Element und dann auf die passende Kategorie
-      </p>
+      {!hasCompleted && (
+        <p className="text-sm text-muted-foreground text-center mb-4">
+          Klicke auf ein Element und dann auf die passende Kategorie
+        </p>
+      )}
+
+      {hasCompleted && (
+        <p className="text-sm text-success text-center mb-4 font-medium">
+          🎉 Aufgabe abgeschlossen! Weiter zur nächsten Frage...
+        </p>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Left column: Items to match */}
@@ -165,14 +176,14 @@ export function MatchingQuestion({ question, onComplete, disabled = false }: Mat
               <div
                 key={item.id}
                 onClick={() => handleItemClick(item.id)}
-                className={`p-4 border-2 rounded-lg cursor-pointer transition-all select-none ${
-                  disabled ? 'opacity-50 cursor-not-allowed' : ''
+                className={`p-4 border-2 rounded-lg transition-all select-none ${
+                  disabled || hasCompleted ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
                 } ${getItemFeedbackClass(item.id)}`}
                 style={{ userSelect: 'none' }}
               >
                 <div className="flex items-center justify-between">
                   <span>{item.content}</span>
-                  {selectedItem === item.id && (
+                  {selectedItem === item.id && !hasCompleted && (
                     <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
                   )}
                 </div>
@@ -196,7 +207,7 @@ export function MatchingQuestion({ question, onComplete, disabled = false }: Mat
                   key={category.id}
                   onClick={() => handleCategoryClick(category.id)}
                   className={`min-h-[100px] p-4 border-2 rounded-lg transition-all ${
-                    disabled ? 'opacity-50 cursor-not-allowed' : 
+                    disabled || hasCompleted ? 'opacity-50 cursor-not-allowed' : 
                     selectedItem ? 'cursor-pointer' : 'cursor-default'
                   } ${getCategoryFeedbackClass(category.id)}`}
                 >
