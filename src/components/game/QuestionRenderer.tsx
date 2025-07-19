@@ -4,7 +4,8 @@ import { Input } from '@/components/ui/input';
 import { MultipleChoiceQuestion } from '@/components/question-types/MultipleChoiceQuestion';
 import { WordSelectionQuestion } from '@/components/question-types/WordSelectionQuestion';
 import { MatchingQuestion } from '@/components/question-types/MatchingQuestion';
-import { SelectionQuestion } from '@/types/questionTypes';
+import { DragDropQuestion } from '@/components/question-types/DragDropQuestion';
+import { SelectionQuestion, TextInputQuestion } from '@/types/questionTypes';
 
 interface QuestionRendererProps {
   question: SelectionQuestion;
@@ -16,6 +17,8 @@ interface QuestionRendererProps {
   setSelectedWords: (words: number[]) => void;
   onWordToggle: (wordIndex: number) => void;  
   onMatchingComplete: (isCorrect: boolean) => void;
+  currentPlacements?: Record<string, string>;
+  onItemMove?: (itemId: string, categoryId: string) => void;
   feedback: 'correct' | 'incorrect' | null;
 }
 
@@ -29,6 +32,8 @@ export function QuestionRenderer({
   setSelectedWords,
   onWordToggle,
   onMatchingComplete,
+  currentPlacements = {},
+  onItemMove = () => {},
   feedback
 }: QuestionRendererProps) {
   console.log('🎯 QuestionRenderer - Question type:', question.questionType);
@@ -64,18 +69,30 @@ export function QuestionRenderer({
         />
       );
       
+    case 'drag-drop':
+      return (
+        <DragDropQuestion
+          question={question}
+          currentPlacements={currentPlacements}
+          onItemMove={onItemMove}
+          disabled={feedback !== null}
+        />
+      );
+      
     case 'text-input':
     default:
+      // Type assertion to ensure we only handle TextInputQuestion in default case
+      const textInputQuestion = question as TextInputQuestion;
       return (
         <div className="text-center">
           <p className="text-xl font-medium mb-6">
-            {question.question}
+            {textInputQuestion.question}
           </p>
           <div className="max-w-sm mx-auto">
             <Input
-              type={typeof question.answer === 'number' ? "number" : "text"}
-              inputMode={typeof question.answer === 'number' ? "numeric" : "text"}
-              pattern={typeof question.answer === 'number' ? "[0-9]*" : undefined}
+              type={typeof textInputQuestion.answer === 'number' ? "number" : "text"}
+              inputMode={typeof textInputQuestion.answer === 'number' ? "numeric" : "text"}
+              pattern={typeof textInputQuestion.answer === 'number' ? "[0-9]*" : undefined}
               value={userAnswer}
               onChange={(e) => setUserAnswer(e.target.value)}
               onKeyPress={(e) => {

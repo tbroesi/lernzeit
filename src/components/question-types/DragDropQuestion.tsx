@@ -1,36 +1,24 @@
-
 import React, { useState } from 'react';
 import { DragDropQuestion as DragDropQuestionType } from '@/types/questionTypes';
 
 interface DragDropQuestionProps {
   question: DragDropQuestionType;
-  currentPlacements: Record<string, string>; // itemId -> categoryId
+  currentPlacements: Record<string, string>;
   onItemMove: (itemId: string, categoryId: string) => void;
   disabled?: boolean;
 }
 
-export function DragDropQuestion({ 
-  question, 
-  currentPlacements, 
-  onItemMove, 
-  disabled = false 
+export function DragDropQuestion({
+  question,
+  currentPlacements,
+  onItemMove,
+  disabled = false
 }: DragDropQuestionProps) {
   const [draggedItem, setDraggedItem] = useState<string | null>(null);
 
-  // Debug logging
-  console.log('🐞 DragDropQuestion rendered:', {
-    question: question.question,
-    items: question.items,
-    categories: question.categories,
-    currentPlacements,
-    disabled
-  });
-
   const handleDragStart = (itemId: string) => {
-    console.log('🐞 Drag start:', itemId, 'disabled:', disabled);
-    if (!disabled) {
-      setDraggedItem(itemId);
-    }
+    if (disabled) return;
+    setDraggedItem(itemId);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -39,12 +27,10 @@ export function DragDropQuestion({
 
   const handleDrop = (e: React.DragEvent, categoryId: string) => {
     e.preventDefault();
-    console.log('🐞 Drop event:', draggedItem, 'to category:', categoryId, 'disabled:', disabled);
-    if (draggedItem && !disabled) {
-      console.log('🐞 Moving item:', draggedItem, 'to category:', categoryId);
-      onItemMove(draggedItem, categoryId);
-      setDraggedItem(null);
-    }
+    if (disabled || !draggedItem) return;
+    
+    onItemMove(draggedItem, categoryId);
+    setDraggedItem(null);
   };
 
   const getItemsInCategory = (categoryId: string) => {
@@ -57,56 +43,48 @@ export function DragDropQuestion({
 
   return (
     <div className="space-y-6">
-      <p className="text-xl font-medium mb-6 text-center">
-        {question.question}
-      </p>
-      
-      {/* Unplaced items */}
-      <div className="bg-muted/20 p-4 rounded-lg">
-        <h3 className="font-medium mb-3 text-center">Ziehe die Elemente in die richtige Kategorie:</h3>
-        <div className="flex flex-wrap gap-2 justify-center">
-          {getUnplacedItems().map(item => (
+      <div className="text-center">
+        <p className="text-xl font-medium mb-6">{question.question}</p>
+      </div>
+
+      {/* Unplaced Items */}
+      <div className="bg-muted p-4 rounded-lg">
+        <h3 className="font-medium mb-3">Items to categorize:</h3>
+        <div className="flex flex-wrap gap-2">
+          {getUnplacedItems().map((item) => (
             <div
               key={item.id}
               draggable={!disabled}
-              onDragStart={(e) => {
-                console.log('🐞 DragStart triggered for:', item.id);
-                handleDragStart(item.id);
-              }}
-              className={`px-3 py-2 bg-card border rounded transition-opacity select-none ${
-                disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-move hover:shadow-md'
-              } ${draggedItem === item.id ? 'opacity-50' : ''}`}
-              style={{ userSelect: 'none' }}
+              onDragStart={() => handleDragStart(item.id)}
+              className={`px-3 py-2 bg-background border rounded cursor-move transition-colors ${
+                draggedItem === item.id ? 'opacity-50' : ''
+              } ${disabled ? 'cursor-not-allowed opacity-60' : 'hover:bg-accent'}`}
             >
               {item.content}
             </div>
           ))}
         </div>
       </div>
-      
+
       {/* Categories */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {question.categories.map(category => (
+        {question.categories.map((category) => (
           <div
             key={category.id}
-            className="min-h-[120px] p-4 border-2 border-dashed border-muted-foreground/30 rounded-lg bg-muted/10"
             onDragOver={handleDragOver}
             onDrop={(e) => handleDrop(e, category.id)}
+            className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-4 min-h-[120px] transition-colors hover:border-muted-foreground/50"
           >
-            <h4 className="font-medium mb-3 text-center">{category.name}</h4>
+            <h3 className="font-medium mb-3 text-center">{category.name}</h3>
             <div className="space-y-2">
-              {getItemsInCategory(category.id).map(item => (
+              {getItemsInCategory(category.id).map((item) => (
                 <div
                   key={item.id}
                   draggable={!disabled}
-                  onDragStart={(e) => {
-                    console.log('🐞 DragStart triggered for:', item.id, '(from category)');
-                    handleDragStart(item.id);
-                  }}
-                  className={`px-3 py-2 bg-card border rounded transition-opacity select-none ${
-                    disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-move hover:shadow-md'
-                  } ${draggedItem === item.id ? 'opacity-50' : ''}`}
-                  style={{ userSelect: 'none' }}
+                  onDragStart={() => handleDragStart(item.id)}
+                  className={`px-3 py-2 bg-accent/50 rounded transition-colors ${
+                    draggedItem === item.id ? 'opacity-50' : ''
+                  } ${disabled ? 'cursor-not-allowed' : 'cursor-move hover:bg-accent'}`}
                 >
                   {item.content}
                 </div>
