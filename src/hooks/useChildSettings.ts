@@ -26,6 +26,12 @@ export function useChildSettings(childId: string) {
     }
   }, [childId]);
 
+  const refreshSettings = () => {
+    if (childId) {
+      loadChildSettings();
+    }
+  };
+
   const loadChildSettings = async () => {
     if (!childId) {
       console.log('❌ No childId provided to useChildSettings');
@@ -119,5 +125,5 @@ export function useChildSettings(childId: string) {
     }
   };
 
-  return { settings, loading };
+  return { settings, loading, refreshSettings };
 }

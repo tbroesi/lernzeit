@@ -1,10 +1,11 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { BookOpen, Languages, GraduationCap, ArrowLeft, Globe, Clock, Atom, Leaf, FlaskConical, Columns3 } from 'lucide-react';
 import { useChildSettings } from '@/hooks/useChildSettings';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/lib/supabase';
 
 interface CategorySelectorProps {
   grade: number;
@@ -15,6 +16,54 @@ interface CategorySelectorProps {
 export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySelectorProps) {
   const { user } = useAuth();
   const { settings, loading } = useChildSettings(user?.id || '');
+  const [visibleSubjects, setVisibleSubjects] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (user?.id) {
+      loadSubjectVisibility();
+    }
+  }, [user?.id]);
+
+  const loadSubjectVisibility = async () => {
+    if (!user?.id) return;
+
+    try {
+      // Get parent-child relationship first
+      const { data: relationships } = await supabase
+        .from('parent_child_relationships')
+        .select('parent_id')
+        .eq('child_id', user.id)
+        .maybeSingle();
+
+      if (relationships?.parent_id) {
+        // Get subject visibility settings
+        const { data: visibilitySettings } = await supabase
+          .from('child_subject_visibility')
+          .select('subject, is_visible')
+          .eq('parent_id', relationships.parent_id)
+          .eq('child_id', user.id);
+
+        if (visibilitySettings && visibilitySettings.length > 0) {
+          const visible = new Set(
+            visibilitySettings
+              .filter(setting => setting.is_visible)
+              .map(setting => setting.subject)
+          );
+          setVisibleSubjects(visible);
+        } else {
+          // If no settings exist, show all subjects
+          setVisibleSubjects(new Set(['math', 'german', 'english', 'geography', 'history', 'physics', 'biology', 'chemistry', 'latin']));
+        }
+      } else {
+        // If no parent relationship, show all subjects
+        setVisibleSubjects(new Set(['math', 'german', 'english', 'geography', 'history', 'physics', 'biology', 'chemistry', 'latin']));
+      }
+    } catch (error) {
+      console.error('Error loading subject visibility:', error);
+      // On error, show all subjects
+      setVisibleSubjects(new Set(['math', 'german', 'english', 'geography', 'history', 'physics', 'biology', 'chemistry', 'latin']));
+    }
+  };
 
   const getMinutesForCategory = (categoryId: string) => {
     if (!settings) return 5;
@@ -138,11 +187,13 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
 
         {/* Categories Grid */}
         <div className="grid grid-cols-1 gap-4">
-          {categories.map((category) => {
-            const IconComponent = category.icon;
-            const minutes = getMinutesForCategory(category.id);
-            
-            return (
+          {categories
+            .filter(category => visibleSubjects.has(category.id))
+            .map((category) => {
+              const IconComponent = category.icon;
+              const minutes = getMinutesForCategory(category.id);
+              
+              return (
               <Card
                 key={category.id}
                 className="shadow-card hover:shadow-lg transition-all duration-300 cursor-pointer"
