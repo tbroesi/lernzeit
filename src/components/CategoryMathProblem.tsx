@@ -27,6 +27,64 @@ interface CategoryMathProblemProps {
   userId: string;
 }
 
+const generateGrade4DeutschProblems = (): Problem[] => {
+  const grade4Problems = [
+    {
+      id: 1,
+      question: "Bestimme das Subjekt im Satz: 'Der große Hund bellte laut.'",
+      answer: "Der große Hund",
+      type: 'german' as const,
+      explanation: "Das Subjekt ist der Satzgegenstand, der die Handlung ausführt."
+    },
+    {
+      id: 2,
+      question: "Welches Wort ist ein Verb im Satz: 'Die Kinder spielen fröhlich im Garten.'?",
+      answer: "spielen",
+      type: 'german' as const,
+      explanation: "Das Verb beschreibt die Tätigkeit oder Handlung."
+    },
+    {
+      id: 3,
+      question: "Setze die richtige Form von 'sein' ein: 'Gestern ___ ich im Kino.' (war/bin)",
+      answer: "war",
+      type: 'german' as const,
+      explanation: "Bei 'gestern' verwendet man die Vergangenheitsform 'war'."
+    },
+    {
+      id: 4,
+      question: "Wie schreibt man das Wort richtig: 'sch___ssen' (ie oder ei)?",
+      answer: "schießen",
+      type: 'german' as const,
+      explanation: "Nach langem 'i' schreibt man meistens 'ie'."
+    },
+    {
+      id: 5,
+      question: "Was ist das Prädikat in: 'Meine Schwester liest ein spannendes Buch.'?",
+      answer: "liest",
+      type: 'german' as const,
+      explanation: "Das Prädikat ist das Verb, das aussagt, was jemand tut."
+    },
+    {
+      id: 6,
+      question: "Welcher Artikel gehört zu 'Mädchen'? (der/die/das)",
+      answer: "das",
+      type: 'german' as const,
+      explanation: "Trotz der Endung -chen ist 'Mädchen' sächlich: das Mädchen."
+    },
+    {
+      id: 7,
+      question: "Ergänze die wörtliche Rede: 'Tom sagte: ___ gehe nach Hause.___' (Ich/Anführungszeichen)",
+      answer: "\"Ich gehe nach Hause.\"",
+      type: 'german' as const,
+      explanation: "Wörtliche Rede steht in Anführungszeichen und beginnt mit Großbuchstabe."
+    }
+  ];
+  
+  // Shuffle and return 5 random problems
+  const shuffled = [...grade4Problems].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, 5);
+};
+
 const generateMathProblem = (grade: number): Problem => {
   if (grade <= 2) {
     const operations = ['+', '-'];
@@ -58,8 +116,8 @@ const generateMathProblem = (grade: number): Problem => {
     const op = operations[Math.floor(Math.random() * operations.length)];
     
     if (op === '+') {
-      const a = Math.floor(Math.random() * 90) + 10;
-      const b = Math.floor(Math.random() * 90) + 10;
+      const a = Math.floor(Math.random() * 900) + 100; // 3-digit numbers
+      const b = Math.floor(Math.random() * 900) + 100;
       return {
         id: 1,
         question: `${a} + ${b} = ?`,
@@ -68,8 +126,8 @@ const generateMathProblem = (grade: number): Problem => {
         explanation: `${a} + ${b} = ${a + b}`
       };
     } else if (op === '-') {
-      const b = Math.floor(Math.random() * 50) + 10;
-      const a = b + Math.floor(Math.random() * 90) + 10;
+      const b = Math.floor(Math.random() * 500) + 100;
+      const a = b + Math.floor(Math.random() * 900) + 100;
       return {
         id: 1,
         question: `${a} - ${b} = ?`,
@@ -78,8 +136,8 @@ const generateMathProblem = (grade: number): Problem => {
         explanation: `${a} - ${b} = ${a - b}`
       };
     } else if (op === '×') {
-      const a = Math.floor(Math.random() * 10) + 2;
-      const b = Math.floor(Math.random() * 10) + 2;
+      const a = Math.floor(Math.random() * 9) + 2; // 2-10
+      const b = Math.floor(Math.random() * 9) + 2; // 2-10
       return {
         id: 1,
         question: `${a} × ${b} = ?`,
@@ -142,6 +200,11 @@ const generateCategoryProblem = (category: string, grade: number): Problem => {
   
   switch (category) {
     case 'Deutsch':
+      if (grade === 4) {
+        const grade4Problems = generateGrade4DeutschProblems();
+        return grade4Problems[Math.floor(Math.random() * grade4Problems.length)];
+      }
+      // ... keep existing code for other grades
       const germanWords = ['Haus', 'Auto', 'Schule', 'Buch', 'Freund', 'Familie', 'Garten', 'Wasser', 'Sonne', 'Mond'];
       const word = germanWords[Math.floor(Math.random() * germanWords.length)];
       return {
@@ -152,6 +215,7 @@ const generateCategoryProblem = (category: string, grade: number): Problem => {
         explanation: `Das Wort "${word}" hat ${word.toLowerCase().split(/[aeiouäöü]/).length - 1 || 1} Silbe(n).`
       };
       
+    // ... keep existing code for other categories
     case 'Englisch':
       const englishPairs = [
         { german: 'Haus', english: 'house' },
@@ -300,7 +364,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
 
   useEffect(() => {
     generateProblems();
-  }, [category, grade]); // Re-generate when category or grade changes
+  }, [category, grade]);
 
   const generateProblems = async () => {
     try {
@@ -330,25 +394,23 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
 
   const generateAIProblems = async (): Promise<Problem[]> => {
     try {
-      const response = await fetch('https://fsmgynpdfxkaiiuguqyr.supabase.co/functions/v1/generate-problems', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      console.log('🤖 Calling AI edge function via supabase.functions.invoke');
+      
+      const { data, error } = await supabase.functions.invoke('generate-problems', {
+        body: {
           category,
           grade,
           count: totalQuestions
-        }),
+        }
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (error) {
+        console.error('❌ Supabase function error:', error);
+        throw error;
       }
 
-      const data = await response.json();
-      console.log('✅ AI Problems generated:', data.problems?.length || 0);
-      return data.problems || [];
+      console.log('✅ AI Problems generated:', data?.problems?.length || 0);
+      return data?.problems || [];
     } catch (error) {
       console.error('❌ AI problem generation failed:', error);
       return [];
