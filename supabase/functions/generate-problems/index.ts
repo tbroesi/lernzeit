@@ -15,6 +15,8 @@ interface ProblemRequest {
   count: number;
   excludeQuestions?: string[];
   sessionId?: string;
+  globalQuestionCount?: number;
+  requestId?: string;
 }
 
 interface BaseQuestion {
@@ -171,17 +173,32 @@ serve(async (req) => {
   }
 
   try {
-    const { category, grade, count = 5, excludeQuestions = [], sessionId }: ProblemRequest = await req.json();
+    const { 
+      category, 
+      grade, 
+      count = 5, 
+      excludeQuestions = [], 
+      sessionId,
+      globalQuestionCount = 0,
+      requestId
+    }: ProblemRequest = await req.json();
+    
+    console.log(`🎯 Request ID: ${requestId}`);
     console.log(`Generating ${count} problems for ${category}, Grade ${grade}, Session: ${sessionId}`);
-    console.log(`Excluding ${excludeQuestions.length} questions:`, excludeQuestions.slice(0, 3));
+    console.log(`Excluding ${excludeQuestions.length} questions from ${globalQuestionCount} total stored`);
+    console.log(`Sample excluded:`, excludeQuestions.slice(0, 2).map(q => q.substring(0, 30) + '...'));
 
     const subjectPrompt = getSubjectPrompt(category, grade);
     
+    // Enhanced exclusion text with stronger language
     const excludeText = excludeQuestions.length > 0 
-      ? `\n\nWICHTIG: VERMEIDE diese bereits gestellten Fragen und erstelle VÖLLIG NEUE Aufgaben:\n${excludeQuestions.map(q => `- "${q}"`).join('\n')}\n\nBitte erstelle komplett andere Fragen mit unterschiedlichen Themen und Formulierungen!`
-      : '';
+      ? `\n\n🚫 KRITISCH WICHTIG - VERMEIDE DIESE ${excludeQuestions.length} BEREITS GESTELLTEN FRAGEN:\n${excludeQuestions.slice(0, 10).map((q, i) => `${i+1}. "${q.substring(0, 60)}..."`).join('\n')}\n\n⚡ ERSTELLE KOMPLETT ANDERE FRAGEN MIT:\n- Unterschiedlichen Zahlen/Werten\n- Anderen Themen/Unterthemen\n- Verschiedenen Formulierungen\n- Neuen Beispielen und Begriffen\n\n${excludeQuestions.length > 10 ? `... und ${excludeQuestions.length - 10} weitere bereits verwendete Fragen` : ''}`
+      : '\n\n✨ Erste Sitzung - erstelle völlig neue und einzigartige Aufgaben!';
 
-    const enhancedPrompt = `Du bist ein erfahrener Lehrer für interaktives Lernen. Erstelle genau ${count} VÖLLIG NEUE UND EINZIGARTIGE Aufgaben mit verschiedenen Fragetypen.${excludeText}
+    const creativityBoost = excludeQuestions.length > 5 ? 
+      '\n\n🎨 KREATIVITÄTS-BOOST ERFORDERLICH: Da bereits viele Fragen gestellt wurden, sei besonders kreativ und nutze völlig neue Ansätze, andere Themenbereiche und innovative Fragestellungen!' : '';
+
+    const enhancedPrompt = `Du bist ein erfahrener Lehrer für interaktives Lernen. Erstelle genau ${count} VÖLLIG NEUE UND EINZIGARTIGE Aufgaben mit verschiedenen Fragetypen.${excludeText}${creativityBoost}
 
 NEUE FRAGETYPEN FÜR BESSERE UX:
 1. "multiple-choice": 4 Antwortoptionen (A, B, C, D)
@@ -266,9 +283,10 @@ ANTWORTFORMAT (JSON):
           }]
         }],
         generationConfig: {
-          temperature: 0.9, // Increased for more variation
-          maxOutputTokens: 2000,
-          topP: 0.95, // Higher creativity
+          temperature: Math.min(0.95, 0.7 + (excludeQuestions.length * 0.05)), // Dynamic temperature based on exclusions
+          maxOutputTokens: 3000,
+          topP: 0.95,
+          topK: 40, // Add diversity
         }
       }),
     });
@@ -354,15 +372,60 @@ ANTWORTFORMAT (JSON):
       })
     })) || [];
 
-    // Filter out problems that are too similar to excluded ones
+    // Enhanced filtering with multiple similarity checks
     const filteredProblems = problems.filter(problem => {
-      return !excludeQuestions.some(excluded => 
-        problem.question.toLowerCase().includes(excluded.toLowerCase().substring(0, 20)) ||
-        excluded.toLowerCase().includes(problem.question.toLowerCase().substring(0, 20))
-      );
+      const questionLower = problem.question.toLowerCase();
+      
+      return !excludeQuestions.some(excluded => {
+        const excludedLower = excluded.toLowerCase();
+        
+        // Check multiple similarity metrics
+        const exactMatch = questionLower === excludedLower;
+        const substringMatch = questionLower.includes(excludedLower.substring(0, 30)) || 
+                              excludedLower.includes(questionLower.substring(0, 30));
+        const wordOverlap = calculateWordOverlap(questionLower, excludedLower);
+        const patternMatch = checkQuestionPattern(questionLower, excludedLower);
+        
+        const isSimilar = exactMatch || substringMatch || wordOverlap > 0.6 || patternMatch;
+        
+        if (isSimilar) {
+          console.log(`🔄 Filtered similar question: "${problem.question.substring(0, 50)}..." (matched with: "${excluded.substring(0, 30)}...")`);
+        }
+        
+        return isSimilar;
+      });
     });
 
+    // Helper functions for similarity detection
+    function calculateWordOverlap(str1: string, str2: string): number {
+      const words1 = str1.split(/\s+/).filter(w => w.length > 2);
+      const words2 = str2.split(/\s+/).filter(w => w.length > 2);
+      const intersection = words1.filter(w => words2.includes(w));
+      return intersection.length / Math.max(words1.length, words2.length);
+    }
+
+    function checkQuestionPattern(str1: string, str2: string): boolean {
+      // Check for mathematical patterns like "X + Y" or "was ist"
+      const mathPattern1 = str1.match(/\d+\s*[+\-×÷]\s*\d+/);
+      const mathPattern2 = str2.match(/\d+\s*[+\-×÷]\s*\d+/);
+      
+      if (mathPattern1 && mathPattern2) {
+        return mathPattern1[0] === mathPattern2[0];
+      }
+      
+      // Check for common question starters
+      const starters1 = str1.match(/^(was ist|wie|welche|wo|wann|warum)/);
+      const starters2 = str2.match(/^(was ist|wie|welche|wo|wann|warum)/);
+      
+      if (starters1 && starters2 && starters1[0] === starters2[0]) {
+        return calculateWordOverlap(str1, str2) > 0.4;
+      }
+      
+      return false;
+    }
+
     console.log(`Generated ${filteredProblems.length} unique problems (filtered from ${problems.length})`);
+    console.log(`🎯 Request ${requestId} completed with ${filteredProblems.length} problems`);
 
     return new Response(JSON.stringify({ problems: filteredProblems }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

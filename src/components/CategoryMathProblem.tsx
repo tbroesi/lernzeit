@@ -23,9 +23,30 @@ interface CategoryMathProblemProps {
   userId: string;
 }
 
-// Session-based question tracking
-const SESSION_QUESTIONS_KEY = (category: string, grade: number, userId: string) => 
-  `questions_${category}_${grade}_${userId}_${Date.now()}`;
+// Global question tracking with persistent storage
+const GLOBAL_QUESTIONS_KEY = (category: string, grade: number, userId: string) => 
+  `global_questions_${category}_${grade}_${userId}`;
+
+const SESSION_KEY = (category: string, grade: number, userId: string) => 
+  `session_${category}_${grade}_${userId}`;
+
+// Enhanced question storage
+const getStoredQuestions = (category: string, grade: number, userId: string): Set<string> => {
+  try {
+    const stored = localStorage.getItem(GLOBAL_QUESTIONS_KEY(category, grade, userId));
+    return new Set(stored ? JSON.parse(stored) : []);
+  } catch {
+    return new Set();
+  }
+};
+
+const storeQuestions = (category: string, grade: number, userId: string, questions: Set<string>) => {
+  try {
+    localStorage.setItem(GLOBAL_QUESTIONS_KEY(category, grade, userId), JSON.stringify(Array.from(questions)));
+  } catch (e) {
+    console.warn('Failed to store questions:', e);
+  }
+};
 
 const generateGrade4DeutschProblems = (): SelectionQuestion[] => {
   const problems: SelectionQuestion[] = [
@@ -420,9 +441,19 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
   const [gameStarted, setGameStarted] = useState(false);
   const [newAchievements, setNewAchievements] = useState<NewAchievement[]>([]);
   const [showAchievementPopup, setShowAchievementPopup] = useState(false);
-  const [sessionQuestions, setSessionQuestions] = useState<Set<string>>(new Set());
+  const [globalQuestions, setGlobalQuestions] = useState<Set<string>>(new Set());
   const [isQuestionComplete, setIsQuestionComplete] = useState(false);
-  const [sessionId] = useState(() => `session_${Date.now()}_${Math.random()}`);
+  const [sessionId] = useState(() => {
+    // Create persistent session ID
+    const storageKey = SESSION_KEY(category, grade, userId);
+    let existingSessionId = localStorage.getItem(storageKey);
+    if (!existingSessionId) {
+      existingSessionId = `session_${Date.now()}_${Math.random()}`;
+      localStorage.setItem(storageKey, existingSessionId);
+    }
+    return existingSessionId;
+  });
+  const [debugInfo, setDebugInfo] = useState<any>({});
   const { toast } = useToast();
   const { settings } = useChildSettings(userId);
   const { canEarnMoreTime, isAtLimit, remainingMinutes, getDailyLimit } = useScreenTimeLimit(userId);
@@ -440,104 +471,190 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
   }, [gameStarted]);
 
   useEffect(() => {
+    // Load stored questions on component mount
+    const storedQuestions = getStoredQuestions(category, grade, userId);
+    setGlobalQuestions(storedQuestions);
+    console.log(`🔄 Loaded ${storedQuestions.size} previously asked questions for ${category} Grade ${grade}`);
     generateProblems();
-  }, [category, grade]);
+  }, [category, grade, userId]);
 
   const generateProblems = async () => {
     try {
       console.log(`🔄 Generating problems for ${category}, Grade ${grade}`);
-      console.log(`📝 Session questions so far:`, Array.from(sessionQuestions));
+      console.log(`📝 Global questions stored: ${globalQuestions.size}`);
+      console.log(`🔍 Previously asked questions:`, Array.from(globalQuestions).slice(0, 5).map(q => q.substring(0, 50) + '...'));
 
-      // Try to generate AI problems first with session exclusions
+      // Enhanced debug info
+      const debugData = {
+        category,
+        grade,
+        userId,
+        sessionId,
+        globalQuestionsCount: globalQuestions.size,
+        timestamp: new Date().toISOString()
+      };
+      setDebugInfo(debugData);
+
+      // Try to generate AI problems with enhanced exclusion
       const aiProblems = await generateAIProblems();
+      
       if (aiProblems.length >= totalQuestions) {
         const selectedProblems = aiProblems.slice(0, totalQuestions);
         setProblems(selectedProblems);
         
-        // Track used questions in this session
-        const newSessionQuestions = new Set(sessionQuestions);
-        selectedProblems.forEach(p => newSessionQuestions.add(p.question));
-        setSessionQuestions(newSessionQuestions);
+        // Update global question tracking
+        const updatedGlobalQuestions = new Set(globalQuestions);
+        selectedProblems.forEach(problem => {
+          updatedGlobalQuestions.add(problem.question);
+        });
+        setGlobalQuestions(updatedGlobalQuestions);
+        storeQuestions(category, grade, userId, updatedGlobalQuestions);
         
-        console.log(`✅ Using ${selectedProblems.length} AI-generated problems`);
+        console.log(`✅ Using AI-generated problems: ${selectedProblems.length}`);
+        console.log(`📊 Total questions now stored: ${updatedGlobalQuestions.size}`);
         setGameStarted(true);
         return;
+      } else {
+        console.log(`⚠️ AI generated insufficient problems (${aiProblems.length}/${totalQuestions}), using enhanced fallback`);
       }
-
-      // Fallback to manual problems if AI fails
-      console.log('⚠️ AI generation failed, using fallback problems');
-      const fallbackProblems = generateFallbackProblems();
-      setProblems(fallbackProblems);
-      setGameStarted(true);
     } catch (error) {
-      console.error('Error generating problems:', error);
-      const fallbackProblems = generateFallbackProblems();
-      setProblems(fallbackProblems);
-      setGameStarted(true);
+      console.error('❌ AI generation failed:', error);
+      toast({
+        title: "Problem Generation",
+        description: "Using backup questions due to generation issue",
+        duration: 3000,
+      });
     }
+
+    // Enhanced fallback with better variety
+    console.log('🔄 Using enhanced fallback problems...');
+    const fallbackProblems = generateFallbackProblems();
+    setProblems(fallbackProblems);
+    setGameStarted(true);
   };
 
   const generateAIProblems = async (): Promise<SelectionQuestion[]> => {
     try {
-      console.log('🤖 Calling AI edge function via supabase.functions.invoke');
-
-      const excludeQuestions = Array.from(sessionQuestions);
-      console.log(`🚫 Excluding ${excludeQuestions.length} questions from this session`);
-
-      const { data, error } = await supabase.functions.invoke('generate-problems', {
+      console.log('🤖 Attempting AI generation via Supabase Edge Function...');
+      
+      // Enhanced exclusion with both global and recent questions
+      const excludeQuestions = Array.from(globalQuestions);
+      console.log(`📝 Excluding ${excludeQuestions.length} global questions`);
+      
+      // Add debug logging for question exclusion
+      if (excludeQuestions.length > 0) {
+        console.log('🚫 Sample excluded questions:', excludeQuestions.slice(0, 3).map(q => q.substring(0, 40) + '...'));
+      }
+      
+      const response = await supabase.functions.invoke('generate-problems', {
         body: {
           category,
           grade,
-          count: totalQuestions,
+          count: totalQuestions + 5, // Generate more for better filtering
           excludeQuestions,
-          sessionId // Add session ID for better tracking
+          sessionId,
+          globalQuestionCount: globalQuestions.size,
+          requestId: `${Date.now()}_${Math.random()}` // Unique request ID
         }
       });
 
-      if (error) {
-        console.error('❌ Supabase function error:', error);
-        throw error;
+      if (response.error) {
+        console.error('❌ Supabase function error:', response.error);
+        return [];
       }
 
-      console.log('✅ AI Problems generated:', data?.problems?.length || 0);
-      return data?.problems || [];
+      const problems = response.data?.problems || [];
+      console.log(`🎯 AI generated ${problems.length} problems`);
+      
+      if (problems.length === 0) {
+        console.warn('⚠️ AI returned empty problems array');
+        return [];
+      }
+
+      // Additional client-side duplicate detection
+      const uniqueProblems = problems.filter((problem: SelectionQuestion) => {
+        const isDuplicate = Array.from(globalQuestions).some(existingQ => 
+          similarity(problem.question.toLowerCase(), existingQ.toLowerCase()) > 0.7
+        );
+        if (isDuplicate) {
+          console.log(`🔄 Filtered duplicate: "${problem.question.substring(0, 50)}..."`);
+        }
+        return !isDuplicate;
+      });
+
+      console.log(`✅ Final unique problems after filtering: ${uniqueProblems.length}`);
+      return uniqueProblems;
     } catch (error) {
-      console.error('❌ AI problem generation failed:', error);
+      console.error('❌ Error calling AI generation:', error);
       return [];
     }
   };
 
-  const generateFallbackProblems = (): SelectionQuestion[] => {
-    console.log('🔧 Generating fallback problems');
-    const availableProblems: SelectionQuestion[] = [];
-    
-    // Generate more problems to avoid repetition
-    for (let i = 0; i < totalQuestions * 3; i++) {
-      let problem: SelectionQuestion;
-      if (category === 'Mathematik') {
-        problem = generateMathProblem(grade);
-      } else {
-        problem = generateCategoryProblem(category, grade);
+  // Simple string similarity function
+  const similarity = (str1: string, str2: string): number => {
+    const longer = str1.length > str2.length ? str1 : str2;
+    const shorter = str1.length > str2.length ? str2 : str1;
+    const editDistance = levenshteinDistance(longer, shorter);
+    return (longer.length - editDistance) / longer.length;
+  };
+
+  const levenshteinDistance = (str1: string, str2: string): number => {
+    const matrix = [];
+    for (let i = 0; i <= str2.length; i++) {
+      matrix[i] = [i];
+    }
+    for (let j = 0; j <= str1.length; j++) {
+      matrix[0][j] = j;
+    }
+    for (let i = 1; i <= str2.length; i++) {
+      for (let j = 1; j <= str1.length; j++) {
+        if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+          matrix[i][j] = matrix[i - 1][j - 1];
+        } else {
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j - 1] + 1,
+            matrix[i][j - 1] + 1,
+            matrix[i - 1][j] + 1
+          );
+        }
       }
+    }
+    return matrix[str2.length][str1.length];
+  };
+
+  const generateFallbackProblems = (): SelectionQuestion[] => {
+    console.log('🔄 Generating enhanced fallback problems...');
+    const fallbackProblems: SelectionQuestion[] = [];
+    
+    if (category === 'Deutsch' && grade === 4) {
+      // Enhanced German problems with more variety
+      const allGrade4Problems = generateGrade4DeutschProblems();
+      const availableProblems = allGrade4Problems.filter(problem => 
+        !Array.from(globalQuestions).some(existingQ => 
+          similarity(problem.question.toLowerCase(), existingQ.toLowerCase()) > 0.7
+        )
+      );
       
-      // Add unique ID and avoid duplicates
-      problem.id = i + 1;
-      if (!sessionQuestions.has(problem.question)) {
-        availableProblems.push(problem);
+      if (availableProblems.length >= totalQuestions) {
+        return availableProblems.slice(0, totalQuestions);
+      } else {
+        // Mix with generated problems if not enough unique ones
+        fallbackProblems.push(...availableProblems);
+        for (let i = availableProblems.length; i < totalQuestions; i++) {
+          fallbackProblems.push(generateCategoryProblem(category, grade));
+        }
+      }
+    } else {
+      // Generate varied problems for other categories
+      const problemTypes = ['basic', 'intermediate', 'advanced'];
+      for (let i = 0; i < totalQuestions; i++) {
+        const problemType = problemTypes[i % problemTypes.length];
+        fallbackProblems.push(generateCategoryProblem(category, grade));
       }
     }
     
-    // Shuffle and select unique problems
-    const shuffled = [...availableProblems].sort(() => Math.random() - 0.5);
-    const selectedProblems = shuffled.slice(0, totalQuestions);
-    
-    // Track in session
-    const newSessionQuestions = new Set(sessionQuestions);
-    selectedProblems.forEach(p => newSessionQuestions.add(p.question));
-    setSessionQuestions(newSessionQuestions);
-    
-    console.log(`✅ Generated ${selectedProblems.length} fallback problems`);
-    return selectedProblems;
+    console.log(`📝 Generated ${fallbackProblems.length} fallback problems`);
+    return fallbackProblems.slice(0, totalQuestions);
   };
 
   const resetAnswerState = () => {
