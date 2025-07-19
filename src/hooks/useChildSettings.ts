@@ -53,7 +53,7 @@ export function useChildSettings(childId: string) {
       console.log('🔧 Child settings result:', { childSettings, childError });
 
       if (childSettings && !childError) {
-        console.log('✅ Found child-specific settings');
+        console.log('✅ Found child-specific settings:', childSettings);
         setSettings(childSettings);
         return;
       }
