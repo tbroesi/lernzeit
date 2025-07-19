@@ -17,7 +17,17 @@ export function DragDropQuestion({
 }: DragDropQuestionProps) {
   const [draggedItem, setDraggedItem] = useState<string | null>(null);
 
+  // Debug logging
+  console.log('🐞 DragDropQuestion rendered:', {
+    question: question.question,
+    items: question.items,
+    categories: question.categories,
+    currentPlacements,
+    disabled
+  });
+
   const handleDragStart = (itemId: string) => {
+    console.log('🐞 Drag start:', itemId, 'disabled:', disabled);
     if (!disabled) {
       setDraggedItem(itemId);
     }
@@ -29,7 +39,9 @@ export function DragDropQuestion({
 
   const handleDrop = (e: React.DragEvent, categoryId: string) => {
     e.preventDefault();
+    console.log('🐞 Drop event:', draggedItem, 'to category:', categoryId, 'disabled:', disabled);
     if (draggedItem && !disabled) {
+      console.log('🐞 Moving item:', draggedItem, 'to category:', categoryId);
       onItemMove(draggedItem, categoryId);
       setDraggedItem(null);
     }
