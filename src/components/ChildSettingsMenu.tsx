@@ -94,13 +94,19 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack }: ChildSet
         console.log('✅ Found parent relationship with parent ID:', relationship.parent_id);
         
         // Load parent profile
+        console.log('🔍 Querying parent profile for ID:', relationship.parent_id);
         const { data: parentProfile, error: parentError } = await supabase
           .from('profiles')
           .select('id, name, role')
           .eq('id', relationship.parent_id)
           .maybeSingle();
 
-        console.log('👨‍👩‍👧‍👦 Parent profile query result:', { parentProfile, parentError });
+        console.log('👨‍👩‍👧‍👦 Parent profile query result:', { 
+          parentProfile, 
+          parentError,
+          nameFromProfile: parentProfile?.name,
+          rawParentProfile: parentProfile
+        });
 
         if (parentProfile && !parentError) {
           const parentData = {
@@ -110,7 +116,7 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack }: ChildSet
             role: parentProfile.role || 'parent',
             displayName: parentProfile.name || 'Elternteil'
           };
-          console.log('✅ Setting parent info:', parentData);
+          console.log('✅ Setting parent info with name:', parentProfile.name, 'Final parentData:', parentData);
           setParentInfo(parentData);
         } else {
           console.error('❌ Error fetching parent profile:', parentError);
