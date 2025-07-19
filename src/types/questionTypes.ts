@@ -41,4 +41,18 @@ export interface DragDropQuestion extends BaseQuestion {
   }>;
 }
 
-export type SelectionQuestion = TextInputQuestion | MultipleChoiceQuestion | WordSelectionQuestion | DragDropQuestion;
+export interface MatchingQuestion extends BaseQuestion {
+  questionType: 'matching';
+  items: Array<{
+    id: string;
+    content: string;
+    category: string;
+  }>;
+  categories: Array<{
+    id: string;
+    name: string;
+    acceptsItems: string[]; // item ids that belong in this category
+  }>;
+}
+
+export type SelectionQuestion = TextInputQuestion | MultipleChoiceQuestion | WordSelectionQuestion | DragDropQuestion | MatchingQuestion;

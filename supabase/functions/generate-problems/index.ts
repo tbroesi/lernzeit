@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -43,8 +44,8 @@ interface WordSelectionQuestion extends BaseQuestion {
   }>;
 }
 
-interface DragDropQuestion extends BaseQuestion {
-  questionType: 'drag-drop';
+interface MatchingQuestion extends BaseQuestion {
+  questionType: 'matching';
   items: Array<{
     id: string;
     content: string;
@@ -57,7 +58,7 @@ interface DragDropQuestion extends BaseQuestion {
   }>;
 }
 
-type SelectionQuestion = TextInputQuestion | MultipleChoiceQuestion | WordSelectionQuestion | DragDropQuestion;
+type SelectionQuestion = TextInputQuestion | MultipleChoiceQuestion | WordSelectionQuestion | MatchingQuestion;
 
 const getSubjectPrompt = (category: string, grade: number): string => {
   const prompts = {
@@ -78,11 +79,11 @@ const getSubjectPrompt = (category: string, grade: number): string => {
       2: 'Multiple Choice: Satzzeichen, Wortarten (Nomen/Verben), Rechtschreibregeln.',
       3: 'Wortauswahl und Multiple Choice: Zeitformen, Adjektive, ck/tz-Regeln.',
       4: 'Interaktive Satzglied-Bestimmung, wörtliche Rede zuordnen, ie/ei/ai-Rechtschreibung.',
-      5: 'Drag-and-Drop Fälle, Multiple Choice Konjunktionen, Wortauswahl Satzarten.',
-      6: 'Multiple Choice Aktiv/Passiv, Drag-and-Drop indirekte Rede, Kommaregeln.',
-      7: 'Satzgefüge-Analyse per Auswahl, Drag-and-Drop Stilmittel, Multiple Choice Textanalyse.',
-      8: 'Multiple Choice Konjunktiv, Drag-and-Drop Argumentationsstrukturen, Textanalyse-Auswahl.',
-      9: 'Epochen zuordnen per Drag-and-Drop, Multiple Choice rhetorische Mittel, Erörterungs-Strukturen.',
+      5: 'Matching Fälle, Multiple Choice Konjunktionen, Wortauswahl Satzarten.',
+      6: 'Multiple Choice Aktiv/Passiv, Matching indirekte Rede, Kommaregeln.',
+      7: 'Satzgefüge-Analyse per Auswahl, Matching Stilmittel, Multiple Choice Textanalyse.',
+      8: 'Multiple Choice Konjunktiv, Matching Argumentationsstrukturen, Textanalyse-Auswahl.',
+      9: 'Epochen zuordnen per Matching, Multiple Choice rhetorische Mittel, Erörterungs-Strukturen.',
       10: 'Sprachgeschichte-Timeline, komplexe Textinterpretation-Auswahl, Literaturkritik-Kategorien.'
     },
     'Englisch': {
@@ -183,18 +184,18 @@ serve(async (req) => {
 NEUE FRAGETYPEN FÜR BESSERE UX:
 1. "multiple-choice": 4 Antwortoptionen (A, B, C, D)
 2. "word-selection": Klickbare Wörter in Sätzen auswählen
-3. "drag-drop": Elemente in Kategorien ziehen
+3. "matching": Zuordnungsaufgaben mit Klick-Interface (ersetzt drag-drop)
 4. "text-input": Nur wenn andere Typen nicht passen
 
 INTERAKTIVE AUFGABEN FÜR ALLE FÄCHER:
-- MATHEMATIK: Zahlen nach Stellenwerten sortieren (drag-drop), Geometrische Formen zuordnen (drag-drop), Rechenarten per Multiple Choice
-- DEUTSCH: Satzglieder per Klick markieren (word-selection), Wortarten per Multiple Choice, Rechtschreibregeln per Drag-and-Drop
-- ALLE ANDEREN FÄCHER: Multiple Choice bevorzugen, bei Zuordnungsaufgaben drag-drop verwenden
+- MATHEMATIK: Zahlen nach Stellenwerten sortieren (matching), Geometrische Formen zuordnen (matching), Rechenarten per Multiple Choice
+- DEUTSCH: Satzglieder per Klick markieren (word-selection), Wortarten per Multiple Choice, Rechtschreibregeln per Matching
+- ALLE ANDEREN FÄCHER: Multiple Choice bevorzugen, bei Zuordnungsaufgaben matching verwenden
 
-WICHTIG FÜR DRAG-DROP FORMAT:
-Verwende immer dieses exakte Format für drag-drop:
+WICHTIG FÜR MATCHING FORMAT:
+Verwende immer dieses exakte Format für matching:
 {
-  "questionType": "drag-drop",
+  "questionType": "matching",
   "question": "Ordne die Elemente zu:",
   "items": [
     {"id": "item-1", "content": "Element1", "category": "Kategorie1"},
@@ -323,7 +324,7 @@ ANTWORTFORMAT (JSON):
         sentence: problem.sentence || '',
         selectableWords: problem.selectableWords || []
       }),
-      ...(problem.questionType === 'drag-drop' && {
+      ...(problem.questionType === 'matching' && {
         items: problem.items?.map((item: any, itemIndex: number) => ({
           id: item.id || `item-${itemIndex}`,
           content: item.content || item.word,

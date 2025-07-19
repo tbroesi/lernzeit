@@ -13,7 +13,7 @@ import { AchievementPopup } from '@/components/AchievementPopup';
 import { SelectionQuestion } from '@/types/questionTypes';
 import { MultipleChoiceQuestion } from '@/components/question-types/MultipleChoiceQuestion';
 import { WordSelectionQuestion } from '@/components/question-types/WordSelectionQuestion';
-import { DragDropQuestion } from '@/components/question-types/DragDropQuestion';
+import { MatchingQuestion } from '@/components/question-types/MatchingQuestion';
 
 interface CategoryMathProblemProps {
   category: string;
@@ -380,7 +380,6 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
   const [userAnswer, setUserAnswer] = useState('');
   const [selectedMultipleChoice, setSelectedMultipleChoice] = useState<number | null>(null);
   const [selectedWords, setSelectedWords] = useState<number[]>([]);
-  const [dragDropPlacements, setDragDropPlacements] = useState<Record<string, string>>({});
   const [feedback, setFeedback] = useState<'correct' | 'incorrect' | null>(null);
   const [correctAnswers, setCorrectAnswers] = useState(0);
   const [timeElapsed, setTimeElapsed] = useState(0);
@@ -388,6 +387,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
   const [newAchievements, setNewAchievements] = useState<NewAchievement[]>([]);
   const [showAchievementPopup, setShowAchievementPopup] = useState(false);
   const [usedQuestions, setUsedQuestions] = useState<string[]>([]);
+  const [isQuestionComplete, setIsQuestionComplete] = useState(false);
   const { toast } = useToast();
   const { settings } = useChildSettings(userId);
   const { canEarnMoreTime, isAtLimit, remainingMinutes, getDailyLimit } = useScreenTimeLimit(userId);
@@ -490,7 +490,27 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
     setUserAnswer('');
     setSelectedMultipleChoice(null);
     setSelectedWords([]);
-    setDragDropPlacements({});
+    setIsQuestionComplete(false);
+  };
+
+  const handleMatchingComplete = (isCorrect: boolean) => {
+    console.log('🎯 Matching game completed:', isCorrect);
+    setFeedback(isCorrect ? 'correct' : 'incorrect');
+    setIsQuestionComplete(true);
+
+    if (isCorrect) {
+      setCorrectAnswers(prev => prev + 1);
+    }
+
+    setTimeout(() => {
+      if (currentProblem + 1 >= totalQuestions) {
+        completeGame();
+      } else {
+        setCurrentProblem(prev => prev + 1);
+        resetAnswerState();
+        setFeedback(null);
+      }
+    }, 1500);
   };
 
   const checkAnswer = () => {
@@ -510,16 +530,9 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
         isCorrect = selectedWords.length === correctWordIndices.length &&
                    selectedWords.every(index => correctWordIndices.includes(index));
         break;
-      case 'drag-drop':
-        isCorrect = problem.categories.every(category => {
-          const expectedItems = category.acceptsItems;
-          const actualItems = Object.entries(dragDropPlacements)
-            .filter(([_, categoryId]) => categoryId === category.id)
-            .map(([itemId, _]) => itemId);
-          return expectedItems.length === actualItems.length &&
-                 expectedItems.every(itemId => actualItems.includes(itemId));
-        });
-        break;
+      case 'matching':
+        // Matching completion is handled by the MatchingQuestion component
+        return;
       case 'text-input':
       default:
         const userValue = parseFloat(userAnswer.trim());
@@ -721,8 +734,8 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
         return selectedMultipleChoice !== null;
       case 'word-selection':
         return selectedWords.length > 0;
-      case 'drag-drop':
-        return Object.keys(dragDropPlacements).length > 0;
+      case 'matching':
+        return false; // Matching questions handle their own completion
       case 'text-input':
       default:
         return userAnswer.trim() !== '';
@@ -758,14 +771,11 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
             disabled={feedback !== null}
           />
         );
-      case 'drag-drop':
+      case 'matching':
         return (
-          <DragDropQuestion
+          <MatchingQuestion
             question={currentQuestionData}
-            currentPlacements={dragDropPlacements}
-            onItemMove={(itemId, categoryId) => {
-              setDragDropPlacements(prev => ({ ...prev, [itemId]: categoryId }));
-            }}
+            onComplete={handleMatchingComplete}
             disabled={feedback !== null}
           />
         );
@@ -882,7 +892,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
                 </div>
               )}
 
-              {!feedback && (
+              {!feedback && currentQuestionData.questionType !== 'matching' && (
                 <div className="text-center">
                   <Button 
                     onClick={checkAnswer}
