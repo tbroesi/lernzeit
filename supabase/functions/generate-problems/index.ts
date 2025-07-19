@@ -305,8 +305,17 @@ ANTWORTFORMAT (JSON):
         selectableWords: problem.selectableWords || []
       }),
       ...(problem.questionType === 'drag-drop' && {
-        items: problem.items || [],
-        categories: problem.categories || []
+        items: problem.words?.map((word: any, wordIndex: number) => ({
+          id: `item-${wordIndex}`,
+          content: word.word,
+          category: word.category
+        })) || problem.items || [],
+        categories: problem.categories?.map((category: any, catIndex: number) => ({
+          id: category.name || `category-${catIndex}`,
+          name: category.name,
+          acceptsItems: problem.words?.filter((word: any) => word.category === category.name)
+            .map((_: any, wordIndex: number) => `item-${problem.words.findIndex((w: any) => w.word === _.word)}`) || []
+        })) || []
       }),
       ...(problem.questionType === 'text-input' && {
         answer: problem.answer || problem.correctAnswer || ''
