@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
-import { Check, X, ArrowLeft, Clock } from 'lucide-react';
+import { Check, X, ArrowLeft, Clock, ArrowRight } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { useChildSettings } from '@/hooks/useChildSettings';
@@ -38,7 +38,7 @@ const generateGrade4DeutschProblems = (): SelectionQuestion[] => {
         { word: "laut.", isCorrect: false, index: 4 }
       ],
       type: 'german',
-      explanation: "Das Subjekt besteht aus Artikel, Adjektiv und Nomen"
+      explanation: "Das Subjekt besteht aus Artikel 'Der', Adjektiv 'große' und Nomen 'Hund'"
     },
     {
       id: 2,
@@ -47,30 +47,37 @@ const generateGrade4DeutschProblems = (): SelectionQuestion[] => {
       options: ["Kinder", "spielen", "fröhlich", "Garten"],
       correctAnswer: 1,
       type: 'german',
-      explanation: "Das Verb beschreibt die Tätigkeit oder Handlung."
+      explanation: "Das Verb 'spielen' beschreibt die Tätigkeit der Kinder."
     },
     {
       id: 3,
-      questionType: 'multiple-choice',
-      question: "Setze die richtige Form von 'sein' ein: 'Gestern ___ ich im Kino.' (war/bin)",
-      options: ["war", "bin"],
-      correctAnswer: 0,
+      questionType: 'word-selection',
+      question: "Markiere alle Nomen im Satz:",
+      sentence: "Die Katze liegt auf dem Sofa.",
+      selectableWords: [
+        { word: "Die", isCorrect: false, index: 0 },
+        { word: "Katze", isCorrect: true, index: 1 },
+        { word: "liegt", isCorrect: false, index: 2 },
+        { word: "auf", isCorrect: false, index: 3 },
+        { word: "dem", isCorrect: false, index: 4 },
+        { word: "Sofa.", isCorrect: true, index: 5 }
+      ],
       type: 'german',
-      explanation: "Bei 'gestern' verwendet man die Vergangenheitsform 'war'."
+      explanation: "Die Nomen sind 'Katze' und 'Sofa' - das sind Namen für Lebewesen und Gegenstände."
     },
     {
       id: 4,
       questionType: 'multiple-choice',
-      question: "Wie schreibt man das Wort richtig: 'sch___ssen' (ie oder ei)?",
-      options: ["schießen", "scheissen"],
+      question: "Wie schreibt man das Wort richtig?",
+      options: ["schießen", "schiessen", "schieesen", "schisen"],
       correctAnswer: 0,
       type: 'german',
-      explanation: "Nach langem 'i' schreibt man meistens 'ie'."
+      explanation: "Nach langem 'i' schreibt man 'ie': schießen."
     },
     {
       id: 5,
       questionType: 'word-selection',
-      question: "Was ist das Prädikat in: 'Meine Schwester liest ein spannendes Buch.'?",
+      question: "Was ist das Prädikat in diesem Satz?",
       sentence: "Meine Schwester liest ein spannendes Buch.",
       selectableWords: [
         { word: "Meine", isCorrect: false, index: 0 },
@@ -81,24 +88,7 @@ const generateGrade4DeutschProblems = (): SelectionQuestion[] => {
         { word: "Buch.", isCorrect: false, index: 5 }
       ],
       type: 'german',
-      explanation: "Das Prädikat ist das Verb, das aussagt, was jemand tut."
-    },
-    {
-      id: 6,
-      questionType: 'multiple-choice',
-      question: "Welcher Artikel gehört zu 'Mädchen'? (der/die/das)",
-      options: ["der", "die", "das"],
-      correctAnswer: 2,
-      type: 'german',
-      explanation: "Trotz der Endung -chen ist 'Mädchen' sächlich: das Mädchen."
-    },
-    {
-      id: 7,
-      questionType: 'text-input',
-      question: "Ergänze die wörtliche Rede: 'Tom sagte: ___ gehe nach Hause.___' (Ich/Anführungszeichen)",
-      answer: "\"Ich gehe nach Hause.\"",
-      type: 'german',
-      explanation: "Wörtliche Rede steht in Anführungszeichen und beginnt mit Großbuchstabe."
+      explanation: "Das Prädikat ist das Verb 'liest', das aussagt, was die Schwester tut."
     }
   ];
 
@@ -501,16 +491,16 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
     if (isCorrect) {
       setCorrectAnswers(prev => prev + 1);
     }
+  };
 
-    setTimeout(() => {
-      if (currentProblem + 1 >= totalQuestions) {
-        completeGame();
-      } else {
-        setCurrentProblem(prev => prev + 1);
-        resetAnswerState();
-        setFeedback(null);
-      }
-    }, 1500);
+  const handleNextQuestion = () => {
+    if (currentProblem + 1 >= totalQuestions) {
+      completeGame();
+    } else {
+      setCurrentProblem(prev => prev + 1);
+      resetAnswerState();
+      setFeedback(null);
+    }
   };
 
   const checkAnswer = () => {
@@ -519,20 +509,43 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
     const problem = problems[currentProblem];
     let isCorrect = false;
 
+    console.log('🔍 Checking answer for question type:', problem.questionType);
+
     switch (problem.questionType) {
       case 'multiple-choice':
         isCorrect = selectedMultipleChoice === problem.correctAnswer;
+        console.log('✅ Multiple choice - Selected:', selectedMultipleChoice, 'Correct:', problem.correctAnswer);
         break;
+        
       case 'word-selection':
+        console.log('🔤 Word selection validation:');
+        console.log('Selected words (indices):', selectedWords);
+        console.log('Available words:', problem.selectableWords);
+        
         const correctWordIndices = problem.selectableWords
           .filter(word => word.isCorrect)
           .map(word => word.index);
-        isCorrect = selectedWords.length === correctWordIndices.length &&
-                   selectedWords.every(index => correctWordIndices.includes(index));
+        
+        console.log('Correct word indices:', correctWordIndices);
+        
+        // Sort both arrays for comparison
+        const sortedSelected = [...selectedWords].sort((a, b) => a - b);
+        const sortedCorrect = [...correctWordIndices].sort((a, b) => a - b);
+        
+        console.log('Sorted selected:', sortedSelected);
+        console.log('Sorted correct:', sortedCorrect);
+        
+        // Check if arrays are equal
+        isCorrect = sortedSelected.length === sortedCorrect.length &&
+                   sortedSelected.every((index, i) => index === sortedCorrect[i]);
+        
+        console.log('Word selection result:', isCorrect);
         break;
+        
       case 'matching':
         // Matching completion is handled by the MatchingQuestion component
         return;
+        
       case 'text-input':
       default:
         if (problem.questionType === 'text-input') {
@@ -545,21 +558,14 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
         break;
     }
 
+    console.log('Final answer result:', isCorrect);
+
     setFeedback(isCorrect ? 'correct' : 'incorrect');
+    setIsQuestionComplete(true);
 
     if (isCorrect) {
       setCorrectAnswers(prev => prev + 1);
     }
-
-    setTimeout(() => {
-      if (currentProblem + 1 >= totalQuestions) {
-        completeGame();
-      } else {
-        setCurrentProblem(prev => prev + 1);
-        resetAnswerState();
-        setFeedback(null);
-      }
-    }, 1500);
   };
 
   const completeGame = async () => {
@@ -889,8 +895,17 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
                     </span>
                   </div>
                   {currentQuestionData.explanation && (
-                    <p className="text-sm">{currentQuestionData.explanation}</p>
+                    <p className="text-sm mb-4">{currentQuestionData.explanation}</p>
                   )}
+                  
+                  <Button 
+                    onClick={handleNextQuestion}
+                    className="w-full max-w-sm"
+                    variant="default"
+                  >
+                    {currentProblem + 1 >= totalQuestions ? 'Fertig' : 'Weiter'}
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
                 </div>
               )}
 
