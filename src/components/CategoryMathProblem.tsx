@@ -572,8 +572,14 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
     let timeEarned = 0;
 
     if (canEarnMoreTime) {
-      timeEarned = correctAnswers * secondsPerTask;
-      // timeEarned is now calculated in seconds
+      // Calculate the theoretical time earned based on correct answers
+      const theoreticalTimeEarned = correctAnswers * secondsPerTask;
+      
+      // Prevent negative bonus: earned time minus spent time should not be negative
+      // If the user took longer than they earned, they get 0 seconds as bonus
+      timeEarned = Math.max(0, theoreticalTimeEarned - timeElapsed);
+      
+      console.log(`🎯 Time calculation: ${correctAnswers} correct × ${secondsPerTask}s = ${theoreticalTimeEarned}s theoretical, spent ${timeElapsed}s, final bonus: ${timeEarned}s`);
     }
 
     try {
