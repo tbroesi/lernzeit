@@ -16,15 +16,15 @@ import { Loader2, Save, Plus, Copy, Users, Key, Trash2, RefreshCw, Settings, Cal
 interface ParentSettings {
   weekday_max_minutes: number;
   weekend_max_minutes: number;
-  math_minutes_per_task: number;
-  german_minutes_per_task: number;
-  english_minutes_per_task: number;
-  geography_minutes_per_task: number;
-  history_minutes_per_task: number;
-  physics_minutes_per_task: number;
-  biology_minutes_per_task: number;
-  chemistry_minutes_per_task: number;
-  latin_minutes_per_task: number;
+  math_seconds_per_task: number;
+  german_seconds_per_task: number;
+  english_seconds_per_task: number;
+  geography_seconds_per_task: number;
+  history_seconds_per_task: number;
+  physics_seconds_per_task: number;
+  biology_seconds_per_task: number;
+  chemistry_seconds_per_task: number;
+  latin_seconds_per_task: number;
 }
 
 interface ChildSettings {
@@ -32,15 +32,15 @@ interface ChildSettings {
   child_id: string;
   weekday_max_minutes: number;
   weekend_max_minutes: number;
-  math_minutes_per_task: number;
-  german_minutes_per_task: number;
-  english_minutes_per_task: number;
-  geography_minutes_per_task: number;
-  history_minutes_per_task: number;
-  physics_minutes_per_task: number;
-  biology_minutes_per_task: number;
-  chemistry_minutes_per_task: number;
-  latin_minutes_per_task: number;
+  math_seconds_per_task: number;
+  german_seconds_per_task: number;
+  english_seconds_per_task: number;
+  geography_seconds_per_task: number;
+  history_seconds_per_task: number;
+  physics_seconds_per_task: number;
+  biology_seconds_per_task: number;
+  chemistry_seconds_per_task: number;
+  latin_seconds_per_task: number;
 }
 
 interface ParentSettingsMenuProps {
@@ -52,15 +52,15 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
   const [settings, setSettings] = useState<ParentSettings>({
     weekday_max_minutes: 30,
     weekend_max_minutes: 60,
-    math_minutes_per_task: 1,
-    german_minutes_per_task: 1,
-    english_minutes_per_task: 1,
-    geography_minutes_per_task: 1,
-    history_minutes_per_task: 1,
-    physics_minutes_per_task: 1,
-    biology_minutes_per_task: 1,
-    chemistry_minutes_per_task: 1,
-    latin_minutes_per_task: 1,
+    math_seconds_per_task: 30,
+    german_seconds_per_task: 30,
+    english_seconds_per_task: 30,
+    geography_seconds_per_task: 30,
+    history_seconds_per_task: 30,
+    physics_seconds_per_task: 30,
+    biology_seconds_per_task: 30,
+    chemistry_seconds_per_task: 30,
+    latin_seconds_per_task: 30,
   });
   const [childSettings, setChildSettings] = useState<ChildSettings[]>([]);
   const [newPassword, setNewPassword] = useState('');
@@ -111,17 +111,17 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
         const existing = settingsMap.get(child.id);
         return existing || {
           child_id: child.id,
-          weekday_max_minutes: 30, // Default values (1 minute per task)
+          weekday_max_minutes: 30, // Default values (30 seconds per task)
           weekend_max_minutes: 60,
-          math_minutes_per_task: 1,
-          german_minutes_per_task: 1,
-          english_minutes_per_task: 1,
-          geography_minutes_per_task: 1,
-          history_minutes_per_task: 1,
-          physics_minutes_per_task: 1,
-          biology_minutes_per_task: 1,
-          chemistry_minutes_per_task: 1,
-          latin_minutes_per_task: 1,
+          math_seconds_per_task: 30,
+          german_seconds_per_task: 30,
+          english_seconds_per_task: 30,
+          geography_seconds_per_task: 30,
+          history_seconds_per_task: 30,
+          physics_seconds_per_task: 30,
+          biology_seconds_per_task: 30,
+          chemistry_seconds_per_task: 30,
+          latin_seconds_per_task: 30,
         };
       });
 
@@ -149,15 +149,15 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
             child_id: childSetting.child_id,
             weekday_max_minutes: childSetting.weekday_max_minutes,
             weekend_max_minutes: childSetting.weekend_max_minutes,
-            math_minutes_per_task: childSetting.math_minutes_per_task,
-            german_minutes_per_task: childSetting.german_minutes_per_task,
-            english_minutes_per_task: childSetting.english_minutes_per_task,
-            geography_minutes_per_task: childSetting.geography_minutes_per_task,
-            history_minutes_per_task: childSetting.history_minutes_per_task,
-            physics_minutes_per_task: childSetting.physics_minutes_per_task,
-            biology_minutes_per_task: childSetting.biology_minutes_per_task,
-            chemistry_minutes_per_task: childSetting.chemistry_minutes_per_task,
-            latin_minutes_per_task: childSetting.latin_minutes_per_task,
+            math_seconds_per_task: childSetting.math_seconds_per_task,
+            german_seconds_per_task: childSetting.german_seconds_per_task,
+            english_seconds_per_task: childSetting.english_seconds_per_task,
+            geography_seconds_per_task: childSetting.geography_seconds_per_task,
+            history_seconds_per_task: childSetting.history_seconds_per_task,
+            physics_seconds_per_task: childSetting.physics_seconds_per_task,
+            biology_seconds_per_task: childSetting.biology_seconds_per_task,
+            chemistry_seconds_per_task: childSetting.chemistry_seconds_per_task,
+            latin_seconds_per_task: childSetting.latin_seconds_per_task,
           });
 
         if (error) throw error;

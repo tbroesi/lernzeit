@@ -3,15 +3,15 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 
 interface ChildSettings {
-  math_minutes_per_task: number;
-  german_minutes_per_task: number;
-  english_minutes_per_task: number;
-  geography_minutes_per_task: number;
-  history_minutes_per_task: number;
-  physics_minutes_per_task: number;
-  biology_minutes_per_task: number;
-  chemistry_minutes_per_task: number;
-  latin_minutes_per_task: number;
+  math_seconds_per_task: number;
+  german_seconds_per_task: number;
+  english_seconds_per_task: number;
+  geography_seconds_per_task: number;
+  history_seconds_per_task: number;
+  physics_seconds_per_task: number;
+  biology_seconds_per_task: number;
+  chemistry_seconds_per_task: number;
+  latin_seconds_per_task: number;
   weekday_max_minutes: number;
   weekend_max_minutes: number;
 }
@@ -64,18 +64,18 @@ export function useChildSettings(childId: string) {
         return;
       }
 
-      // If no child settings found, use default settings (1 minute per task)
-      console.log('🔧 No child settings found, using default settings (1 minute per task)');
+      // If no child settings found, use default settings (30 seconds per task)
+      console.log('🔧 No child settings found, using default settings (30 seconds per task)');
       const defaultSettings = {
-        math_minutes_per_task: 1,
-        german_minutes_per_task: 1,
-        english_minutes_per_task: 1,
-        geography_minutes_per_task: 1,
-        history_minutes_per_task: 1,
-        physics_minutes_per_task: 1,
-        biology_minutes_per_task: 1,
-        chemistry_minutes_per_task: 1,
-        latin_minutes_per_task: 1,
+        math_seconds_per_task: 30,
+        german_seconds_per_task: 30,
+        english_seconds_per_task: 30,
+        geography_seconds_per_task: 30,
+        history_seconds_per_task: 30,
+        physics_seconds_per_task: 30,
+        biology_seconds_per_task: 30,
+        chemistry_seconds_per_task: 30,
+        latin_seconds_per_task: 30,
         weekday_max_minutes: 30,
         weekend_max_minutes: 60,
       };
@@ -85,17 +85,17 @@ export function useChildSettings(childId: string) {
     } catch (error) {
       console.error('❌ Error loading child settings:', error);
       
-      // Use defaults on error (1 minute per task)
+      // Use defaults on error (30 seconds per task)
       const defaultSettings = {
-        math_minutes_per_task: 1,
-        german_minutes_per_task: 1,
-        english_minutes_per_task: 1,
-        geography_minutes_per_task: 1,
-        history_minutes_per_task: 1,
-        physics_minutes_per_task: 1,
-        biology_minutes_per_task: 1,
-        chemistry_minutes_per_task: 1,
-        latin_minutes_per_task: 1,
+        math_seconds_per_task: 30,
+        german_seconds_per_task: 30,
+        english_seconds_per_task: 30,
+        geography_seconds_per_task: 30,
+        history_seconds_per_task: 30,
+        physics_seconds_per_task: 30,
+        biology_seconds_per_task: 30,
+        chemistry_seconds_per_task: 30,
+        latin_seconds_per_task: 30,
         weekday_max_minutes: 30,
         weekend_max_minutes: 60,
       };

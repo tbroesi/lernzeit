@@ -544,15 +544,15 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
 
   const completeGame = async () => {
     const categoryMapping: { [key: string]: keyof typeof settings } = {
-      'Mathematik': 'math_minutes_per_task',
-      'Deutsch': 'german_minutes_per_task',
-      'Englisch': 'english_minutes_per_task',
-      'Geographie': 'geography_minutes_per_task',
-      'Geschichte': 'history_minutes_per_task',
-      'Physik': 'physics_minutes_per_task',
-      'Biologie': 'biology_minutes_per_task',
-      'Chemie': 'chemistry_minutes_per_task',
-      'Latein': 'latin_minutes_per_task'
+      'Mathematik': 'math_seconds_per_task',
+      'Deutsch': 'german_seconds_per_task',
+      'Englisch': 'english_seconds_per_task',
+      'Geographie': 'geography_seconds_per_task',
+      'Geschichte': 'history_seconds_per_task',
+      'Physik': 'physics_seconds_per_task',
+      'Biologie': 'biology_seconds_per_task',
+      'Chemie': 'chemistry_seconds_per_task',
+      'Latein': 'latin_seconds_per_task'
     };
 
     // Mapping für deutsche zu englische Kategorienamen für die Datenbank
@@ -568,12 +568,12 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
       'Latein': 'latin'
     };
 
-    const minutesPerTask = settings?.[categoryMapping[category]] || 5;
+    const secondsPerTask = settings?.[categoryMapping[category]] || 30;
     let timeEarned = 0;
 
     if (canEarnMoreTime) {
-      timeEarned = correctAnswers * minutesPerTask;
-      // timeEarned wird bereits korrekt berechnet
+      timeEarned = correctAnswers * secondsPerTask;
+      // timeEarned is now calculated in seconds
     }
 
     try {
@@ -689,16 +689,16 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
     }
   };
 
-  const categoryMapping: { [key: string]: keyof typeof settings } = {
-    'Mathematik': 'math_minutes_per_task',
-    'Deutsch': 'german_minutes_per_task',
-    'Englisch': 'english_minutes_per_task',
-    'Geographie': 'geography_minutes_per_task',
-    'Geschichte': 'history_minutes_per_task',
-    'Physik': 'physics_minutes_per_task',
-    'Biologie': 'biology_minutes_per_task',
-    'Chemie': 'chemistry_minutes_per_task',
-    'Latein': 'latin_minutes_per_task'
+  const categoryMappingFix: { [key: string]: keyof typeof settings } = {
+    'Mathematik': 'math_seconds_per_task',
+    'Deutsch': 'german_seconds_per_task',
+    'Englisch': 'english_seconds_per_task',
+    'Geographie': 'geography_seconds_per_task',
+    'Geschichte': 'history_seconds_per_task',
+    'Physik': 'physics_seconds_per_task',
+    'Biologie': 'biology_seconds_per_task',
+    'Chemie': 'chemistry_seconds_per_task',
+    'Latein': 'latin_seconds_per_task'
   };
 
   const canSubmit = () => {

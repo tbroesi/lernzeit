@@ -38,15 +38,15 @@ interface ChildSettings {
   child_id: string;
   weekday_max_minutes: number;
   weekend_max_minutes: number;
-  math_minutes_per_task: number;
-  german_minutes_per_task: number;
-  english_minutes_per_task: number;
-  geography_minutes_per_task: number;
-  history_minutes_per_task: number;
-  physics_minutes_per_task: number;
-  biology_minutes_per_task: number;
-  chemistry_minutes_per_task: number;
-  latin_minutes_per_task: number;
+  math_seconds_per_task: number;
+  german_seconds_per_task: number;
+  english_seconds_per_task: number;
+  geography_seconds_per_task: number;
+  history_seconds_per_task: number;
+  physics_seconds_per_task: number;
+  biology_seconds_per_task: number;
+  chemistry_seconds_per_task: number;
+  latin_seconds_per_task: number;
 }
 
 interface VisibleSubjects {
@@ -124,15 +124,15 @@ export function ChildManagement({ linkedChildren, parentId, onChildUpdate }: Chi
           child_id: selectedChildId,
           weekday_max_minutes: 0,
           weekend_max_minutes: 0,
-          math_minutes_per_task: 0,
-          german_minutes_per_task: 0,
-          english_minutes_per_task: 0,
-          geography_minutes_per_task: 0,
-          history_minutes_per_task: 0,
-          physics_minutes_per_task: 0,
-          biology_minutes_per_task: 0,
-          chemistry_minutes_per_task: 0,
-          latin_minutes_per_task: 0,
+          math_seconds_per_task: 0,
+          german_seconds_per_task: 0,
+          english_seconds_per_task: 0,
+          geography_seconds_per_task: 0,
+          history_seconds_per_task: 0,
+          physics_seconds_per_task: 0,
+          biology_seconds_per_task: 0,
+          chemistry_seconds_per_task: 0,
+          latin_seconds_per_task: 0,
         };
         setChildSettings(defaultSettings);
       }
@@ -185,15 +185,15 @@ export function ChildManagement({ linkedChildren, parentId, onChildUpdate }: Chi
         child_id: selectedChildId,
         weekday_max_minutes: childSettings.weekday_max_minutes,
         weekend_max_minutes: childSettings.weekend_max_minutes,
-        math_minutes_per_task: childSettings.math_minutes_per_task,
-        german_minutes_per_task: childSettings.german_minutes_per_task,
-        english_minutes_per_task: childSettings.english_minutes_per_task,
-        geography_minutes_per_task: childSettings.geography_minutes_per_task,
-        history_minutes_per_task: childSettings.history_minutes_per_task,
-        physics_minutes_per_task: childSettings.physics_minutes_per_task,
-        biology_minutes_per_task: childSettings.biology_minutes_per_task,
-        chemistry_minutes_per_task: childSettings.chemistry_minutes_per_task,
-        latin_minutes_per_task: childSettings.latin_minutes_per_task,
+        math_seconds_per_task: childSettings.math_seconds_per_task,
+        german_seconds_per_task: childSettings.german_seconds_per_task,
+        english_seconds_per_task: childSettings.english_seconds_per_task,
+        geography_seconds_per_task: childSettings.geography_seconds_per_task,
+        history_seconds_per_task: childSettings.history_seconds_per_task,
+        physics_seconds_per_task: childSettings.physics_seconds_per_task,
+        biology_seconds_per_task: childSettings.biology_seconds_per_task,
+        chemistry_seconds_per_task: childSettings.chemistry_seconds_per_task,
+        latin_seconds_per_task: childSettings.latin_seconds_per_task,
         ...(childSettings.id && { id: childSettings.id })
       };
 

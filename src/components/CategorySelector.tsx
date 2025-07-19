@@ -78,23 +78,23 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
     console.log('🔍 CategorySelector getMinutesForCategory:', { categoryId, settings, loading });
     if (!settings) return 1; // Default: 1 minute per task
     
-    const minutes = (() => {
+    const seconds = (() => {
       switch (categoryId) {
-        case 'math': return settings.math_minutes_per_task;
-        case 'german': return settings.german_minutes_per_task;
-        case 'english': return settings.english_minutes_per_task;
-        case 'geography': return settings.geography_minutes_per_task;
-        case 'history': return settings.history_minutes_per_task;
-        case 'physics': return settings.physics_minutes_per_task;
-        case 'biology': return settings.biology_minutes_per_task;
-        case 'chemistry': return settings.chemistry_minutes_per_task;
-        case 'latin': return settings.latin_minutes_per_task;
-        default: return 1; // Default: 1 minute per task
+        case 'math': return settings.math_seconds_per_task;
+        case 'german': return settings.german_seconds_per_task;
+        case 'english': return settings.english_seconds_per_task;
+        case 'geography': return settings.geography_seconds_per_task;
+        case 'history': return settings.history_seconds_per_task;
+        case 'physics': return settings.physics_seconds_per_task;
+        case 'biology': return settings.biology_seconds_per_task;
+        case 'chemistry': return settings.chemistry_seconds_per_task;
+        case 'latin': return settings.latin_seconds_per_task;
+        default: return 30; // Default: 30 seconds per task
       }
     })();
     
-    console.log(`🔍 CategorySelector ${categoryId}: ${minutes} minutes`);
-    return minutes;
+    console.log(`🔍 CategorySelector ${categoryId}: ${seconds} seconds`);
+    return seconds;
   };
 
   const categories = [
@@ -206,7 +206,7 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
             .filter(category => visibleSubjects.has(category.id))
             .map((category) => {
               const IconComponent = category.icon;
-              const minutes = getMinutesForCategory(category.id);
+              const seconds = getMinutesForCategory(category.id);
               
               return (
               <Card
@@ -225,7 +225,7 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
                       <div className="flex items-center gap-1 mt-1">
                         <Clock className="w-4 h-4 text-green-600" />
                         <span className="text-sm text-green-600 font-medium">
-                          +{minutes} Min pro Aufgabe
+                          +{seconds} Sek pro Aufgabe
                         </span>
                       </div>
                     </div>
