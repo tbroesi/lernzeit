@@ -105,10 +105,10 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack }: ChildSet
         if (parentProfile && !parentError) {
           const parentData = {
             id: parentProfile.id,
-            name: parentProfile.name || 'Betreuungsperson',
+            name: parentProfile.name || 'Elternteil',
             email: '',
             role: parentProfile.role || 'parent',
-            displayName: parentProfile.name || 'Betreuungsperson'
+            displayName: parentProfile.name || 'Elternteil'
           };
           console.log('✅ Setting parent info:', parentData);
           setParentInfo(parentData);
@@ -116,7 +116,7 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack }: ChildSet
           console.error('❌ Error fetching parent profile:', parentError);
           setParentInfo({
             id: relationship.parent_id,
-            name: 'Betreuungsperson',
+            name: 'Elternteil',
             email: ''
           });
         }
@@ -321,7 +321,7 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack }: ChildSet
                   {/* Multiple Parent Support */}
                   <Card className="shadow-card">
                     <CardHeader>
-                      <CardTitle className="text-lg">Weitere Betreuungsperson hinzufügen</CardTitle>
+                      <CardTitle className="text-lg">Weitere Eltern hinzufügen</CardTitle>
                       <p className="text-sm text-muted-foreground">
                         Du kannst dich mit mehreren Erziehungsberechtigten verknüpfen
                       </p>
