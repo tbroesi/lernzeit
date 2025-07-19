@@ -69,10 +69,14 @@ export function DragDropQuestion({
             <div
               key={item.id}
               draggable={!disabled}
-              onDragStart={() => handleDragStart(item.id)}
-              className={`px-3 py-2 bg-card border rounded cursor-move transition-opacity ${
-                disabled ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-md'
+              onDragStart={(e) => {
+                console.log('🐞 DragStart triggered for:', item.id);
+                handleDragStart(item.id);
+              }}
+              className={`px-3 py-2 bg-card border rounded transition-opacity select-none ${
+                disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-move hover:shadow-md'
               } ${draggedItem === item.id ? 'opacity-50' : ''}`}
+              style={{ userSelect: 'none' }}
             >
               {item.content}
             </div>
@@ -95,10 +99,14 @@ export function DragDropQuestion({
                 <div
                   key={item.id}
                   draggable={!disabled}
-                  onDragStart={() => handleDragStart(item.id)}
-                  className={`px-3 py-2 bg-card border rounded cursor-move transition-opacity ${
-                    disabled ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-md'
+                  onDragStart={(e) => {
+                    console.log('🐞 DragStart triggered for:', item.id, '(from category)');
+                    handleDragStart(item.id);
+                  }}
+                  className={`px-3 py-2 bg-card border rounded transition-opacity select-none ${
+                    disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-move hover:shadow-md'
                   } ${draggedItem === item.id ? 'opacity-50' : ''}`}
+                  style={{ userSelect: 'none' }}
                 >
                   {item.content}
                 </div>
