@@ -416,6 +416,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      trigger_grade_upgrade: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       update_achievement_progress: {
         Args: {
           p_user_id: string
