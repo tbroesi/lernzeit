@@ -12,7 +12,7 @@ interface DebugInfoProps {
   grade: number;
   problemsLength: number;
   currentQuestionType?: string;
-  generationSource?: 'ai' | 'fallback' | null;
+  generationSource?: 'template' | 'ai' | 'fallback' | null;
 }
 
 export function DebugInfo({ 
@@ -38,26 +38,28 @@ export function DebugInfo({
               Problems: {problemsLength}
             </Badge>
             <Badge variant="outline" className="text-xs">
-              Global: {globalQuestionsCount}
+              Used: {globalQuestionsCount}
             </Badge>
             <Badge variant="outline" className="text-xs">
               Type: {currentQuestionType || 'Unknown'}
             </Badge>
             {generationSource && (
               <Badge 
-                variant={generationSource === 'ai' ? 'default' : 'secondary'} 
+                variant={generationSource === 'template' ? 'default' : generationSource === 'ai' ? 'secondary' : 'outline'} 
                 className={`text-xs ${
-                  generationSource === 'ai' 
+                  generationSource === 'template' 
+                    ? 'bg-blue-100 text-blue-800 border-blue-300' 
+                    : generationSource === 'ai'
                     ? 'bg-green-100 text-green-800 border-green-300' 
                     : 'bg-orange-100 text-orange-800 border-orange-300'
                 }`}
               >
-                {generationSource === 'ai' ? '🤖 AI' : '⚡ Fallback'}
+                {generationSource === 'template' ? '📋 Template' : generationSource === 'ai' ? '🤖 AI' : '⚡ Fallback'}
               </Badge>
             )}
           </div>
           <div className="text-muted-foreground">
-            Session: {sessionId.substring(0, 8)}... | {category} Grade {grade}
+            Session: {sessionId.substring(0, 12)}... | {category} Grade {grade}
           </div>
         </div>
       </CardContent>

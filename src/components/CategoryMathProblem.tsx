@@ -8,7 +8,7 @@ import { useChildSettings } from '@/hooks/useChildSettings';
 import { useScreenTimeLimit } from '@/hooks/useScreenTimeLimit';
 import { useAchievements, NewAchievement } from '@/hooks/useAchievements';
 import { AchievementPopup } from '@/components/AchievementPopup';
-import { useQuestionGeneration } from '@/hooks/useQuestionGeneration';
+import { useTemplateQuestionGeneration } from '@/hooks/useTemplateQuestionGeneration';
 import { DebugInfo } from '@/components/game/DebugInfo';
 import { GameProgress } from '@/components/game/GameProgress';
 import { QuestionRenderer } from '@/components/game/QuestionRenderer';
@@ -43,12 +43,12 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
   const totalQuestions = 5;
   const { 
     problems, 
-    globalQuestions, 
+    usedCombinations, 
     sessionId, 
     isGenerating,
     generationSource,
     generateProblems 
-  } = useQuestionGeneration(category, grade, userId, totalQuestions);
+  } = useTemplateQuestionGeneration(category, grade, userId, totalQuestions);
 
   console.log('🎯 CategoryMathProblem render:', {
     currentProblem,
@@ -58,7 +58,8 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
     gameStarted,
     isGenerating,
     feedback,
-    isQuestionComplete
+    isQuestionComplete,
+    generationSource
   });
 
   // Log when currentProblem changes
@@ -359,6 +360,11 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
           <CardContent className="p-8 text-center">
             <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
             <p>Aufgaben werden generiert...</p>
+            {generationSource && (
+              <p className="text-sm text-muted-foreground mt-2">
+                Methode: {generationSource === 'template' ? 'Template-System' : generationSource === 'ai' ? 'KI-Unterstützung' : 'Backup-System'}
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -399,13 +405,13 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
           <DebugInfo
             currentProblem={currentProblem}
             totalQuestions={totalQuestions}
-            globalQuestionsCount={globalQuestions.size}
+            globalQuestionsCount={usedCombinations.size}
             sessionId={sessionId}
             category={category}
             grade={grade}
             problemsLength={problems.length}
             currentQuestionType={currentQuestionData?.questionType}
-            generationSource={generationSource}
+            generationSource={generationSource || undefined}
           />
 
           <Card className="shadow-card">
