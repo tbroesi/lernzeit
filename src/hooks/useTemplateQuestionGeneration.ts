@@ -305,7 +305,7 @@ export function useTemplateQuestionGeneration(
           questionType: 'text-input',
           question: `Was ist ${num} + 1?`,
           answer: num + 1,
-          type: category.toLowerCase(),
+          type: category.toLowerCase() as 'math' | 'german' | 'english' | 'geography' | 'history' | 'physics' | 'biology' | 'chemistry' | 'latin',
           explanation: 'Einfache Rechnung'
         });
       }
