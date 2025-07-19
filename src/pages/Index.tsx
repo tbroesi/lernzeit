@@ -9,7 +9,7 @@ import { AchievementsBadge } from '@/components/AchievementsBadge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
-import { Trophy, Clock, RotateCcw } from 'lucide-react';
+import { Trophy, Clock, RotateCcw, BookOpen, Sparkles, User, Shield } from 'lucide-react';
 
 type Category = 'math' | 'german' | 'english' | 'geography' | 'history' | 'physics' | 'biology' | 'chemistry' | 'latin';
 
@@ -225,46 +225,101 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-bg p-4">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-4">
-            LernZeit 📱⏰
+    <div className="min-h-screen bg-gradient-bg p-4 relative overflow-hidden">
+      {/* Animated background elements */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/20 rounded-full animate-pulse blur-3xl"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-secondary/20 rounded-full animate-pulse blur-3xl" style={{animationDelay: '1s'}}></div>
+        <div className="absolute top-1/3 right-1/4 w-16 h-16 bg-accent/30 rounded-full animate-pulse blur-xl" style={{animationDelay: '2s'}}></div>
+      </div>
+
+      <div className="relative z-10 max-w-4xl mx-auto">
+        <div className="text-center mb-12 animate-fade-in">
+          {/* Logo */}
+          <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-r from-primary to-secondary rounded-3xl mb-6 shadow-lg animate-scale-in">
+            <BookOpen className="w-12 h-12 text-white" />
+          </div>
+          
+          <h1 className="text-5xl md:text-6xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-6">
+            LernZeit
           </h1>
-          <p className="text-lg text-muted-foreground mb-4">
+          
+          <p className="text-xl md:text-2xl text-muted-foreground mb-4 max-w-2xl mx-auto leading-relaxed">
             Löse Lernaufgaben und verdiene Handyzeit!
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button onClick={() => setShowAuth(true)} variant="default" size="lg">
+          
+          <div className="flex items-center justify-center gap-3 mb-8 text-muted-foreground">
+            <Sparkles className="w-5 h-5 text-primary animate-pulse" />
+            <span className="text-lg">Alle Schulfächer • Individuelle Belohnungen • Fortschritt speichern</span>
+            <Sparkles className="w-5 h-5 text-primary animate-pulse" />
+          </div>
+          
+          <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-lg mx-auto">
+            <Button 
+              onClick={() => setShowAuth(true)} 
+              size="lg" 
+              className="h-14 px-8 text-lg font-medium bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
+            >
+              <User className="w-5 h-5 mr-2" />
               Anmelden / Registrieren
             </Button>
-            <Button onClick={() => setSelectedGrade(3)} variant="outline" size="lg">
-              Ohne Konto spielen (Demo)
+            <Button 
+              onClick={() => setSelectedGrade(3)} 
+              variant="outline" 
+              size="lg"
+              className="h-14 px-8 text-lg font-medium border-2 hover:bg-muted/50 transition-all duration-200 hover:scale-105"
+            >
+              <Trophy className="w-5 h-5 mr-2" />
+              Demo starten
             </Button>
           </div>
         </div>
         
-        <Card className="max-w-md mx-auto shadow-card">
-          <CardContent className="p-6 text-center">
-            <div className="text-2xl mb-3">📚</div>
-            <h3 className="font-semibold mb-2">Alle Schulfächer verfügbar!</h3>
-            <div className="grid grid-cols-3 gap-2 text-sm text-muted-foreground">
-              <div>🔢 Mathematik</div>
-              <div>📚 Deutsch</div>
-              <div>🇬🇧 Englisch</div>
-              <div>🌍 Geographie</div>
-              <div>🏛️ Geschichte</div>
-              <div>⚡ Physik</div>
-              <div>🌱 Biologie</div>
-              <div>🧪 Chemie</div>
-              <div>🏺 Latein</div>
-            </div>
-            <div className="mt-4 space-y-1 text-sm text-muted-foreground">
-              <div>✅ Individuelle Belohnungszeiten</div>
-              <div>✅ Fortschritt wird gespeichert</div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Feature cards */}
+        <div className="grid md:grid-cols-3 gap-6 mb-8 animate-slide-up">
+          <Card className="shadow-card border-0 backdrop-blur-sm bg-card/80 hover:shadow-xl transition-all duration-300 hover:scale-105">
+            <CardContent className="p-6 text-center">
+              <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <BookOpen className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="font-bold text-lg mb-2">Alle Schulfächer</h3>
+              <p className="text-muted-foreground text-sm">
+                Mathematik, Deutsch, Englisch, Naturwissenschaften und mehr
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card className="shadow-card border-0 backdrop-blur-sm bg-card/80 hover:shadow-xl transition-all duration-300 hover:scale-105">
+            <CardContent className="p-6 text-center">
+              <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <Clock className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="font-bold text-lg mb-2">Belohnungssystem</h3>
+              <p className="text-muted-foreground text-sm">
+                Verdiene Handyzeit durch das Lösen von Lernaufgaben
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card className="shadow-card border-0 backdrop-blur-sm bg-card/80 hover:shadow-xl transition-all duration-300 hover:scale-105">
+            <CardContent className="p-6 text-center">
+              <div className="w-16 h-16 bg-gradient-to-r from-orange-500 to-red-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <Trophy className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="font-bold text-lg mb-2">Fortschritt verfolgen</h3>
+              <p className="text-muted-foreground text-sm">
+                Erfolge sammeln und Lernfortschritte dokumentieren
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="text-center text-sm text-muted-foreground animate-fade-in">
+          <p className="flex items-center justify-center gap-2">
+            <Shield className="w-4 h-4" />
+            Sicher, lehrreich und motivierend für alle Klassenstufen
+          </p>
+        </div>
       </div>
     </div>
   );
