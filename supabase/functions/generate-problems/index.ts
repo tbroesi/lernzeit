@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -15,13 +14,49 @@ interface ProblemRequest {
   count: number;
 }
 
-interface Problem {
+interface BaseQuestion {
   id: number;
   question: string;
-  answer: string | number;
   type: string;
   explanation: string;
 }
+
+interface TextInputQuestion extends BaseQuestion {
+  questionType: 'text-input';
+  answer: string | number;
+}
+
+interface MultipleChoiceQuestion extends BaseQuestion {
+  questionType: 'multiple-choice';
+  options: string[];
+  correctAnswer: number;
+}
+
+interface WordSelectionQuestion extends BaseQuestion {
+  questionType: 'word-selection';
+  sentence: string;
+  selectableWords: Array<{
+    word: string;
+    isCorrect: boolean;
+    index: number;
+  }>;
+}
+
+interface DragDropQuestion extends BaseQuestion {
+  questionType: 'drag-drop';
+  items: Array<{
+    id: string;
+    content: string;
+    category: string;
+  }>;
+  categories: Array<{
+    id: string;
+    name: string;
+    acceptsItems: string[];
+  }>;
+}
+
+type SelectionQuestion = TextInputQuestion | MultipleChoiceQuestion | WordSelectionQuestion | DragDropQuestion;
 
 const getSubjectPrompt = (category: string, grade: number): string => {
   const prompts = {
@@ -38,16 +73,16 @@ const getSubjectPrompt = (category: string, grade: number): string => {
       10: 'Funktionen. Exponentialrechnung. Komplexe Geometrie.'
     },
     'Deutsch': {
-      1: 'Einfache Wörter buchstabieren. Silben klatschen. Groß- und Kleinschreibung bei Namen.',
-      2: 'Satzzeichen setzen. Wortarten erkennen (Nomen, Verben). Einfache Rechtschreibregeln.',
-      3: 'Zeitformen (Gegenwart, Vergangenheit). Adjektive steigern. Rechtschreibung: ck, tz.',
-      4: 'Satzglieder bestimmen (Subjekt, Prädikat, Objekt). Wörtliche Rede. Rechtschreibung: ie, ei, ai.',
-      5: 'Fälle bestimmen (Nominativ, Akkusativ, Dativ, Genitiv). Konjunktionen verwenden.',
-      6: 'Aktiv und Passiv unterscheiden. Indirekte Rede. Kommaregeln bei Aufzählungen.',
-      7: 'Satzgefüge analysieren. Stilmittel erkennen. Textanalyse einfacher Texte.',
-      8: 'Konjunktiv verwenden. Argumentationsstrukturen. Erweiterte Textanalyse.',
-      9: 'Literarische Epochen. Rhetorische Mittel analysieren. Erörterung schreiben.',
-      10: 'Sprachgeschichte. Komplexe Textinterpretation. Literaturkritik.'
+      1: 'Multiple Choice und Wortauswahl: Silben erkennen, Groß-/Kleinschreibung, einfache Wörter.',
+      2: 'Multiple Choice: Satzzeichen, Wortarten (Nomen/Verben), Rechtschreibregeln.',
+      3: 'Wortauswahl und Multiple Choice: Zeitformen, Adjektive, ck/tz-Regeln.',
+      4: 'Interaktive Satzglied-Bestimmung, wörtliche Rede zuordnen, ie/ei/ai-Rechtschreibung.',
+      5: 'Drag-and-Drop Fälle, Multiple Choice Konjunktionen, Wortauswahl Satzarten.',
+      6: 'Multiple Choice Aktiv/Passiv, Drag-and-Drop indirekte Rede, Kommaregeln.',
+      7: 'Satzgefüge-Analyse per Auswahl, Drag-and-Drop Stilmittel, Multiple Choice Textanalyse.',
+      8: 'Multiple Choice Konjunktiv, Drag-and-Drop Argumentationsstrukturen, Textanalyse-Auswahl.',
+      9: 'Epochen zuordnen per Drag-and-Drop, Multiple Choice rhetorische Mittel, Erörterungs-Strukturen.',
+      10: 'Sprachgeschichte-Timeline, komplexe Textinterpretation-Auswahl, Literaturkritik-Kategorien.'
     },
     'Englisch': {
       1: 'Grundwortschatz: Farben, Zahlen 1-10, Familie (mother, father, sister).',
@@ -138,33 +173,45 @@ serve(async (req) => {
 
     const subjectPrompt = getSubjectPrompt(category, grade);
     
-    const systemPrompt = `Du bist ein erfahrener Grundschullehrer und Experte für deutschen Lehrplan. Erstelle genau ${count} Aufgaben.
+    const systemPrompt = `Du bist ein erfahrener Lehrer für interaktives Lernen. Erstelle genau ${count} Aufgaben mit verschiedenen Fragetypen.
 
-KRITISCHE ANFORDERUNGEN:
-- Aufgaben müssen EXAKT dem Niveau von Klasse ${grade} entsprechen (nicht einfacher!)
-- Berücksichtige den deutschen Grundschul-/Gymnasiallehrplan
-- Antworten MÜSSEN kurz und präzise sein (max. 2-3 Wörter)
-- Für Zahlen: nur die Zahl als Antwort (z.B. "42" statt "Die Antwort ist 42")
-- Für Wörter: nur das Wort, keine Sätze (z.B. "Paris" statt "Die Hauptstadt ist Paris")
-- Deutsche Antworten in deutscher Sprache
-- Englische Antworten in englischer Sprache
+NEUE FRAGETYPEN FÜR BESSERE UX:
+1. "multiple-choice": 4 Antwortoptionen (A, B, C, D)
+2. "word-selection": Klickbare Wörter in Sätzen auswählen
+3. "drag-drop": Elemente in Kategorien ziehen
+4. "text-input": Nur für Mathematik oder wenn andere Typen nicht passen
+
+DEUTSCHE AUFGABEN SOLLEN HAUPTSÄCHLICH INTERACTIVE SEIN:
+- Satzglieder per Klick in Sätzen markieren (word-selection)
+- Wortarten per Multiple Choice bestimmen
+- Rechtschreibregeln per Drag-and-Drop zuordnen
+- Zeitformen per Multiple Choice auswählen
 
 AUFGABENINHALT:
 ${subjectPrompt}
-
-QUALITÄTSKONTROLLE:
-- Jede Aufgabe muss für Klasse ${grade} angemessen schwierig sein
-- Keine zu einfachen Aufgaben für höhere Klassen
-- Konkrete Beispiele und Zahlen verwenden
-- Eindeutige, überprüfbare Antworten
 
 ANTWORTFORMAT (JSON):
 {
   "problems": [
     {
-      "question": "Frage hier",
-      "answer": "Kurze Antwort",
+      "questionType": "multiple-choice",
+      "question": "Welche Wortart ist 'laufen'?",
+      "options": ["Nomen", "Verb", "Adjektiv", "Artikel"],
+      "correctAnswer": 1,
       "explanation": "Kurze Erklärung"
+    },
+    {
+      "questionType": "word-selection",
+      "question": "Markiere das Subjekt im Satz:",
+      "sentence": "Der große Hund bellt laut",
+      "selectableWords": [
+        {"word": "Der", "isCorrect": true, "index": 0},
+        {"word": "große", "isCorrect": true, "index": 1},
+        {"word": "Hund", "isCorrect": true, "index": 2},
+        {"word": "bellt", "isCorrect": false, "index": 3},
+        {"word": "laut", "isCorrect": false, "index": 4}
+      ],
+      "explanation": "Das Subjekt besteht aus Artikel, Adjektiv und Nomen"
     }
   ]
 }`;
@@ -242,13 +289,28 @@ ANTWORTFORMAT (JSON):
       parsedContent = { problems: [] };
     }
 
-    // Transform to expected format
-    const problems: Problem[] = parsedContent.problems?.map((problem: any, index: number) => ({
+    // Transform to expected format with proper IDs and types
+    const problems: SelectionQuestion[] = parsedContent.problems?.map((problem: any, index: number) => ({
       id: Math.floor(Math.random() * 1000000),
       question: problem.question,
-      answer: problem.answer,
       type: category.toLowerCase(),
-      explanation: problem.explanation || `${problem.question} ${problem.answer}`
+      explanation: problem.explanation || `${problem.question}`,
+      questionType: problem.questionType || 'text-input',
+      ...(problem.questionType === 'multiple-choice' && {
+        options: problem.options || [],
+        correctAnswer: problem.correctAnswer || 0
+      }),
+      ...(problem.questionType === 'word-selection' && {
+        sentence: problem.sentence || '',
+        selectableWords: problem.selectableWords || []
+      }),
+      ...(problem.questionType === 'drag-drop' && {
+        items: problem.items || [],
+        categories: problem.categories || []
+      }),
+      ...(problem.questionType === 'text-input' && {
+        answer: problem.answer || problem.correctAnswer || ''
+      })
     })) || [];
 
     console.log(`Generated ${problems.length} problems`);
