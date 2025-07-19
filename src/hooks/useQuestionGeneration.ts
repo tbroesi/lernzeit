@@ -71,6 +71,7 @@ export function useQuestionGeneration(category: string, grade: number, userId: s
         
         console.log(`✅ Using AI-generated problems: ${selectedProblems.length}`);
         console.log(`📊 Total questions now stored: ${updatedGlobalQuestions.size}`);
+        setIsGenerating(false); // WICHTIG: Status hier setzen
         return;
       }
     } catch (error) {
