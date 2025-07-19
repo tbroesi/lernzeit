@@ -179,13 +179,27 @@ NEUE FRAGETYPEN FÜR BESSERE UX:
 1. "multiple-choice": 4 Antwortoptionen (A, B, C, D)
 2. "word-selection": Klickbare Wörter in Sätzen auswählen
 3. "drag-drop": Elemente in Kategorien ziehen
-4. "text-input": Nur für Mathematik oder wenn andere Typen nicht passen
+4. "text-input": Nur wenn andere Typen nicht passen
 
-DEUTSCHE AUFGABEN SOLLEN HAUPTSÄCHLICH INTERACTIVE SEIN:
-- Satzglieder per Klick in Sätzen markieren (word-selection)
-- Wortarten per Multiple Choice bestimmen
-- Rechtschreibregeln per Drag-and-Drop zuordnen
-- Zeitformen per Multiple Choice auswählen
+INTERAKTIVE AUFGABEN FÜR ALLE FÄCHER:
+- MATHEMATIK: Zahlen nach Stellenwerten sortieren (drag-drop), Geometrische Formen zuordnen (drag-drop), Rechenarten per Multiple Choice
+- DEUTSCH: Satzglieder per Klick markieren (word-selection), Wortarten per Multiple Choice, Rechtschreibregeln per Drag-and-Drop
+- ALLE ANDEREN FÄCHER: Multiple Choice bevorzugen, bei Zuordnungsaufgaben drag-drop verwenden
+
+WICHTIG FÜR DRAG-DROP FORMAT:
+Verwende immer dieses exakte Format für drag-drop:
+{
+  "questionType": "drag-drop",
+  "question": "Ordne die Elemente zu:",
+  "words": [
+    {"word": "Element1", "category": "Kategorie1"},
+    {"word": "Element2", "category": "Kategorie2"}
+  ],
+  "categories": [
+    {"name": "Kategorie1"},
+    {"name": "Kategorie2"}
+  ]
+}
 
 AUFGABENINHALT:
 ${subjectPrompt}
