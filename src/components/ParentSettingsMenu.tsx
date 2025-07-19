@@ -92,6 +92,7 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
   }, [linkedChildren]);
 
   const loadSettings = async () => {
+    console.log('🔧 ParentSettingsMenu: Loading settings for userId:', userId);
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -100,11 +101,14 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
         .eq('user_id', userId)
         .maybeSingle();
 
+      console.log('🔧 ParentSettingsMenu query result:', { data, error });
+
       if (error) {
         throw error;
       }
 
       if (data) {
+        console.log('✅ ParentSettingsMenu: Found existing settings');
         setSettings({
           weekday_max_minutes: data.weekday_max_minutes,
           weekend_max_minutes: data.weekend_max_minutes,
@@ -120,7 +124,7 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
         });
       } else {
         // No settings found, save current defaults to database
-        console.log('🔧 No parent settings found, creating defaults');
+        console.log('🔧 ParentSettingsMenu: No settings found, creating defaults');
         await saveInitialSettings();
       }
     } catch (error: any) {
@@ -136,6 +140,7 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
   };
 
   const saveInitialSettings = async () => {
+    console.log('🔧 ParentSettingsMenu: Creating initial settings with:', settings);
     try {
       const { error } = await supabase
         .from('parent_settings')
@@ -155,9 +160,9 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
         });
 
       if (error) throw error;
-      console.log('✅ Initial parent settings created successfully');
+      console.log('✅ ParentSettingsMenu: Initial settings created successfully');
     } catch (error) {
-      console.error('❌ Error creating initial parent settings:', error);
+      console.error('❌ ParentSettingsMenu: Error creating initial settings:', error);
     }
   };
 
