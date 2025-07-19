@@ -91,7 +91,10 @@ export function useAchievements(userId?: string) {
   const updateProgress = async (
     category: string, 
     type: string, 
-    increment: number = 1
+    increment: number = 1,
+    isCorrect: boolean = true,
+    timeLimitExceeded: boolean = false,
+    answerTime: number = 0
   ): Promise<NewAchievement[]> => {
     if (!userId) return [];
 
@@ -100,8 +103,11 @@ export function useAchievements(userId?: string) {
         p_user_id: userId,
         p_category: category,
         p_type: type,
-        p_increment: increment
-      });
+        p_increment: increment,
+        p_is_correct: isCorrect,
+        p_time_limit_exceeded: timeLimitExceeded,
+        p_answer_time: answerTime
+      } as any);
 
       if (error) throw error;
 

@@ -618,22 +618,66 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
 
     try {
       const achievements: NewAchievement[] = [];
+      const accuracy = totalQuestions > 0 ? correctAnswers / totalQuestions : 0;
+      const averageTimePerQuestion = totalQuestions > 0 ? timeElapsed / totalQuestions : 0;
 
-      const questionAchievements = await updateProgress(
-        achievementCategory, 
-        'questions_solved', 
-        correctAnswers
-      );
-      achievements.push(...questionAchievements);
+      // Track daily activity (just being called once per session)
+      const dailyAchievements = await updateProgress('general', 'daily_activity', 1);
+      achievements.push(...dailyAchievements);
 
-      if (correctAnswers > 0) {
-        const minutesPerTask = settings?.[categoryMapping[category] as keyof typeof settings] || 5;
-        const timeAchievements = await updateProgress(
+      // Process each answer for accuracy streak and efficiency
+      for (let i = 0; i < totalQuestions; i++) {
+        const isCorrect = i < correctAnswers;
+        
+        // Track accuracy streak
+        const accuracyAchievements = await updateProgress(
           'general', 
-          'time_earned', 
-          Math.max(0, correctAnswers * minutesPerTask)
+          'accuracy_streak', 
+          1, 
+          isCorrect, 
+          false, 
+          averageTimePerQuestion
         );
-        achievements.push(...timeAchievements);
+        achievements.push(...accuracyAchievements);
+
+        // Track learning efficiency for correct answers
+        if (isCorrect) {
+          const efficiencyAchievements = await updateProgress(
+            'general', 
+            'learning_efficiency', 
+            1, 
+            true, 
+            false, 
+            averageTimePerQuestion
+          );
+          achievements.push(...efficiencyAchievements);
+        }
+
+        // Track subject mastery
+        const masteryAchievements = await updateProgress(
+          achievementCategory, 
+          'subject_mastery', 
+          1, 
+          isCorrect, 
+          false, 
+          averageTimePerQuestion
+        );
+        achievements.push(...masteryAchievements);
+      }
+
+      // Check if user continued beyond time limit (persistence)
+      const dailyLimit = getDailyLimit();
+      const currentTime = timeElapsed / 60; // Convert to minutes
+      if (currentTime > dailyLimit) {
+        const persistenceAchievements = await updateProgress(
+          'general', 
+          'persistence', 
+          1, 
+          true, 
+          true, 
+          0
+        );
+        achievements.push(...persistenceAchievements);
       }
 
       if (achievements.length > 0) {
