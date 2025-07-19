@@ -120,17 +120,17 @@ export function ChildManagement({ linkedChildren, parentId, onChildUpdate }: Chi
         // Use default settings if none exist
         const defaultSettings: ChildSettings = {
           child_id: selectedChildId,
-          weekday_max_minutes: 30,
-          weekend_max_minutes: 60,
-          math_minutes_per_task: 5,
-          german_minutes_per_task: 5,
-          english_minutes_per_task: 5,
-          geography_minutes_per_task: 5,
-          history_minutes_per_task: 5,
-          physics_minutes_per_task: 5,
-          biology_minutes_per_task: 5,
-          chemistry_minutes_per_task: 5,
-          latin_minutes_per_task: 5,
+          weekday_max_minutes: 0,
+          weekend_max_minutes: 0,
+          math_minutes_per_task: 0,
+          german_minutes_per_task: 0,
+          english_minutes_per_task: 0,
+          geography_minutes_per_task: 0,
+          history_minutes_per_task: 0,
+          physics_minutes_per_task: 0,
+          biology_minutes_per_task: 0,
+          chemistry_minutes_per_task: 0,
+          latin_minutes_per_task: 0,
         };
         setChildSettings(defaultSettings);
       }
@@ -274,8 +274,7 @@ export function ChildManagement({ linkedChildren, parentId, onChildUpdate }: Chi
                 onClick={() => setSelectedChildId(child.id)}
                 className="flex items-center gap-2"
               >
-                {child.name}
-                <Badge variant="secondary">Klasse {pendingGrades[child.id] || child.grade}</Badge>
+                {selectedChildId === child.id ? child.name : child.name.slice(0, 2).toUpperCase()}
               </Button>
             ))}
           </div>
@@ -449,17 +448,25 @@ export function ChildManagement({ linkedChildren, parentId, onChildUpdate }: Chi
                             <IconComponent className="w-4 h-4" />
                             {subject.name}
                           </Label>
-                          <div className="flex items-center gap-2">
-                            <Input
-                              type="number"
-                              min="0"
-                              max="60"
-                              value={value}
-                              onChange={(e) => updateChildSetting(fieldKey, parseInt(e.target.value) || 0)}
-                              className="w-20"
-                            />
-                            <span className="text-sm text-muted-foreground">Min/Aufgabe</span>
-                          </div>
+                           <div className="flex items-center gap-2">
+                             <Input
+                               type="number"
+                               min="0"
+                               max="60"
+                               value={value === 0 ? '' : value}
+                               onChange={(e) => {
+                                 const inputValue = e.target.value;
+                                 if (inputValue === '') {
+                                   updateChildSetting(fieldKey, 0);
+                                 } else {
+                                   updateChildSetting(fieldKey, parseInt(inputValue) || 0);
+                                 }
+                               }}
+                               placeholder="0"
+                               className="w-20"
+                             />
+                             <span className="text-sm text-muted-foreground">Min/Aufgabe</span>
+                           </div>
                         </div>
                       );
                     })}

@@ -50,26 +50,21 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
         </Button>
       </div>
 
+      {/* Child Management - Family Link Style */}
+      <ChildManagement 
+        linkedChildren={linkedChildren} 
+        parentId={userId}
+        onChildUpdate={() => loadFamilyData(userId)}
+      />
+
       {/* Quick Stats */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardContent className="flex items-center p-6">
             <Users className="h-8 w-8 text-primary" />
             <div className="ml-4">
               <div className="text-2xl font-bold">{linkedChildren.length}</div>
               <div className="text-sm text-muted-foreground">Verknüpfte Kinder</div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="flex items-center p-6">
-            <Plus className="h-8 w-8 text-blue-500" />
-            <div className="ml-4">
-              <div className="text-2xl font-bold">
-                {invitationCodes.filter(code => !code.is_used && new Date(code.expires_at) > new Date()).length}
-              </div>
-              <div className="text-sm text-muted-foreground">Aktive Codes</div>
             </div>
           </CardContent>
         </Card>
@@ -86,13 +81,6 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
           </CardContent>
         </Card>
       </div>
-
-      {/* Child Management - Family Link Style */}
-      <ChildManagement 
-        linkedChildren={linkedChildren} 
-        parentId={userId}
-        onChildUpdate={() => loadFamilyData(userId)}
-      />
     </div>
   );
 }
