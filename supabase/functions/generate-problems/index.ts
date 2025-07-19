@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -284,7 +283,7 @@ ANTWORTFORMAT (JSON):
     console.log('📝 Content type:', typeof content);
     console.log('📝 Content length:', content?.length);
     
-    // Parse JSON response
+    // Parse JSON response with improved error handling
     let parsedContent;
     try {
       if (!content) {
@@ -297,6 +296,14 @@ ANTWORTFORMAT (JSON):
         cleanContent = cleanContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
       } else if (cleanContent.startsWith('```')) {
         cleanContent = cleanContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
+      }
+      
+      // Find JSON boundaries more precisely
+      const jsonStart = cleanContent.indexOf('{');
+      const jsonEnd = cleanContent.lastIndexOf('}') + 1;
+      
+      if (jsonStart !== -1 && jsonEnd > jsonStart) {
+        cleanContent = cleanContent.substring(jsonStart, jsonEnd);
       }
       
       console.log('🧹 Cleaned content:', cleanContent);
