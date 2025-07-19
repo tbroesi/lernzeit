@@ -898,6 +898,33 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
                     <p className="text-sm mb-4">{currentQuestionData.explanation}</p>
                   )}
                   
+                  {feedback === 'incorrect' && (
+                    <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-sm font-medium text-blue-800 mb-2">Richtige Antwort:</p>
+                      <div className="text-sm text-blue-700">
+                        {(() => {
+                          switch (currentQuestionData.questionType) {
+                            case 'multiple-choice':
+                              return currentQuestionData.options[currentQuestionData.correctAnswer];
+                            case 'word-selection':
+                              const correctWords = currentQuestionData.selectableWords
+                                .filter(word => word.isCorrect)
+                                .map(word => word.word);
+                              return correctWords.join(', ');
+                            case 'text-input':
+                              return (currentQuestionData as any).answer?.toString();
+                            case 'matching':
+                              return 'Siehe die richtige Zuordnung oben';
+                            case 'drag-drop':
+                              return 'Siehe die richtige Zuordnung oben';
+                            default:
+                              return 'Antwort nicht verfügbar';
+                          }
+                        })()}
+                      </div>
+                    </div>
+                  )}
+                  
                   <Button 
                     onClick={handleNextQuestion}
                     className="w-full max-w-sm"
