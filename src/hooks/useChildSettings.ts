@@ -44,13 +44,19 @@ export function useChildSettings(childId: string) {
       console.log('🔧 Loading child settings for:', childId);
       
       // First try to get child-specific settings
+      console.log('🔍 Querying child_settings with child_id:', childId);
       const { data: childSettings, error: childError } = await supabase
         .from('child_settings')
         .select('*')
         .eq('child_id', childId)
         .maybeSingle();
 
-      console.log('🔧 Child settings result:', { childSettings, childError });
+      console.log('🔧 Child settings query result:', { 
+        childId, 
+        childSettings, 
+        childError,
+        query: `SELECT * FROM child_settings WHERE child_id = '${childId}'`
+      });
 
       if (childSettings && !childError) {
         console.log('✅ Found child-specific settings:', childSettings);
