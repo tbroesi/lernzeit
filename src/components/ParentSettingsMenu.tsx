@@ -98,9 +98,9 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
         .from('parent_settings')
         .select('*')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         throw error;
       }
 
@@ -118,8 +118,13 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
           chemistry_minutes_per_task: data.chemistry_minutes_per_task,
           latin_minutes_per_task: data.latin_minutes_per_task,
         });
+      } else {
+        // No settings found, save current defaults to database
+        console.log('🔧 No parent settings found, creating defaults');
+        await saveInitialSettings();
       }
     } catch (error: any) {
+      console.error('❌ Error loading parent settings:', error);
       toast({
         title: "Fehler",
         description: "Einstellungen konnten nicht geladen werden.",
@@ -127,6 +132,32 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const saveInitialSettings = async () => {
+    try {
+      const { error } = await supabase
+        .from('parent_settings')
+        .insert({
+          user_id: userId,
+          weekday_max_minutes: settings.weekday_max_minutes,
+          weekend_max_minutes: settings.weekend_max_minutes,
+          math_minutes_per_task: settings.math_minutes_per_task,
+          german_minutes_per_task: settings.german_minutes_per_task,
+          english_minutes_per_task: settings.english_minutes_per_task,
+          geography_minutes_per_task: settings.geography_minutes_per_task,
+          history_minutes_per_task: settings.history_minutes_per_task,
+          physics_minutes_per_task: settings.physics_minutes_per_task,
+          biology_minutes_per_task: settings.biology_minutes_per_task,
+          chemistry_minutes_per_task: settings.chemistry_minutes_per_task,
+          latin_minutes_per_task: settings.latin_minutes_per_task,
+        });
+
+      if (error) throw error;
+      console.log('✅ Initial parent settings created successfully');
+    } catch (error) {
+      console.error('❌ Error creating initial parent settings:', error);
     }
   };
 
