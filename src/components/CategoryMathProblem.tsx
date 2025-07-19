@@ -300,9 +300,62 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
 
   useEffect(() => {
     generateProblems();
-  }, []);
+  }, [category, grade]); // Re-generate when category or grade changes
 
-  const generateProblems = () => {
+  const generateProblems = async () => {
+    try {
+      console.log(`🔄 Generating problems for ${category}, Grade ${grade}`);
+      
+      // Try to generate AI problems first
+      const aiProblems = await generateAIProblems();
+      if (aiProblems.length >= totalQuestions) {
+        setProblems(aiProblems.slice(0, totalQuestions));
+        setGameStarted(true);
+        return;
+      }
+      
+      // Fallback to manual problems if AI fails
+      console.log('⚠️ AI generation failed, using fallback problems');
+      const fallbackProblems = generateFallbackProblems();
+      setProblems(fallbackProblems);
+      setGameStarted(true);
+    } catch (error) {
+      console.error('Error generating problems:', error);
+      // Use fallback problems
+      const fallbackProblems = generateFallbackProblems();
+      setProblems(fallbackProblems);
+      setGameStarted(true);
+    }
+  };
+
+  const generateAIProblems = async (): Promise<Problem[]> => {
+    try {
+      const response = await fetch('https://fsmgynpdfxkaiiuguqyr.supabase.co/functions/v1/generate-problems', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          category,
+          grade,
+          count: totalQuestions
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ AI Problems generated:', data.problems?.length || 0);
+      return data.problems || [];
+    } catch (error) {
+      console.error('❌ AI problem generation failed:', error);
+      return [];
+    }
+  };
+
+  const generateFallbackProblems = (): Problem[] => {
     const newProblems: Problem[] = [];
     for (let i = 0; i < totalQuestions; i++) {
       // Generate problems based on category
@@ -312,8 +365,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
         newProblems.push(generateCategoryProblem(category, grade));
       }
     }
-    setProblems(newProblems);
-    setGameStarted(true);
+    return newProblems;
   };
 
   const checkAnswer = () => {
