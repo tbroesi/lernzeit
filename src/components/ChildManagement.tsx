@@ -1,0 +1,494 @@
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/lib/supabase';
+import { 
+  User, 
+  Clock, 
+  BookOpen, 
+  Save, 
+  Loader2,
+  GraduationCap,
+  Languages,
+  Globe,
+  Atom,
+  Leaf,
+  FlaskConical,
+  Columns3,
+  Eye,
+  EyeOff
+} from 'lucide-react';
+
+interface Child {
+  id: string;
+  name: string;
+  grade: number;
+}
+
+interface ChildSettings {
+  id?: string;
+  child_id: string;
+  weekday_max_minutes: number;
+  weekend_max_minutes: number;
+  math_minutes_per_task: number;
+  german_minutes_per_task: number;
+  english_minutes_per_task: number;
+  geography_minutes_per_task: number;
+  history_minutes_per_task: number;
+  physics_minutes_per_task: number;
+  biology_minutes_per_task: number;
+  chemistry_minutes_per_task: number;
+  latin_minutes_per_task: number;
+}
+
+interface VisibleSubjects {
+  [key: string]: boolean;
+}
+
+interface ChildManagementProps {
+  linkedChildren: Child[];
+  parentId: string;
+  onChildUpdate?: () => void;
+}
+
+const subjects = [
+  { key: 'math', name: 'Mathematik', icon: BookOpen },
+  { key: 'german', name: 'Deutsch', icon: Languages },
+  { key: 'english', name: 'Englisch', icon: GraduationCap },
+  { key: 'geography', name: 'Geographie', icon: Globe },
+  { key: 'history', name: 'Geschichte', icon: Clock },
+  { key: 'physics', name: 'Physik', icon: Atom },
+  { key: 'biology', name: 'Biologie', icon: Leaf },
+  { key: 'chemistry', name: 'Chemie', icon: FlaskConical },
+  { key: 'latin', name: 'Latein', icon: Columns3 },
+];
+
+export function ChildManagement({ linkedChildren, parentId, onChildUpdate }: ChildManagementProps) {
+  const [selectedChildId, setSelectedChildId] = useState<string>('');
+  const [childSettings, setChildSettings] = useState<ChildSettings | null>(null);
+  const [visibleSubjects, setVisibleSubjects] = useState<VisibleSubjects>({});
+  const [pendingGrades, setPendingGrades] = useState<{[key: string]: number}>({});
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  
+  const { toast } = useToast();
+
+  // Set first child as selected by default
+  useEffect(() => {
+    if (linkedChildren.length > 0 && !selectedChildId) {
+      setSelectedChildId(linkedChildren[0].id);
+    }
+  }, [linkedChildren, selectedChildId]);
+
+  // Load settings when child is selected
+  useEffect(() => {
+    if (selectedChildId) {
+      loadChildData();
+    }
+  }, [selectedChildId]);
+
+  const selectedChild = linkedChildren.find(child => child.id === selectedChildId);
+
+  const loadChildData = async () => {
+    if (!selectedChildId || !parentId) return;
+    
+    try {
+      setLoading(true);
+      
+      // Load child-specific settings
+      const { data: settings, error: settingsError } = await supabase
+        .from('child_settings')
+        .select('*')
+        .eq('child_id', selectedChildId)
+        .eq('parent_id', parentId)
+        .maybeSingle();
+
+      if (settingsError && settingsError.code !== 'PGRST116') {
+        throw settingsError;
+      }
+
+      if (settings) {
+        setChildSettings(settings);
+      } else {
+        // Use default settings if none exist
+        const defaultSettings: ChildSettings = {
+          child_id: selectedChildId,
+          weekday_max_minutes: 30,
+          weekend_max_minutes: 60,
+          math_minutes_per_task: 5,
+          german_minutes_per_task: 5,
+          english_minutes_per_task: 5,
+          geography_minutes_per_task: 5,
+          history_minutes_per_task: 5,
+          physics_minutes_per_task: 5,
+          biology_minutes_per_task: 5,
+          chemistry_minutes_per_task: 5,
+          latin_minutes_per_task: 5,
+        };
+        setChildSettings(defaultSettings);
+      }
+
+      // TODO: Load visible subjects from database
+      // For now, set all subjects as visible by default
+      const defaultVisible: VisibleSubjects = {};
+      subjects.forEach(subject => {
+        defaultVisible[subject.key] = true;
+      });
+      setVisibleSubjects(defaultVisible);
+
+    } catch (error: any) {
+      toast({
+        title: "Fehler",
+        description: "Einstellungen konnten nicht geladen werden.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const saveChildSettings = async () => {
+    if (!childSettings || !selectedChildId || !parentId) return;
+
+    try {
+      setSaving(true);
+      
+      const { error } = await supabase
+        .from('child_settings')
+        .upsert({
+          parent_id: parentId,
+          child_id: selectedChildId,
+          weekday_max_minutes: childSettings.weekday_max_minutes,
+          weekend_max_minutes: childSettings.weekend_max_minutes,
+          math_minutes_per_task: childSettings.math_minutes_per_task,
+          german_minutes_per_task: childSettings.german_minutes_per_task,
+          english_minutes_per_task: childSettings.english_minutes_per_task,
+          geography_minutes_per_task: childSettings.geography_minutes_per_task,
+          history_minutes_per_task: childSettings.history_minutes_per_task,
+          physics_minutes_per_task: childSettings.physics_minutes_per_task,
+          biology_minutes_per_task: childSettings.biology_minutes_per_task,
+          chemistry_minutes_per_task: childSettings.chemistry_minutes_per_task,
+          latin_minutes_per_task: childSettings.latin_minutes_per_task,
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Erfolgreich gespeichert",
+        description: `Einstellungen für ${selectedChild?.name} wurden aktualisiert.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Fehler",
+        description: "Einstellungen konnten nicht gespeichert werden.",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const saveGradeChange = async (childId: string, newGrade: number) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ grade: newGrade })
+        .eq('id', childId);
+
+      if (error) throw error;
+
+      setPendingGrades(prev => {
+        const updated = { ...prev };
+        delete updated[childId];
+        return updated;
+      });
+
+      toast({
+        title: "Klasse aktualisiert",
+        description: `${selectedChild?.name} ist jetzt in Klasse ${newGrade}.`,
+      });
+
+      onChildUpdate?.();
+    } catch (error: any) {
+      toast({
+        title: "Fehler",
+        description: "Klasse konnte nicht aktualisiert werden.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const updateChildSetting = (field: keyof ChildSettings, value: number) => {
+    if (!childSettings) return;
+    
+    setChildSettings({
+      ...childSettings,
+      [field]: value
+    });
+  };
+
+  const toggleSubjectVisibility = (subjectKey: string) => {
+    setVisibleSubjects(prev => ({
+      ...prev,
+      [subjectKey]: !prev[subjectKey]
+    }));
+  };
+
+  if (linkedChildren.length === 0) {
+    return (
+      <Card>
+        <CardContent className="text-center py-8">
+          <User className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+          <h3 className="text-lg font-medium mb-2">Noch keine Kinder verknüpft</h3>
+          <p className="text-muted-foreground">
+            Erstellen Sie einen Einladungscode, um Kinder zu verknüpfen.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Child Selection Tabs */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <User className="w-5 h-5" />
+            Kind auswählen
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-2">
+            {linkedChildren.map((child) => (
+              <Button
+                key={child.id}
+                variant={selectedChildId === child.id ? "default" : "outline"}
+                onClick={() => setSelectedChildId(child.id)}
+                className="flex items-center gap-2"
+              >
+                {child.name}
+                <Badge variant="secondary">Klasse {pendingGrades[child.id] || child.grade}</Badge>
+              </Button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Child Settings */}
+      {selectedChild && (
+        <Tabs defaultValue="basic" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="basic">Grundlagen</TabsTrigger>
+            <TabsTrigger value="time-limits">Zeitlimits</TabsTrigger>
+            <TabsTrigger value="subjects">Fächer</TabsTrigger>
+            <TabsTrigger value="rewards">Belohnungen</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="basic" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Grundeinstellungen für {selectedChild.name}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="grade">Klassenstufe</Label>
+                  <Select
+                    value={pendingGrades[selectedChild.id]?.toString() || selectedChild.grade.toString()}
+                    onValueChange={(value) => {
+                      const newGrade = parseInt(value);
+                      setPendingGrades(prev => ({
+                        ...prev,
+                        [selectedChild.id]: newGrade
+                      }));
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 13 }, (_, i) => i + 1).map((grade) => (
+                        <SelectItem key={grade} value={grade.toString()}>
+                          Klasse {grade}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {pendingGrades[selectedChild.id] && (
+                    <Button
+                      size="sm"
+                      onClick={() => saveGradeChange(selectedChild.id, pendingGrades[selectedChild.id])}
+                    >
+                      Klasse speichern
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="time-limits" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Tägliche Bildschirmzeit-Limits</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {loading ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                  </div>
+                ) : childSettings && (
+                  <>
+                    <div className="space-y-2">
+                      <Label>Wochentage (Montag - Freitag)</Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          min="0"
+                          max="480"
+                          value={childSettings.weekday_max_minutes}
+                          onChange={(e) => updateChildSetting('weekday_max_minutes', parseInt(e.target.value) || 0)}
+                          className="w-24"
+                        />
+                        <span className="text-sm text-muted-foreground">Minuten</span>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label>Wochenende (Samstag - Sonntag)</Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          min="0"
+                          max="480"
+                          value={childSettings.weekend_max_minutes}
+                          onChange={(e) => updateChildSetting('weekend_max_minutes', parseInt(e.target.value) || 0)}
+                          className="w-24"
+                        />
+                        <span className="text-sm text-muted-foreground">Minuten</span>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="subjects" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Sichtbare Fächer</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Bestimmen Sie, welche Fächer {selectedChild.name} lernen kann.
+                </p>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {subjects.map((subject) => {
+                    const IconComponent = subject.icon;
+                    const isVisible = visibleSubjects[subject.key];
+                    
+                    return (
+                      <div
+                        key={subject.key}
+                        className="flex items-center justify-between p-4 border rounded-lg"
+                      >
+                        <div className="flex items-center gap-3">
+                          <IconComponent className="w-5 h-5" />
+                          <span className="font-medium">{subject.name}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {isVisible ? (
+                            <Eye className="w-4 h-4 text-green-600" />
+                          ) : (
+                            <EyeOff className="w-4 h-4 text-muted-foreground" />
+                          )}
+                          <Switch
+                            checked={isVisible}
+                            onCheckedChange={() => toggleSubjectVisibility(subject.key)}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="rewards" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Belohnungen pro richtige Antwort</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Legen Sie fest, wie viele Minuten {selectedChild.name} pro richtig gelöster Aufgabe bekommt.
+                </p>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                  </div>
+                ) : childSettings && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {subjects.map((subject) => {
+                      const IconComponent = subject.icon;
+                      const fieldKey = `${subject.key}_minutes_per_task` as keyof ChildSettings;
+                      const value = childSettings[fieldKey] as number;
+                      
+                      return (
+                        <div key={subject.key} className="space-y-2">
+                          <Label className="flex items-center gap-2">
+                            <IconComponent className="w-4 h-4" />
+                            {subject.name}
+                          </Label>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="number"
+                              min="0"
+                              max="60"
+                              value={value}
+                              onChange={(e) => updateChildSetting(fieldKey, parseInt(e.target.value) || 0)}
+                              className="w-20"
+                            />
+                            <span className="text-sm text-muted-foreground">Min/Aufgabe</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      )}
+
+      {/* Save Button */}
+      {selectedChild && childSettings && (
+        <div className="flex justify-end">
+          <Button onClick={saveChildSettings} disabled={saving || loading}>
+            {saving ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Speichere...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4 mr-2" />
+                Änderungen speichern
+              </>
+            )}
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
