@@ -135,12 +135,29 @@ export function ChildManagement({ linkedChildren, parentId, onChildUpdate }: Chi
         setChildSettings(defaultSettings);
       }
 
-      // TODO: Load visible subjects from database
-      // For now, set all subjects as visible by default
+      // Load visible subjects from database
+      const { data: visibilityData, error: visibilityError } = await supabase
+        .from('child_subject_visibility')
+        .select('subject, is_visible')
+        .eq('child_id', selectedChildId)
+        .eq('parent_id', parentId);
+
+      if (visibilityError && visibilityError.code !== 'PGRST116') {
+        console.error('Error loading subject visibility:', visibilityError);
+      }
+
+      // Set up visible subjects - default to all visible, then apply saved settings
       const defaultVisible: VisibleSubjects = {};
       subjects.forEach(subject => {
         defaultVisible[subject.key] = true;
       });
+
+      if (visibilityData) {
+        visibilityData.forEach(item => {
+          defaultVisible[item.subject] = item.is_visible;
+        });
+      }
+
       setVisibleSubjects(defaultVisible);
 
     } catch (error: any) {
@@ -243,11 +260,42 @@ export function ChildManagement({ linkedChildren, parentId, onChildUpdate }: Chi
     });
   };
 
-  const toggleSubjectVisibility = (subjectKey: string) => {
+  const toggleSubjectVisibility = async (subjectKey: string) => {
+    const newVisibility = !visibleSubjects[subjectKey];
+    
+    // Update local state immediately
     setVisibleSubjects(prev => ({
       ...prev,
-      [subjectKey]: !prev[subjectKey]
+      [subjectKey]: newVisibility
     }));
+
+    // Save to database
+    try {
+      const { error } = await supabase
+        .from('child_subject_visibility')
+        .upsert({
+          parent_id: parentId,
+          child_id: selectedChildId,
+          subject: subjectKey,
+          is_visible: newVisibility
+        }, {
+          onConflict: 'parent_id,child_id,subject'
+        });
+
+      if (error) throw error;
+    } catch (error: any) {
+      console.error('Error saving subject visibility:', error);
+      // Revert local state if save failed
+      setVisibleSubjects(prev => ({
+        ...prev,
+        [subjectKey]: !newVisibility
+      }));
+      toast({
+        title: "Fehler",
+        description: "Fach-Sichtbarkeit konnte nicht gespeichert werden.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (linkedChildren.length === 0) {

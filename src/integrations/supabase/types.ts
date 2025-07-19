@@ -110,6 +110,36 @@ export type Database = {
         }
         Relationships: []
       }
+      child_subject_visibility: {
+        Row: {
+          child_id: string
+          created_at: string
+          id: string
+          is_visible: boolean
+          parent_id: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          child_id: string
+          created_at?: string
+          id?: string
+          is_visible?: boolean
+          parent_id: string
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          child_id?: string
+          created_at?: string
+          id?: string
+          is_visible?: boolean
+          parent_id?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       game_sessions: {
         Row: {
           correct_answers: number
