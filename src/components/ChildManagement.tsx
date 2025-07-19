@@ -160,22 +160,27 @@ export function ChildManagement({ linkedChildren, parentId, onChildUpdate }: Chi
     try {
       setSaving(true);
       
+      const upsertData = {
+        parent_id: parentId,
+        child_id: selectedChildId,
+        weekday_max_minutes: childSettings.weekday_max_minutes,
+        weekend_max_minutes: childSettings.weekend_max_minutes,
+        math_minutes_per_task: childSettings.math_minutes_per_task,
+        german_minutes_per_task: childSettings.german_minutes_per_task,
+        english_minutes_per_task: childSettings.english_minutes_per_task,
+        geography_minutes_per_task: childSettings.geography_minutes_per_task,
+        history_minutes_per_task: childSettings.history_minutes_per_task,
+        physics_minutes_per_task: childSettings.physics_minutes_per_task,
+        biology_minutes_per_task: childSettings.biology_minutes_per_task,
+        chemistry_minutes_per_task: childSettings.chemistry_minutes_per_task,
+        latin_minutes_per_task: childSettings.latin_minutes_per_task,
+        ...(childSettings.id && { id: childSettings.id })
+      };
+
       const { error } = await supabase
         .from('child_settings')
-        .upsert({
-          parent_id: parentId,
-          child_id: selectedChildId,
-          weekday_max_minutes: childSettings.weekday_max_minutes,
-          weekend_max_minutes: childSettings.weekend_max_minutes,
-          math_minutes_per_task: childSettings.math_minutes_per_task,
-          german_minutes_per_task: childSettings.german_minutes_per_task,
-          english_minutes_per_task: childSettings.english_minutes_per_task,
-          geography_minutes_per_task: childSettings.geography_minutes_per_task,
-          history_minutes_per_task: childSettings.history_minutes_per_task,
-          physics_minutes_per_task: childSettings.physics_minutes_per_task,
-          biology_minutes_per_task: childSettings.biology_minutes_per_task,
-          chemistry_minutes_per_task: childSettings.chemistry_minutes_per_task,
-          latin_minutes_per_task: childSettings.latin_minutes_per_task,
+        .upsert(upsertData, {
+          onConflict: 'parent_id,child_id'
         });
 
       if (error) throw error;
@@ -184,7 +189,11 @@ export function ChildManagement({ linkedChildren, parentId, onChildUpdate }: Chi
         title: "Erfolgreich gespeichert",
         description: `Einstellungen für ${selectedChild?.name} wurden aktualisiert.`,
       });
+
+      // Reload data to get the updated settings with id
+      await loadChildData();
     } catch (error: any) {
+      console.error('Error saving child settings:', error);
       toast({
         title: "Fehler",
         description: "Einstellungen konnten nicht gespeichert werden.",
