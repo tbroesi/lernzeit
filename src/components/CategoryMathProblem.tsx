@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
@@ -50,69 +51,47 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
     generateProblems 
   } = useTemplateQuestionGeneration(category, grade, userId, totalQuestions);
 
-  console.log('🎯 CategoryMathProblem render:', {
-    currentProblem,
-    problemsLength: problems.length,
-    currentQuestionType: problems[currentProblem]?.questionType,
-    currentQuestionId: problems[currentProblem]?.id,
-    gameStarted,
-    isGenerating,
-    feedback,
-    isQuestionComplete,
-    generationSource
-  });
-
-  // Log when currentProblem changes
+  // Memoize timer effect to prevent re-creation
   useEffect(() => {
-    console.log('📋 Current problem changed to:', currentProblem);
-    if (problems[currentProblem]) {
-      console.log('📋 New question:', problems[currentProblem].question);
-      console.log('📋 Question type:', problems[currentProblem].questionType);
-      console.log('📋 Question ID:', problems[currentProblem].id);
-    }
-  }, [currentProblem, problems]);
-
-  // Log when problems array changes
-  useEffect(() => {
-    console.log('📊 Problems array updated:', {
-      length: problems.length,
-      questions: problems.map(p => ({ id: p.id, question: p.question.substring(0, 50) + '...' }))
-    });
-  }, [problems]);
-
-  useEffect(() => {
-    if (gameStarted) {
-      const timer = setInterval(() => {
-        setTimeElapsed(prev => prev + 1);
-      }, 1000);
-      return () => clearInterval(timer);
-    }
+    if (!gameStarted) return;
+    
+    const timer = setInterval(() => {
+      setTimeElapsed(prev => prev + 1);
+    }, 1000);
+    
+    return () => clearInterval(timer);
   }, [gameStarted]);
 
-  useEffect(() => {
-    generateProblems().then(() => {
+  // Memoize initialization to prevent infinite loops
+  const initializeGame = useCallback(async () => {
+    if (!isGenerating && problems.length === 0) {
+      await generateProblems();
       setGameStarted(true);
-    });
-  }, []);
+    }
+  }, [generateProblems, isGenerating, problems.length]);
 
-  const resetAnswerState = () => {
+  useEffect(() => {
+    initializeGame();
+  }, [initializeGame]);
+
+  const resetAnswerState = useCallback(() => {
     console.log('🔄 Resetting answer state');
     setUserAnswer('');
     setSelectedMultipleChoice(null);
     setSelectedWords([]);
     setIsQuestionComplete(false);
-  };
+  }, []);
 
-  const handleWordToggle = (wordIndex: number) => {
+  const handleWordToggle = useCallback((wordIndex: number) => {
     console.log('🔤 Word toggle:', wordIndex, 'Current selection:', selectedWords);
-    if (selectedWords.includes(wordIndex)) {
-      setSelectedWords(prev => prev.filter(i => i !== wordIndex));
-    } else {
-      setSelectedWords(prev => [...prev, wordIndex]);
-    }
-  };
+    setSelectedWords(prev => 
+      prev.includes(wordIndex) 
+        ? prev.filter(i => i !== wordIndex)
+        : [...prev, wordIndex]
+    );
+  }, [selectedWords]);
 
-  const handleMatchingComplete = (isCorrect: boolean) => {
+  const handleMatchingComplete = useCallback((isCorrect: boolean) => {
     console.log('🎯 Matching game completed:', isCorrect);
     setFeedback(isCorrect ? 'correct' : 'incorrect');
     setIsQuestionComplete(true);
@@ -120,9 +99,9 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
     if (isCorrect) {
       setCorrectAnswers(prev => prev + 1);
     }
-  };
+  }, []);
 
-  const handleNextQuestion = () => {
+  const handleNextQuestion = useCallback(() => {
     console.log('➡️ Moving to next question from:', currentProblem);
     
     if (currentProblem + 1 >= totalQuestions) {
@@ -135,22 +114,19 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
       resetAnswerState();
       setFeedback(null);
     }
-  };
+  }, [currentProblem, totalQuestions, resetAnswerState]);
 
-  const checkAnswer = () => {
+  const checkAnswer = useCallback(() => {
     if (!problems[currentProblem]) return;
 
     const problem = problems[currentProblem];
     let isCorrect = false;
 
     console.log('🔍 Checking answer for question type:', problem.questionType);
-    console.log('🔍 Question ID:', problem.id);
-    console.log('🔍 Question:', problem.question);
 
     switch (problem.questionType) {
       case 'multiple-choice':
         isCorrect = selectedMultipleChoice === problem.correctAnswer;
-        console.log('✅ Multiple choice - Selected:', selectedMultipleChoice, 'Correct:', problem.correctAnswer);
         break;
         
       case 'word-selection':
@@ -163,8 +139,6 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
         
         isCorrect = sortedSelected.length === sortedCorrect.length &&
                    sortedSelected.every((index, i) => index === sortedCorrect[i]);
-        
-        console.log('Word selection result:', isCorrect);
         break;
         
       case 'matching':
@@ -191,9 +165,9 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
     if (isCorrect) {
       setCorrectAnswers(prev => prev + 1);
     }
-  };
+  }, [currentProblem, problems, selectedMultipleChoice, selectedWords, userAnswer]);
 
-  const completeGame = async () => {
+  const completeGame = useCallback(async () => {
     const categoryMapping: { [key: string]: keyof typeof settings } = {
       'Mathematik': 'math_seconds_per_task',
       'Deutsch': 'german_seconds_per_task',
@@ -250,9 +224,9 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
         variant: "destructive",
       });
     }
-  };
+  }, [correctAnswers, timeElapsed, settings, category, grade, totalQuestions, canEarnMoreTime, userId, toast, onComplete]);
 
-  const updateAchievements = async () => {
+  const updateAchievements = useCallback(async () => {
     const categoryMap: { [key: string]: string } = {
       'Mathematik': 'math',
       'Deutsch': 'german',
@@ -311,20 +285,6 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
         achievements.push(...masteryAchievements);
       }
 
-      const dailyLimit = useScreenTimeLimit(userId).getDailyLimit();
-      const currentTime = timeElapsed / 60;
-      if (currentTime > dailyLimit) {
-        const persistenceAchievements = await updateProgress(
-          'general', 
-          'persistence', 
-          1, 
-          true, 
-          true, 
-          0
-        );
-        achievements.push(...persistenceAchievements);
-      }
-
       if (achievements.length > 0) {
         setNewAchievements(achievements);
         setShowAchievementPopup(true);
@@ -332,9 +292,9 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
     } catch (error) {
       console.error('Error updating achievements:', error);
     }
-  };
+  }, [category, correctAnswers, timeElapsed, totalQuestions, updateProgress]);
 
-  const canSubmit = () => {
+  const canSubmit = useCallback(() => {
     const currentQuestionData = problems[currentProblem];
     if (!currentQuestionData) return false;
 
@@ -349,11 +309,11 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
       default:
         return userAnswer.trim() !== '';
     }
-  };
+  }, [currentProblem, problems, selectedMultipleChoice, selectedWords, userAnswer]);
 
   const currentQuestionData = problems[currentProblem];
 
-  if (isGenerating || !currentQuestionData) {
+  if (isGenerating || !currentQuestionData || !gameStarted) {
     return (
       <div className="min-h-screen bg-gradient-bg flex items-center justify-center p-4">
         <Card className="w-full max-w-md">

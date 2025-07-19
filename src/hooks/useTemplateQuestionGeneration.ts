@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { SelectionQuestion } from '@/types/questionTypes';
 import { supabase } from '@/lib/supabase';
 import { 
@@ -71,7 +71,8 @@ export function useTemplateQuestionGeneration(
   const [generationSource, setGenerationSource] = useState<'template' | 'ai' | 'fallback' | null>(null);
   const [sessionId] = useState(() => `template_session_${Date.now()}_${Math.random()}`);
 
-  useEffect(() => {
+  // Memoize initialization to prevent infinite loops
+  const initializeData = useCallback(() => {
     const storedCombinations = getUsedCombinations(category, grade, userId);
     const storedUsage = getTemplateUsage(category, grade, userId);
     setUsedCombinations(storedCombinations);
@@ -80,7 +81,13 @@ export function useTemplateQuestionGeneration(
     console.log(`📊 Loaded template usage statistics:`, Object.fromEntries(storedUsage));
   }, [category, grade, userId]);
 
-  const generateProblems = async () => {
+  useEffect(() => {
+    initializeData();
+  }, [initializeData]);
+
+  const generateProblems = useCallback(async () => {
+    if (isGenerating) return; // Prevent concurrent generation
+    
     setIsGenerating(true);
     
     try {
@@ -94,7 +101,8 @@ export function useTemplateQuestionGeneration(
 
       if (availableTemplates.length === 0) {
         console.log('⚠️ No templates available, falling back to AI generation');
-        return await fallbackToAI();
+        await fallbackToAI();
+        return;
       }
 
       // Generate questions using intelligent template selection
@@ -107,20 +115,19 @@ export function useTemplateQuestionGeneration(
         
         console.log(`✅ Using template-generated problems: ${selectedProblems.length}`);
         console.log(`📊 Questions:`, selectedProblems.map(p => p.question.substring(0, 30) + '...'));
-        
-        setIsGenerating(false);
-        return;
+      } else {
+        // If templates don't generate enough questions, try AI fallback
+        console.log(`⚠️ Templates generated only ${templateProblems.length}/${totalQuestions} questions, trying AI fallback`);
+        await fallbackToAI();
       }
-
-      // If templates don't generate enough questions, try AI fallback
-      console.log(`⚠️ Templates generated only ${templateProblems.length}/${totalQuestions} questions, trying AI fallback`);
-      return await fallbackToAI();
 
     } catch (error) {
       console.error('❌ Template generation failed:', error);
-      return await fallbackToAI();
+      await fallbackToAI();
+    } finally {
+      setIsGenerating(false);
     }
-  };
+  }, [category, grade, usedCombinations, templateUsage, totalQuestions, isGenerating]);
 
   const generateTemplateProblemsIntelligently = async (templates: QuestionTemplate[]): Promise<SelectionQuestion[]> => {
     const problems: SelectionQuestion[] = [];
@@ -134,7 +141,7 @@ export function useTemplateQuestionGeneration(
       return 'hard';
     };
 
-    const maxAttempts = totalQuestions * 15; // Increased attempts for better variety
+    const maxAttempts = totalQuestions * 15;
     let attempts = 0;
 
     while (problems.length < totalQuestions && attempts < maxAttempts) {
@@ -244,7 +251,8 @@ export function useTemplateQuestionGeneration(
 
       if (response.error) {
         console.error('❌ AI fallback failed:', response.error);
-        return generateFallbackProblems();
+        generateFallbackProblems();
+        return;
       }
 
       const aiProblems = response.data?.problems || [];
@@ -254,14 +262,12 @@ export function useTemplateQuestionGeneration(
         setGenerationSource('ai');
         console.log(`✅ Using AI fallback: ${selectedProblems.length} problems`);
       } else {
-        return generateFallbackProblems();
+        generateFallbackProblems();
       }
     } catch (error) {
       console.error('❌ AI fallback error:', error);
-      return generateFallbackProblems();
+      generateFallbackProblems();
     }
-
-    setIsGenerating(false);
   };
 
   const generateFallbackProblems = (): void => {
@@ -313,7 +319,6 @@ export function useTemplateQuestionGeneration(
     
     setProblems(fallbackProblems);
     setGenerationSource('fallback');
-    setIsGenerating(false);
   };
 
   // Utility function to get generation statistics
