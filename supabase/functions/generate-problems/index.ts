@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -12,7 +13,8 @@ interface ProblemRequest {
   category: string;
   grade: number;
   count: number;
-  excludeQuestions?: string[]; // Array of question texts to exclude
+  excludeQuestions?: string[];
+  sessionId?: string;
 }
 
 interface BaseQuestion {
@@ -169,16 +171,17 @@ serve(async (req) => {
   }
 
   try {
-    const { category, grade, count = 5, excludeQuestions = [] }: ProblemRequest = await req.json();
-    console.log(`Generating ${count} problems for ${category}, Grade ${grade}`);
+    const { category, grade, count = 5, excludeQuestions = [], sessionId }: ProblemRequest = await req.json();
+    console.log(`Generating ${count} problems for ${category}, Grade ${grade}, Session: ${sessionId}`);
+    console.log(`Excluding ${excludeQuestions.length} questions:`, excludeQuestions.slice(0, 3));
 
     const subjectPrompt = getSubjectPrompt(category, grade);
     
     const excludeText = excludeQuestions.length > 0 
-      ? `\n\nWICHTIG: VERMEIDE diese bereits gestellten Fragen und erstelle VÖLLIG NEUE Aufgaben:\n${excludeQuestions.map(q => `- "${q}"`).join('\n')}\n`
+      ? `\n\nWICHTIG: VERMEIDE diese bereits gestellten Fragen und erstelle VÖLLIG NEUE Aufgaben:\n${excludeQuestions.map(q => `- "${q}"`).join('\n')}\n\nBitte erstelle komplett andere Fragen mit unterschiedlichen Themen und Formulierungen!`
       : '';
 
-    const systemPrompt = `Du bist ein erfahrener Lehrer für interaktives Lernen. Erstelle genau ${count} VÖLLIG NEUE UND EINZIGARTIGE Aufgaben mit verschiedenen Fragetypen.${excludeText}
+    const enhancedPrompt = `Du bist ein erfahrener Lehrer für interaktives Lernen. Erstelle genau ${count} VÖLLIG NEUE UND EINZIGARTIGE Aufgaben mit verschiedenen Fragetypen.${excludeText}
 
 NEUE FRAGETYPEN FÜR BESSERE UX:
 1. "multiple-choice": 4 Antwortoptionen (A, B, C, D)
@@ -209,6 +212,13 @@ Verwende immer dieses exakte Format für matching:
 AUFGABENINHALT:
 ${subjectPrompt}
 
+WICHTIGE REGELN FÜR EINDEUTIGKEIT:
+- Verwende unterschiedliche Themen/Unterthemen pro Aufgabe
+- Variiere die Fragestellungen stark
+- Nutze verschiedene Zahlen, Namen, Begriffe
+- Erstelle Aufgaben mit verschiedenen Schwierigkeitsgraden
+- Für word-selection: Verwende unterschiedliche Sätze und Satzstrukturen
+
 ANTWORTFORMAT (JSON):
 {
   "problems": [
@@ -235,9 +245,7 @@ ANTWORTFORMAT (JSON):
   ]
 }`;
 
-    console.log('🚀 Making Gemini API request with prompt:', systemPrompt);
-    console.log('🔑 Using Gemini API key exists:', !!geminiApiKey);
-    console.log('🔑 API key length:', geminiApiKey?.length || 0);
+    console.log('🚀 Making Gemini API request');
     
     if (!geminiApiKey) {
       console.error('❌ GEMINI_API_KEY environment variable not set');
@@ -245,7 +253,6 @@ ANTWORTFORMAT (JSON):
     }
     
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${geminiApiKey}`;
-    console.log('🌐 Making request to Gemini API');
     
     const response = await fetch(apiUrl, {
       method: 'POST',
@@ -255,18 +262,18 @@ ANTWORTFORMAT (JSON):
       body: JSON.stringify({
         contents: [{
           parts: [{
-            text: `${systemPrompt}\n\nErstelle ${count} Aufgaben für ${category}, Klasse ${grade}`
+            text: `${enhancedPrompt}\n\nErstelle ${count} Aufgaben für ${category}, Klasse ${grade}. Session ID: ${sessionId || 'unknown'}`
           }]
         }],
         generationConfig: {
-          temperature: 0.8,
+          temperature: 0.9, // Increased for more variation
           maxOutputTokens: 2000,
+          topP: 0.95, // Higher creativity
         }
       }),
     });
 
     console.log('📡 Gemini API response status:', response.status);
-    console.log('📡 Gemini API response ok:', response.ok);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -275,11 +282,10 @@ ANTWORTFORMAT (JSON):
     }
 
     const data = await response.json();
-    console.log('📦 Raw Gemini response data:', JSON.stringify(data, null, 2));
+    console.log('📦 Raw Gemini response received');
     
     const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
     
-    console.log('📝 Gemini Response content:', content);
     console.log('📝 Content type:', typeof content);
     console.log('📝 Content length:', content?.length);
     
@@ -306,13 +312,13 @@ ANTWORTFORMAT (JSON):
         cleanContent = cleanContent.substring(jsonStart, jsonEnd);
       }
       
-      console.log('🧹 Cleaned content:', cleanContent);
+      console.log('🧹 Cleaned content length:', cleanContent.length);
       parsedContent = JSON.parse(cleanContent);
-      console.log('✅ JSON parsing successful:', parsedContent);
+      console.log('✅ JSON parsing successful:', parsedContent?.problems?.length || 0, 'problems');
     } catch (e) {
       // Fallback if JSON parsing fails
       console.error('❌ JSON parsing failed:', e);
-      console.error('❌ Raw content that failed to parse:', content);
+      console.error('❌ Raw content that failed to parse:', content?.substring(0, 500));
       parsedContent = { problems: [] };
     }
 
@@ -336,17 +342,11 @@ ANTWORTFORMAT (JSON):
           id: item.id || `item-${itemIndex}`,
           content: item.content || item.word,
           category: item.category
-        })) || problem.words?.map((word: any, wordIndex: number) => ({
-          id: `item-${wordIndex}`,
-          content: word.word,
-          category: word.category
         })) || [],
         categories: problem.categories?.map((category: any, catIndex: number) => ({
           id: category.id || category.name || `category-${catIndex}`,
           name: category.name,
-          acceptsItems: category.acceptsItems || (problem.items || problem.words)
-            ?.filter((item: any) => item.category === category.name)
-            .map((item: any, itemIndex: number) => item.id || `item-${(problem.items || problem.words).findIndex((i: any) => i === item)}`) || []
+          acceptsItems: category.acceptsItems || []
         })) || []
       }),
       ...(problem.questionType === 'text-input' && {
@@ -354,9 +354,17 @@ ANTWORTFORMAT (JSON):
       })
     })) || [];
 
-    console.log(`Generated ${problems.length} problems`);
+    // Filter out problems that are too similar to excluded ones
+    const filteredProblems = problems.filter(problem => {
+      return !excludeQuestions.some(excluded => 
+        problem.question.toLowerCase().includes(excluded.toLowerCase().substring(0, 20)) ||
+        excluded.toLowerCase().includes(problem.question.toLowerCase().substring(0, 20))
+      );
+    });
 
-    return new Response(JSON.stringify({ problems }), {
+    console.log(`Generated ${filteredProblems.length} unique problems (filtered from ${problems.length})`);
+
+    return new Response(JSON.stringify({ problems: filteredProblems }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {

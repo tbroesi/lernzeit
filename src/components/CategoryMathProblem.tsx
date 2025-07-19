@@ -23,6 +23,10 @@ interface CategoryMathProblemProps {
   userId: string;
 }
 
+// Session-based question tracking
+const SESSION_QUESTIONS_KEY = (category: string, grade: number, userId: string) => 
+  `questions_${category}_${grade}_${userId}_${Date.now()}`;
+
 const generateGrade4DeutschProblems = (): SelectionQuestion[] => {
   const problems: SelectionQuestion[] = [
     {
@@ -89,12 +93,54 @@ const generateGrade4DeutschProblems = (): SelectionQuestion[] => {
       ],
       type: 'german',
       explanation: "Das Prädikat ist das Verb 'liest', das aussagt, was die Schwester tut."
+    },
+    {
+      id: 6,
+      questionType: 'word-selection',
+      question: "Finde die Adjektive im Satz:",
+      sentence: "Das kleine blaue Auto fährt schnell.",
+      selectableWords: [
+        { word: "Das", isCorrect: false, index: 0 },
+        { word: "kleine", isCorrect: true, index: 1 },
+        { word: "blaue", isCorrect: true, index: 2 },
+        { word: "Auto", isCorrect: false, index: 3 },
+        { word: "fährt", isCorrect: false, index: 4 },
+        { word: "schnell.", isCorrect: true, index: 5 }
+      ],
+      type: 'german',
+      explanation: "Die Adjektive sind 'kleine', 'blaue' und 'schnell' - sie beschreiben Eigenschaften."
+    },
+    {
+      id: 7,
+      questionType: 'multiple-choice',
+      question: "Welcher Artikel gehört zu 'Haus'?",
+      options: ["der", "die", "das", "den"],
+      correctAnswer: 2,
+      type: 'german',
+      explanation: "Das Wort 'Haus' ist neutral, daher verwendet man den Artikel 'das'."
+    },
+    {
+      id: 8,
+      questionType: 'word-selection',
+      question: "Markiere alle Wörter mit 'ie':",
+      sentence: "Die Biene fliegt zu den vier Blumen.",
+      selectableWords: [
+        { word: "Die", isCorrect: true, index: 0 },
+        { word: "Biene", isCorrect: true, index: 1 },
+        { word: "fliegt", isCorrect: true, index: 2 },
+        { word: "zu", isCorrect: false, index: 3 },
+        { word: "den", isCorrect: false, index: 4 },
+        { word: "vier", isCorrect: true, index: 5 },
+        { word: "Blumen.", isCorrect: false, index: 6 }
+      ],
+      type: 'german',
+      explanation: "Die Wörter mit 'ie' sind: 'Die', 'Biene', 'fliegt' und 'vier'."
     }
   ];
 
-  // Shuffle and return 5 random problems
+  // Shuffle and return more problems for variety
   const shuffled = [...problems].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, 5);
+  return shuffled;
 };
 
 const generateMathProblem = (grade: number): SelectionQuestion => {
@@ -130,7 +176,7 @@ const generateMathProblem = (grade: number): SelectionQuestion => {
     const op = operations[Math.floor(Math.random() * operations.length)];
 
     if (op === '+') {
-      const a = Math.floor(Math.random() * 900) + 100; // 3-digit numbers
+      const a = Math.floor(Math.random() * 900) + 100;
       const b = Math.floor(Math.random() * 900) + 100;
       return {
         id: 1,
@@ -152,8 +198,8 @@ const generateMathProblem = (grade: number): SelectionQuestion => {
         explanation: `${a} - ${b} = ${a - b}`
       };
     } else if (op === '×') {
-      const a = Math.floor(Math.random() * 9) + 2; // 2-10
-      const b = Math.floor(Math.random() * 9) + 2; // 2-10
+      const a = Math.floor(Math.random() * 9) + 2;
+      const b = Math.floor(Math.random() * 9) + 2;
       return {
         id: 1,
         questionType: 'text-input',
@@ -225,7 +271,6 @@ const generateCategoryProblem = (category: string, grade: number): SelectionQues
         const grade4Problems = generateGrade4DeutschProblems();
         return grade4Problems[Math.floor(Math.random() * grade4Problems.length)];
       }
-      // Fallback simple text-input problem for other grades
       const germanWords = ['Haus', 'Auto', 'Schule', 'Buch', 'Freund', 'Familie', 'Garten', 'Wasser', 'Sonne', 'Mond'];
       const word = germanWords[Math.floor(Math.random() * germanWords.length)];
       return {
@@ -359,7 +404,6 @@ const generateCategoryProblem = (category: string, grade: number): SelectionQues
       };
 
     default:
-      // Fallback to math problem
       return generateMathProblem(grade);
   }
 };
@@ -376,8 +420,9 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
   const [gameStarted, setGameStarted] = useState(false);
   const [newAchievements, setNewAchievements] = useState<NewAchievement[]>([]);
   const [showAchievementPopup, setShowAchievementPopup] = useState(false);
-  const [usedQuestions, setUsedQuestions] = useState<string[]>([]);
+  const [sessionQuestions, setSessionQuestions] = useState<Set<string>>(new Set());
   const [isQuestionComplete, setIsQuestionComplete] = useState(false);
+  const [sessionId] = useState(() => `session_${Date.now()}_${Math.random()}`);
   const { toast } = useToast();
   const { settings } = useChildSettings(userId);
   const { canEarnMoreTime, isAtLimit, remainingMinutes, getDailyLimit } = useScreenTimeLimit(userId);
@@ -401,14 +446,20 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
   const generateProblems = async () => {
     try {
       console.log(`🔄 Generating problems for ${category}, Grade ${grade}`);
+      console.log(`📝 Session questions so far:`, Array.from(sessionQuestions));
 
-      // Try to generate AI problems first
+      // Try to generate AI problems first with session exclusions
       const aiProblems = await generateAIProblems();
       if (aiProblems.length >= totalQuestions) {
         const selectedProblems = aiProblems.slice(0, totalQuestions);
         setProblems(selectedProblems);
-        // Track used questions to avoid repetition
-        setUsedQuestions(prev => [...prev, ...selectedProblems.map(p => p.question)]);
+        
+        // Track used questions in this session
+        const newSessionQuestions = new Set(sessionQuestions);
+        selectedProblems.forEach(p => newSessionQuestions.add(p.question));
+        setSessionQuestions(newSessionQuestions);
+        
+        console.log(`✅ Using ${selectedProblems.length} AI-generated problems`);
         setGameStarted(true);
         return;
       }
@@ -420,7 +471,6 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
       setGameStarted(true);
     } catch (error) {
       console.error('Error generating problems:', error);
-      // Use fallback problems
       const fallbackProblems = generateFallbackProblems();
       setProblems(fallbackProblems);
       setGameStarted(true);
@@ -431,12 +481,16 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
     try {
       console.log('🤖 Calling AI edge function via supabase.functions.invoke');
 
+      const excludeQuestions = Array.from(sessionQuestions);
+      console.log(`🚫 Excluding ${excludeQuestions.length} questions from this session`);
+
       const { data, error } = await supabase.functions.invoke('generate-problems', {
         body: {
           category,
           grade,
           count: totalQuestions,
-          excludeQuestions: usedQuestions
+          excludeQuestions,
+          sessionId // Add session ID for better tracking
         }
       });
 
@@ -454,26 +508,36 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
   };
 
   const generateFallbackProblems = (): SelectionQuestion[] => {
-    const newProblems: SelectionQuestion[] = [];
-    for (let i = 0; i < totalQuestions; i++) {
-      // Generate problems based on category - convert legacy format to new format
+    console.log('🔧 Generating fallback problems');
+    const availableProblems: SelectionQuestion[] = [];
+    
+    // Generate more problems to avoid repetition
+    for (let i = 0; i < totalQuestions * 3; i++) {
+      let problem: SelectionQuestion;
       if (category === 'Mathematik') {
-        const mathProblem = generateMathProblem(grade);
-        newProblems.push({
-          ...mathProblem,
-          questionType: 'text-input',
-          id: i + 1
-        } as SelectionQuestion);
+        problem = generateMathProblem(grade);
       } else {
-        const categoryProblem = generateCategoryProblem(category, grade);
-        newProblems.push({
-          ...categoryProblem,
-          questionType: 'text-input',
-          id: i + 1
-        } as SelectionQuestion);
+        problem = generateCategoryProblem(category, grade);
+      }
+      
+      // Add unique ID and avoid duplicates
+      problem.id = i + 1;
+      if (!sessionQuestions.has(problem.question)) {
+        availableProblems.push(problem);
       }
     }
-    return newProblems;
+    
+    // Shuffle and select unique problems
+    const shuffled = [...availableProblems].sort(() => Math.random() - 0.5);
+    const selectedProblems = shuffled.slice(0, totalQuestions);
+    
+    // Track in session
+    const newSessionQuestions = new Set(sessionQuestions);
+    selectedProblems.forEach(p => newSessionQuestions.add(p.question));
+    setSessionQuestions(newSessionQuestions);
+    
+    console.log(`✅ Generated ${selectedProblems.length} fallback problems`);
+    return selectedProblems;
   };
 
   const resetAnswerState = () => {
@@ -581,7 +645,6 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
       'Latein': 'latin_seconds_per_task'
     };
 
-    // Mapping für deutsche zu englische Kategorienamen für die Datenbank
     const categoryToDbMapping: { [key: string]: string } = {
       'Mathematik': 'math',
       'Deutsch': 'german',
@@ -598,13 +661,8 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
     let timeEarned = 0;
 
     if (canEarnMoreTime) {
-      // Calculate the theoretical time earned based on correct answers
       const theoreticalTimeEarned = correctAnswers * secondsPerTask;
-      
-      // Prevent negative bonus: earned time minus spent time should not be negative
-      // If the user took longer than they earned, they get 0 seconds as bonus
       timeEarned = Math.max(0, theoreticalTimeEarned - timeElapsed);
-      
       console.log(`🎯 Time calculation: ${correctAnswers} correct × ${secondsPerTask}s = ${theoreticalTimeEarned}s theoretical, spent ${timeElapsed}s, final bonus: ${timeEarned}s`);
     }
 
@@ -653,15 +711,12 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
       const accuracy = totalQuestions > 0 ? correctAnswers / totalQuestions : 0;
       const averageTimePerQuestion = totalQuestions > 0 ? timeElapsed / totalQuestions : 0;
 
-      // Track daily activity (just being called once per session)
       const dailyAchievements = await updateProgress('general', 'daily_activity', 1);
       achievements.push(...dailyAchievements);
 
-      // Process each answer for accuracy streak and efficiency
       for (let i = 0; i < totalQuestions; i++) {
         const isCorrect = i < correctAnswers;
         
-        // Track accuracy streak
         const accuracyAchievements = await updateProgress(
           'general', 
           'accuracy_streak', 
@@ -672,7 +727,6 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
         );
         achievements.push(...accuracyAchievements);
 
-        // Track learning efficiency for correct answers
         if (isCorrect) {
           const efficiencyAchievements = await updateProgress(
             'general', 
@@ -685,7 +739,6 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
           achievements.push(...efficiencyAchievements);
         }
 
-        // Track subject mastery
         const masteryAchievements = await updateProgress(
           achievementCategory, 
           'subject_mastery', 
@@ -697,9 +750,8 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
         achievements.push(...masteryAchievements);
       }
 
-      // Check if user continued beyond time limit (persistence)
       const dailyLimit = getDailyLimit();
-      const currentTime = timeElapsed / 60; // Convert to minutes
+      const currentTime = timeElapsed / 60;
       if (currentTime > dailyLimit) {
         const persistenceAchievements = await updateProgress(
           'general', 
@@ -719,18 +771,6 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
     } catch (error) {
       console.error('Error updating achievements:', error);
     }
-  };
-
-  const categoryMappingFix: { [key: string]: keyof typeof settings } = {
-    'Mathematik': 'math_seconds_per_task',
-    'Deutsch': 'german_seconds_per_task',
-    'Englisch': 'english_seconds_per_task',
-    'Geographie': 'geography_seconds_per_task',
-    'Geschichte': 'history_seconds_per_task',
-    'Physik': 'physics_seconds_per_task',
-    'Biologie': 'biology_seconds_per_task',
-    'Chemie': 'chemistry_seconds_per_task',
-    'Latein': 'latin_seconds_per_task'
   };
 
   const canSubmit = () => {
@@ -770,6 +810,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
             question={currentQuestionData}
             selectedWords={selectedWords}
             onWordToggle={(wordIndex) => {
+              console.log('🔤 Word toggle:', wordIndex, 'Current selection:', selectedWords);
               if (selectedWords.includes(wordIndex)) {
                 setSelectedWords(prev => prev.filter(i => i !== wordIndex));
               } else {
