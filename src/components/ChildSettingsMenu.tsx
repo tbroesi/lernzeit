@@ -272,12 +272,8 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack }: ChildSet
                       <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
                         <Check className="w-6 h-6 text-green-600" />
                         <div className="flex-1">
-                          <div className="font-medium text-green-800">Mit Betreuungsperson verknüpft</div>
-                          <div className="text-sm text-green-600">
-                            Verbunden mit: <span className="font-semibold">{parentInfo.displayName || parentInfo.name}</span>
-                          </div>
-                          <div className="text-xs text-green-500 mt-1">
-                            👨‍👩‍👧‍👦 Erziehungsberechtigte/r
+                          <div className="font-medium text-green-800">
+                            Verknüpft mit: <span className="font-semibold">{parentInfo.displayName || parentInfo.name}</span>
                           </div>
                         </div>
                       </div>

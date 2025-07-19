@@ -11,7 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useFamilyLinking } from '@/hooks/useFamilyLinking';
 import { supabase } from '@/lib/supabase';
 import { GradeManagement } from '@/components/GradeManagement';
-import { Loader2, Save, Plus, Copy, Users, Key, Trash2, RefreshCw, Settings, Calendar, Clock, ArrowLeft, BookOpen, GraduationCap, Languages, Globe, FlaskConical, Atom, Leaf, Columns3 } from 'lucide-react';
+import { Loader2, Save, Plus, Copy, Users, Key, Trash2, RefreshCw, Settings, Calendar, Clock, ArrowLeft, BookOpen, GraduationCap, Languages, Globe, FlaskConical, Atom, Leaf, Columns3, User } from 'lucide-react';
 
 interface ParentSettings {
   weekday_max_minutes: number;
@@ -65,10 +65,12 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
   const [childSettings, setChildSettings] = useState<ChildSettings[]>([]);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [profileName, setProfileName] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [passwordChanging, setPasswordChanging] = useState(false);
   const [newCodeLoading, setNewCodeLoading] = useState(false);
+  const [loadingProfile, setLoadingProfile] = useState(false);
   
   const { toast } = useToast();
   const {
@@ -82,6 +84,7 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
   useEffect(() => {
     loadSettings();
     loadFamilyData(userId);
+    loadProfileName();
   }, [userId]);
 
   useEffect(() => {
@@ -244,6 +247,55 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const loadProfileName = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('name')
+        .eq('id', userId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error loading profile:', error);
+        return;
+      }
+
+      if (data?.name) {
+        setProfileName(data.name);
+      }
+    } catch (error) {
+      console.error('Error loading profile name:', error);
+    }
+  };
+
+  const saveProfileName = async () => {
+    if (!profileName.trim()) return;
+
+    try {
+      setLoadingProfile(true);
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ name: profileName.trim() })
+        .eq('id', userId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Profil aktualisiert",
+        description: "Ihr Name wurde erfolgreich gespeichert.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Fehler",
+        description: "Name konnte nicht gespeichert werden.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingProfile(false);
     }
   };
 
@@ -632,6 +684,39 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
         </TabsContent>
 
         <TabsContent value="account" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Profil bearbeiten
+              </CardTitle>
+              <CardDescription>
+                Namen und Profilbild anpassen
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="profile-name">Ihr Name</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="profile-name"
+                    type="text"
+                    value={profileName}
+                    onChange={(e) => setProfileName(e.target.value)}
+                    placeholder="Ihr Name"
+                  />
+                  <Button
+                    onClick={saveProfileName}
+                    disabled={loadingProfile || !profileName.trim()}
+                    size="sm"
+                  >
+                    {loadingProfile ? "Speichert..." : "Speichern"}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
