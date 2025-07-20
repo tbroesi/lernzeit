@@ -110,15 +110,16 @@ export const mathTemplates: QuestionTemplate[] = [
     topics: ['addition', 'carry', 'two_digit']
   },
 
-  // Multiplication Introduction
+  // FIXED: Multiplication Introduction with explicit parameters
   {
     id: 'math_2_multiplication_by_2',
     category: 'Mathematik',
     grade: 2,
     type: 'text-input',
-    template: '{a} × 2 = ?',
+    template: '{a} × {b} = ?',
     parameters: [
-      { name: 'a', type: 'number', range: [1, 10] }
+      { name: 'a', type: 'number', range: [1, 10] },
+      { name: 'b', type: 'number', range: [2, 2] } // Fixed to always be 2
     ],
     explanation: 'Multiplikation mit 2',
     difficulty: 'medium',
@@ -129,9 +130,10 @@ export const mathTemplates: QuestionTemplate[] = [
     category: 'Mathematik',
     grade: 2,
     type: 'text-input',
-    template: '{a} × 5 = ?',
+    template: '{a} × {b} = ?',
     parameters: [
-      { name: 'a', type: 'number', range: [1, 10] }
+      { name: 'a', type: 'number', range: [1, 10] },
+      { name: 'b', type: 'number', range: [5, 5] } // Fixed to always be 5
     ],
     explanation: 'Multiplikation mit 5',
     difficulty: 'medium',
@@ -140,15 +142,16 @@ export const mathTemplates: QuestionTemplate[] = [
 
   // =================== GRADE 3 MATH TEMPLATES ===================
   
-  // Advanced Multiplication
+  // FIXED: Advanced Multiplication with explicit parameters
   {
     id: 'math_3_multiplication_table_6',
     category: 'Mathematik',
     grade: 3,
     type: 'text-input',
-    template: '{a} × 6 = ?',
+    template: '{a} × {b} = ?',
     parameters: [
-      { name: 'a', type: 'number', range: [1, 10] }
+      { name: 'a', type: 'number', range: [1, 10] },
+      { name: 'b', type: 'number', range: [6, 6] } // Fixed to always be 6
     ],
     explanation: '6er Einmaleins',
     difficulty: 'medium',
@@ -159,13 +162,30 @@ export const mathTemplates: QuestionTemplate[] = [
     category: 'Mathematik',
     grade: 3,
     type: 'text-input',
-    template: '{a} × 7 = ?',
+    template: '{a} × {b} = ?',
     parameters: [
-      { name: 'a', type: 'number', range: [1, 10] }
+      { name: 'a', type: 'number', range: [1, 10] },
+      { name: 'b', type: 'number', range: [7, 7] } // Fixed to always be 7
     ],
     explanation: '7er Einmaleins',
     difficulty: 'hard',
     topics: ['multiplication', 'times_seven', 'einmaleins']
+  },
+
+  // General multiplication table practice
+  {
+    id: 'math_3_multiplication_general',
+    category: 'Mathematik',
+    grade: 3,
+    type: 'text-input',
+    template: '{a} × {b} = ?',
+    parameters: [
+      { name: 'a', type: 'number', range: [2, 10] },
+      { name: 'b', type: 'number', range: [2, 10] }
+    ],
+    explanation: 'Allgemeine Multiplikation',
+    difficulty: 'medium',
+    topics: ['multiplication', 'general', 'einmaleins']
   },
 
   // Division with Remainders
@@ -216,5 +236,20 @@ export const mathTemplates: QuestionTemplate[] = [
     explanation: 'Umfang eines Rechtecks berechnen',
     difficulty: 'medium',
     topics: ['geometry', 'perimeter', 'rectangle']
+  },
+
+  {
+    id: 'math_4_area_rectangle',
+    category: 'Mathematik',
+    grade: 4,
+    type: 'text-input',
+    template: 'Ein Rechteck hat die Länge {length} cm und die Breite {width} cm. Wie groß ist die Fläche?',
+    parameters: [
+      { name: 'length', type: 'number', range: [3, 12] },
+      { name: 'width', type: 'number', range: [2, 10] }
+    ],
+    explanation: 'Fläche eines Rechtecks berechnen',
+    difficulty: 'medium',
+    topics: ['geometry', 'area', 'rectangle']
   }
 ];

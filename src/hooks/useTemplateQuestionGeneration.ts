@@ -1,16 +1,16 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { SelectionQuestion } from '@/types/questionTypes';
 import { supabase } from '@/lib/supabase';
 import { 
   questionTemplates, 
   getTemplatesForCategory, 
-  generateQuestionFromTemplate,
   selectTemplateIntelligently,
-  getTemplatesByDifficulty,
   QuestionTemplate,
   GeneratedQuestion
 } from '@/utils/questionTemplates';
+import { TemplateCore } from '@/utils/templates/templateCore';
+import { TemplateValidator } from '@/utils/templates/templateValidator';
+import { QuestionGenerator } from '@/utils/templates/questionGenerator';
 
 // Storage utilities for template combinations and usage tracking
 const TEMPLATE_COMBINATIONS_KEY = (category: string, grade: number, userId: string) => 
@@ -70,6 +70,7 @@ export function useTemplateQuestionGeneration(
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationSource, setGenerationSource] = useState<'template' | 'ai' | 'fallback' | null>(null);
   const [sessionId] = useState(() => `template_session_${Date.now()}_${Math.random()}`);
+  const [generationErrors, setGenerationErrors] = useState<string[]>([]);
 
   // Memoize initialization to prevent infinite loops
   const initializeData = useCallback(() => {
@@ -85,10 +86,31 @@ export function useTemplateQuestionGeneration(
     initializeData();
   }, [initializeData]);
 
+  const validateTemplatesForCategory = useCallback((templates: QuestionTemplate[]) => {
+    console.log('🔍 Validating templates for category:', category);
+    const validationResults = TemplateValidator.runComprehensiveValidation(templates);
+    
+    console.log(`📊 Template validation results:`, {
+      overallHealth: Math.round(validationResults.overallHealth * 100) + '%',
+      validTemplates: validationResults.validTemplates,
+      totalTemplates: templates.length,
+      totalIssues: validationResults.totalIssues,
+      criticalIssues: validationResults.criticalIssues.length
+    });
+
+    if (validationResults.criticalIssues.length > 0) {
+      console.warn('🚨 Critical template issues found:', validationResults.criticalIssues.slice(0, 3));
+      setGenerationErrors(prev => [...prev, ...validationResults.criticalIssues.slice(0, 3)]);
+    }
+
+    return validationResults.overallHealth >= 0.7; // At least 70% of templates should be valid
+  }, [category]);
+
   const generateProblems = useCallback(async () => {
-    if (isGenerating) return; // Prevent concurrent generation
+    if (isGenerating) return;
     
     setIsGenerating(true);
+    setGenerationErrors([]);
     
     try {
       console.log(`🎯 Generating template-based problems for ${category}, Grade ${grade}`);
@@ -105,6 +127,14 @@ export function useTemplateQuestionGeneration(
         return;
       }
 
+      // Validate templates before using them
+      const templatesAreHealthy = validateTemplatesForCategory(availableTemplates);
+      if (!templatesAreHealthy) {
+        console.warn('⚠️ Template validation failed, falling back to AI generation');
+        await fallbackToAI();
+        return;
+      }
+
       // Generate questions using intelligent template selection
       const templateProblems = await generateTemplateProblemsIntelligently(availableTemplates);
       
@@ -116,58 +146,64 @@ export function useTemplateQuestionGeneration(
         console.log(`✅ Using template-generated problems: ${selectedProblems.length}`);
         console.log(`📊 Questions:`, selectedProblems.map(p => p.question.substring(0, 30) + '...'));
       } else {
-        // If templates don't generate enough questions, try AI fallback
         console.log(`⚠️ Templates generated only ${templateProblems.length}/${totalQuestions} questions, trying AI fallback`);
         await fallbackToAI();
       }
 
     } catch (error) {
       console.error('❌ Template generation failed:', error);
+      setGenerationErrors(prev => [...prev, `Generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`]);
       await fallbackToAI();
     } finally {
       setIsGenerating(false);
     }
-  }, [category, grade, usedCombinations, templateUsage, totalQuestions, isGenerating]);
+  }, [category, grade, usedCombinations, templateUsage, totalQuestions, isGenerating, validateTemplatesForCategory]);
 
   const generateTemplateProblemsIntelligently = async (templates: QuestionTemplate[]): Promise<SelectionQuestion[]> => {
     const problems: SelectionQuestion[] = [];
     const updatedCombinations = new Set(usedCombinations);
     const updatedUsage = new Map(templateUsage);
+    const errors: string[] = [];
 
-    // Determine difficulty progression (start easier, get harder)
     const getDifficultyForQuestion = (questionIndex: number): 'easy' | 'medium' | 'hard' | undefined => {
       if (questionIndex < 2) return 'easy';
       if (questionIndex < 4) return 'medium';
       return 'hard';
     };
 
-    const maxAttempts = totalQuestions * 15;
+    const maxAttempts = totalQuestions * 20; // Increased attempts for better reliability
     let attempts = 0;
 
     while (problems.length < totalQuestions && attempts < maxAttempts) {
       attempts++;
 
-      // Get preferred difficulty for current question
       const preferredDifficulty = getDifficultyForQuestion(problems.length);
-      
-      // Select template intelligently
       const selectedTemplate = selectTemplateIntelligently(templates, updatedUsage, preferredDifficulty);
       
       if (!selectedTemplate) {
+        errors.push('No suitable template could be selected');
         console.warn('⚠️ No template could be selected');
         break;
       }
 
-      const generatedQuestion = generateQuestionFromTemplate(selectedTemplate, updatedCombinations);
+      // Generate question with improved error handling
+      const generatedQuestion = TemplateCore.generateQuestionFromTemplate(selectedTemplate, updatedCombinations);
 
       if (generatedQuestion) {
-        const selectionQuestion = convertToSelectionQuestion(generatedQuestion);
-        problems.push(selectionQuestion);
-        
-        // Update usage statistics
-        updatedUsage.set(selectedTemplate.id, (updatedUsage.get(selectedTemplate.id) || 0) + 1);
-        
-        console.log(`✅ Generated: "${generatedQuestion.question.substring(0, 40)}..." (Template: ${selectedTemplate.id}, Difficulty: ${selectedTemplate.difficulty})`);
+        try {
+          const selectionQuestion = convertToSelectionQuestion(generatedQuestion);
+          problems.push(selectionQuestion);
+          
+          // Update usage statistics
+          updatedUsage.set(selectedTemplate.id, (updatedUsage.get(selectedTemplate.id) || 0) + 1);
+          
+          console.log(`✅ Generated: "${generatedQuestion.question.substring(0, 40)}..." (Template: ${selectedTemplate.id}, Difficulty: ${selectedTemplate.difficulty})`);
+        } catch (conversionError) {
+          console.error('Error converting generated question:', conversionError);
+          errors.push(`Conversion failed for template ${selectedTemplate.id}`);
+        }
+      } else {
+        errors.push(`Failed to generate question from template ${selectedTemplate.id}`);
       }
     }
 
@@ -176,6 +212,16 @@ export function useTemplateQuestionGeneration(
     setTemplateUsage(updatedUsage);
     storeUsedCombinations(category, grade, userId, updatedCombinations);
     storeTemplateUsage(category, grade, userId, updatedUsage);
+
+    if (errors.length > 0) {
+      console.warn('Generation errors:', errors);
+      setGenerationErrors(prev => [...prev, ...errors.slice(0, 3)]);
+    }
+
+    // Log generation audit trail
+    const auditLog = QuestionGenerator.getAuditLog();
+    const recentEntries = auditLog.slice(-5);
+    console.log('📝 Recent generation audit log:', recentEntries);
 
     return problems;
   };
@@ -274,7 +320,6 @@ export function useTemplateQuestionGeneration(
     console.log('⚡ Using simple fallback generation...');
     const fallbackProblems: SelectionQuestion[] = [];
     
-    // Generate contextual fallback problems based on category
     for (let i = 0; i < totalQuestions; i++) {
       if (category === 'Mathematik') {
         const a = Math.floor(Math.random() * 20) + 5;
@@ -304,7 +349,6 @@ export function useTemplateQuestionGeneration(
           explanation: 'Silben zählen'
         });
       } else {
-        // Generic fallback for other subjects
         const num = Math.floor(Math.random() * 100) + 1;
         fallbackProblems.push({
           id: Math.floor(Math.random() * 1000000),
@@ -321,13 +365,14 @@ export function useTemplateQuestionGeneration(
     setGenerationSource('fallback');
   };
 
-  // Utility function to get generation statistics
   const getGenerationStats = () => {
     return {
       totalCombinations: usedCombinations.size,
       templateUsage: Object.fromEntries(templateUsage),
       availableTemplates: getTemplatesForCategory(category, grade).length,
-      generationSource
+      generationSource,
+      generationErrors,
+      auditLog: QuestionGenerator.getAuditLog().slice(-10) // Last 10 entries
     };
   };
 
@@ -338,6 +383,7 @@ export function useTemplateQuestionGeneration(
     sessionId,
     isGenerating,
     generationSource,
+    generationErrors,
     generateProblems,
     getGenerationStats
   };
