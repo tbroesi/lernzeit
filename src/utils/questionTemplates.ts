@@ -46,12 +46,18 @@ export interface GeneratedQuestion {
 
 import { germanTemplates } from './templates/germanTemplates';
 import { mathTemplates } from './templates/mathTemplates';
+import { extendedMathTemplates } from './templates/extendedMathTemplates';
+import { extendedGermanTemplates } from './templates/extendedGermanTemplates';
+import { scienceTemplates } from './templates/scienceTemplates';
 import { TemplateCore } from './templates/templateCore';
 
 // Comprehensive template definitions for all subjects and grades
 export const questionTemplates: QuestionTemplate[] = [
   ...germanTemplates,
+  ...extendedGermanTemplates,
   ...mathTemplates,
+  ...extendedMathTemplates,
+  ...scienceTemplates,
   
   // =================== ENGLISCH ===================
   
