@@ -10,7 +10,7 @@ export interface ParameterGenerationResult {
 export class ParameterGenerator {
   
   static generateParameters(template: QuestionTemplate): ParameterGenerationResult {
-    const maxAttempts = 100; // Increased attempts for better constraint handling
+    const maxAttempts = 100;
     let attempts = 0;
 
     while (attempts < maxAttempts) {
@@ -19,15 +19,22 @@ export class ParameterGenerator {
       const errors: string[] = [];
       let valid = true;
 
+      // FIXED: Better randomization with timestamp seed
+      const seed = Date.now() + attempts + Math.random() * 1000;
+      
       // Generate all parameters first
       for (const param of template.parameters) {
         try {
           if (param.type === 'number' && param.range) {
             const [min, max] = param.range;
-            params[param.name] = Math.floor(Math.random() * (max - min + 1)) + min;
+            // FIXED: Better random number generation with seed variation
+            const randomValue = Math.floor((seed * 17 + attempts * 31) % (max - min + 1)) + min;
+            params[param.name] = randomValue;
             
           } else if (param.type === 'word' && param.values) {
-            params[param.name] = param.values[Math.floor(Math.random() * param.values.length)];
+            // FIXED: Better word selection with time-based randomization
+            const index = Math.floor((seed * 13 + attempts * 19) % param.values.length);
+            params[param.name] = param.values[index];
             
           } else if (param.type === 'list' && param.values) {
             params[param.name] = [...param.values];
@@ -59,7 +66,7 @@ export class ParameterGenerator {
 
       // If all constraints passed, return the parameters
       if (constraintsPassed) {
-        console.log(`✅ Generated parameters after ${attempts} attempts:`, params);
+        console.log(`✅ Generated parameters after ${attempts} attempts for ${template.id}:`, params);
         return {
           parameters: params,
           isValid: true,
@@ -68,7 +75,7 @@ export class ParameterGenerator {
       }
 
       // If constraints failed, try again with new parameters
-      console.log(`⚠️ Constraint check failed on attempt ${attempts}, retrying...`);
+      console.log(`⚠️ Constraint check failed on attempt ${attempts} for ${template.id}, retrying...`);
     }
 
     // If we've exhausted all attempts
