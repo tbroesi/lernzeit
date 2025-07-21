@@ -10,43 +10,73 @@ export interface ParameterGenerationResult {
 export class ParameterGenerator {
   
   static generateParameters(template: QuestionTemplate): ParameterGenerationResult {
-    const params: Record<string, any> = {};
-    const errors: string[] = [];
-    let valid = true;
+    const maxAttempts = 100; // Increased attempts for better constraint handling
+    let attempts = 0;
 
-    for (const param of template.parameters) {
-      try {
-        if (param.type === 'number' && param.range) {
-          const [min, max] = param.range;
-          params[param.name] = Math.floor(Math.random() * (max - min + 1)) + min;
-          
-        } else if (param.type === 'word' && param.values) {
-          params[param.name] = param.values[Math.floor(Math.random() * param.values.length)];
-          
-        } else if (param.type === 'list' && param.values) {
-          params[param.name] = [...param.values];
-        } else {
-          errors.push(`Invalid parameter configuration for ${param.name}: missing range/values`);
+    while (attempts < maxAttempts) {
+      attempts++;
+      const params: Record<string, any> = {};
+      const errors: string[] = [];
+      let valid = true;
+
+      // Generate all parameters first
+      for (const param of template.parameters) {
+        try {
+          if (param.type === 'number' && param.range) {
+            const [min, max] = param.range;
+            params[param.name] = Math.floor(Math.random() * (max - min + 1)) + min;
+            
+          } else if (param.type === 'word' && param.values) {
+            params[param.name] = param.values[Math.floor(Math.random() * param.values.length)];
+            
+          } else if (param.type === 'list' && param.values) {
+            params[param.name] = [...param.values];
+          } else {
+            errors.push(`Invalid parameter configuration for ${param.name}: missing range/values`);
+            valid = false;
+            break;
+          }
+        } catch (error) {
+          errors.push(`Error generating parameter ${param.name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
           valid = false;
           break;
         }
-
-        // Check constraints after generating the value
-        if (param.constraints && !param.constraints(params[param.name], params)) {
-          valid = false;
-          break;
-        }
-      } catch (error) {
-        errors.push(`Error generating parameter ${param.name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        valid = false;
-        break;
       }
+
+      // If basic generation failed, continue to next attempt
+      if (!valid) {
+        continue;
+      }
+
+      // Check all constraints after all parameters are generated
+      let constraintsPassed = true;
+      for (const param of template.parameters) {
+        if (param.constraints && !param.constraints(params[param.name], params)) {
+          constraintsPassed = false;
+          break;
+        }
+      }
+
+      // If all constraints passed, return the parameters
+      if (constraintsPassed) {
+        console.log(`✅ Generated parameters after ${attempts} attempts:`, params);
+        return {
+          parameters: params,
+          isValid: true,
+          errors: []
+        };
+      }
+
+      // If constraints failed, try again with new parameters
+      console.log(`⚠️ Constraint check failed on attempt ${attempts}, retrying...`);
     }
 
+    // If we've exhausted all attempts
+    console.error(`❌ Failed to generate valid parameters for template ${template.id} after ${maxAttempts} attempts`);
     return {
-      parameters: params,
-      isValid: valid && errors.length === 0,
-      errors
+      parameters: {},
+      isValid: false,
+      errors: [`Failed to generate valid parameters after ${maxAttempts} attempts`]
     };
   }
 

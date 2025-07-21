@@ -1,3 +1,4 @@
+
 import { QuestionTemplate, GeneratedQuestion } from '../questionTemplates';
 import { AnswerCalculator } from './answerCalculator';
 import { ParameterGenerator } from './parameterGenerator';
@@ -20,16 +21,16 @@ export class QuestionGenerator {
     template: QuestionTemplate, 
     usedCombinations: Set<string>
   ): GeneratedQuestion | null {
-    const maxAttempts = 50;
+    const maxAttempts = 100; // Increased attempts for better reliability
     let attempts = 0;
 
     while (attempts < maxAttempts) {
       attempts++;
       
-      // Generate parameter values
+      // Generate parameter values with better error handling
       const paramResult = ParameterGenerator.generateParameters(template);
       if (!paramResult.isValid) {
-        console.warn(`Parameter generation failed for ${template.id}:`, paramResult.errors);
+        console.warn(`Parameter generation failed for ${template.id} on attempt ${attempts}:`, paramResult.errors);
         continue;
       }
 
@@ -38,6 +39,7 @@ export class QuestionGenerator {
       // Create combination key to check for duplicates
       const combinationKey = `${template.id}_${JSON.stringify(params)}`;
       if (usedCombinations.has(combinationKey)) {
+        console.log(`⚠️ Combination already used: ${combinationKey}, trying again...`);
         continue;
       }
 
@@ -45,7 +47,7 @@ export class QuestionGenerator {
       const calculationResult = AnswerCalculator.calculateAnswer(template, params);
       
       if (!calculationResult.isValid) {
-        console.error(`Answer calculation failed for ${template.id}:`, calculationResult.errors);
+        console.error(`Answer calculation failed for ${template.id} on attempt ${attempts}:`, calculationResult.errors);
         this.logGeneration(template.id, params, calculationResult, '', false, calculationResult.errors);
         continue;
       }
@@ -55,11 +57,12 @@ export class QuestionGenerator {
       if (question) {
         usedCombinations.add(combinationKey);
         this.logGeneration(template.id, params, calculationResult, calculationResult.answer, true, []);
+        console.log(`✅ Successfully generated question: "${question.question}" with params:`, params);
         return question;
       }
     }
 
-    console.error(`Failed to generate question for template ${template.id} after ${maxAttempts} attempts`);
+    console.error(`❌ Failed to generate question for template ${template.id} after ${maxAttempts} attempts`);
     return null;
   }
 
@@ -71,9 +74,18 @@ export class QuestionGenerator {
     try {
       let questionText = template.template;
 
-      // Replace parameters in template
+      // Replace parameters in template with proper error handling
       for (const [key, value] of Object.entries(params)) {
-        questionText = questionText.replace(new RegExp(`{${key}}`, 'g'), value.toString());
+        const placeholder = `{${key}}`;
+        if (questionText.includes(placeholder)) {
+          questionText = questionText.replace(new RegExp(`\\{${key}\\}`, 'g'), value.toString());
+        }
+      }
+
+      // Ensure we have a valid question text
+      if (questionText.includes('{') && questionText.includes('}')) {
+        console.error(`❌ Template ${template.id} has unresolved placeholders: ${questionText}`);
+        return null;
       }
 
       const baseQuestion: GeneratedQuestion = {
@@ -100,7 +112,7 @@ export class QuestionGenerator {
 
       return baseQuestion;
     } catch (error) {
-      console.error('Error generating question from template:', error);
+      console.error('❌ Error generating question from template:', error);
       return null;
     }
   }
