@@ -10,7 +10,7 @@ export interface ParameterGenerationResult {
 export class ParameterGenerator {
   
   static generateParameters(template: QuestionTemplate): ParameterGenerationResult {
-    const maxAttempts = 100;
+    const maxAttempts = 200;
     let attempts = 0;
 
     while (attempts < maxAttempts) {
@@ -19,25 +19,30 @@ export class ParameterGenerator {
       const errors: string[] = [];
       let valid = true;
 
-      // FIXED: Better randomization with timestamp seed
-      const seed = Date.now() + attempts + Math.random() * 1000;
+      // FIXED: Use Math.random() directly for better randomization
+      const randomSeed = Math.random() * 1000000;
+      const timeSeed = Date.now() % 1000000;
+      const combinedSeed = (randomSeed + timeSeed + attempts * 137) % 1000000;
       
       // Generate all parameters first
       for (const param of template.parameters) {
         try {
           if (param.type === 'number' && param.range) {
             const [min, max] = param.range;
-            // FIXED: Better random number generation with seed variation
-            const randomValue = Math.floor((seed * 17 + attempts * 31) % (max - min + 1)) + min;
+            // FIXED: Much better random number generation with wider ranges
+            const range = max - min + 1;
+            const randomValue = Math.floor(Math.random() * range) + min;
             params[param.name] = randomValue;
             
           } else if (param.type === 'word' && param.values) {
-            // FIXED: Better word selection with time-based randomization
-            const index = Math.floor((seed * 13 + attempts * 19) % param.values.length);
+            // FIXED: Better word selection with true randomization
+            const index = Math.floor(Math.random() * param.values.length);
             params[param.name] = param.values[index];
             
           } else if (param.type === 'list' && param.values) {
-            params[param.name] = [...param.values];
+            // FIXED: Create a shuffled copy of the values
+            const shuffled = [...param.values].sort(() => Math.random() - 0.5);
+            params[param.name] = shuffled;
           } else {
             errors.push(`Invalid parameter configuration for ${param.name}: missing range/values`);
             valid = false;
@@ -85,6 +90,38 @@ export class ParameterGenerator {
       isValid: false,
       errors: [`Failed to generate valid parameters after ${maxAttempts} attempts`]
     };
+  }
+
+  // FIXED: Add collision detection for generated combinations
+  static generateUniqueParameters(
+    template: QuestionTemplate, 
+    usedCombinations: Set<string>
+  ): ParameterGenerationResult {
+    const maxAttempts = 300;
+    let attempts = 0;
+
+    while (attempts < maxAttempts) {
+      attempts++;
+      const result = this.generateParameters(template);
+      
+      if (!result.isValid) {
+        continue;
+      }
+
+      // Create a unique key for this parameter combination
+      const combinationKey = `${template.id}_${JSON.stringify(result.parameters)}`;
+      
+      if (!usedCombinations.has(combinationKey)) {
+        console.log(`🎯 Generated unique combination: ${combinationKey}`);
+        return result;
+      }
+
+      console.log(`🔄 Duplicate detected, retrying... (${attempts}/${maxAttempts})`);
+    }
+
+    // If we can't generate unique parameters, clear some combinations and try again
+    console.warn(`⚠️ Could not generate unique parameters, allowing duplicates`);
+    return this.generateParameters(template);
   }
 
   static validateParameter(param: TemplateParameter, value: any, allParams: Record<string, any>): { isValid: boolean; errors: string[] } {

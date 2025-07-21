@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -62,13 +61,17 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
     return () => clearInterval(timer);
   }, [gameStarted]);
 
-  // Memoize initialization to prevent infinite loops
+  // FIXED: Better initialization to prevent loops
   const initializeGame = useCallback(async () => {
-    if (!isGenerating && problems.length === 0) {
+    if (problems.length === 0 && !isGenerating) {
+      console.log('🎮 Initializing game with template system...');
       await generateProblems();
       setGameStarted(true);
+    } else if (problems.length > 0 && !gameStarted) {
+      console.log('🎮 Problems ready, starting game...');
+      setGameStarted(true);
     }
-  }, [generateProblems, isGenerating, problems.length]);
+  }, [problems.length, isGenerating, gameStarted, generateProblems]);
 
   useEffect(() => {
     initializeGame();
@@ -322,9 +325,12 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
             <p>Aufgaben werden generiert...</p>
             {generationSource && (
               <p className="text-sm text-muted-foreground mt-2">
-                Methode: {generationSource === 'template' ? 'Template-System' : generationSource === 'ai' ? 'KI-Unterstützung' : 'Backup-System'}
+                System: {generationSource === 'template' ? 'Template-System (Verbessert)' : generationSource === 'ai' ? 'KI-Unterstützung' : 'Backup-System'}
               </p>
             )}
+            <p className="text-xs text-muted-foreground mt-1">
+              Sitzung: {sessionId.substring(0, 8)}...
+            </p>
           </CardContent>
         </Card>
       </div>

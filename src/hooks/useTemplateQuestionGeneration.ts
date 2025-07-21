@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { SelectionQuestion } from '@/types/questionTypes';
 import { supabase } from '@/lib/supabase';
@@ -12,6 +11,7 @@ import {
 import { TemplateCore } from '@/utils/templates/templateCore';
 import { TemplateValidator } from '@/utils/templates/templateValidator';
 import { QuestionGenerator } from '@/utils/templates/questionGenerator';
+import { ParameterGenerator } from '@/utils/templates/parameterGenerator';
 
 // Storage utilities for template combinations and usage tracking
 const TEMPLATE_COMBINATIONS_KEY = (category: string, grade: number, userId: string) => 
@@ -20,7 +20,10 @@ const TEMPLATE_COMBINATIONS_KEY = (category: string, grade: number, userId: stri
 const TEMPLATE_USAGE_KEY = (category: string, grade: number, userId: string) => 
   `template_usage_${category}_${grade}_${userId}`;
 
-// FIXED: Robust storage with better error handling and fallbacks
+const SESSION_TEMPLATES_KEY = (category: string, grade: number, userId: string) => 
+  `session_templates_${category}_${grade}_${userId}`;
+
+// FIXED: Better storage management with rotation
 const getUsedCombinations = (category: string, grade: number, userId: string): Set<string> => {
   try {
     if (typeof Storage === "undefined") {
@@ -36,11 +39,21 @@ const getUsedCombinations = (category: string, grade: number, userId: string): S
 
     const parsed = JSON.parse(stored);
     const combinations = new Set(Array.isArray(parsed) ? parsed : []);
+    
+    // FIXED: Auto-rotate if too many combinations stored
+    const maxCombinations = 500;
+    if (combinations.size > maxCombinations) {
+      console.log(`🔄 Rotating combinations (${combinations.size} -> ${maxCombinations / 2})`);
+      const recentCombinations = Array.from(combinations).slice(-maxCombinations / 2);
+      const rotatedSet = new Set(recentCombinations);
+      storeUsedCombinations(category, grade, userId, rotatedSet);
+      return rotatedSet;
+    }
+    
     console.log(`📝 Loaded ${combinations.size} used combinations for ${category} Grade ${grade}`);
     return combinations;
   } catch (error) {
     console.warn('📝 Failed to load combinations, clearing corrupted data:', error);
-    // Clear corrupted data
     try {
       localStorage.removeItem(TEMPLATE_COMBINATIONS_KEY(category, grade, userId));
     } catch {}
@@ -69,6 +82,25 @@ const getTemplateUsage = (category: string, grade: number, userId: string): Map<
       localStorage.removeItem(TEMPLATE_USAGE_KEY(category, grade, userId));
     } catch {}
     return new Map();
+  }
+};
+
+// FIXED: New session template tracking
+const getSessionTemplates = (category: string, grade: number, userId: string): Set<string> => {
+  try {
+    if (typeof Storage === "undefined") {
+      return new Set();
+    }
+
+    const stored = localStorage.getItem(SESSION_TEMPLATES_KEY(category, grade, userId));
+    if (!stored) {
+      return new Set();
+    }
+
+    return new Set(JSON.parse(stored));
+  } catch (error) {
+    console.warn('📝 Failed to load session templates:', error);
+    return new Set();
   }
 };
 
@@ -101,26 +133,63 @@ const storeTemplateUsage = (category: string, grade: number, userId: string, usa
   }
 };
 
-// FIXED: Better random template selection when intelligent selection fails
-const selectRandomTemplate = (templates: QuestionTemplate[], excludeIds: Set<string> = new Set()): QuestionTemplate | null => {
-  const availableTemplates = templates.filter(t => !excludeIds.has(t.id));
-  if (availableTemplates.length === 0) {
-    console.warn('⚠️ No available templates after filtering');
-    return templates.length > 0 ? templates[Math.floor(Math.random() * templates.length)] : null;
+// FIXED: Store session templates
+const storeSessionTemplates = (category: string, grade: number, userId: string, templates: Set<string>) => {
+  try {
+    if (typeof Storage === "undefined") {
+      return;
+    }
+
+    localStorage.setItem(SESSION_TEMPLATES_KEY(category, grade, userId), JSON.stringify(Array.from(templates)));
+    console.log(`🎯 Stored ${templates.size} session templates`);
+  } catch (error) {
+    console.warn('🎯 Failed to store session templates:', error);
   }
-  
-  const randomIndex = Math.floor(Math.random() * availableTemplates.length);
-  const selected = availableTemplates[randomIndex];
-  console.log(`🎲 Randomly selected template: ${selected.id} from ${availableTemplates.length} options`);
-  return selected;
 };
 
-// FIXED: Reset function to clear problematic combinations
-const clearUsedCombinations = (category: string, grade: number, userId: string) => {
+// FIXED: Force template rotation with weighted selection
+const selectTemplateWithRotation = (templates: QuestionTemplate[], usage: Map<string, number>, sessionTemplates: Set<string>, difficulty?: string): QuestionTemplate | null => {
+  if (templates.length === 0) return null;
+
+  // Filter out recently used templates in this session
+  const availableTemplates = templates.filter(t => !sessionTemplates.has(t.id));
+  
+  if (availableTemplates.length === 0) {
+    console.log('🔄 All templates used in session, resetting session tracking');
+    return selectTemplateWithRotation(templates, usage, new Set(), difficulty);
+  }
+
+  // Weight templates by inverse usage (less used = higher weight)
+  const weights = availableTemplates.map(template => {
+    const usageCount = usage.get(template.id) || 0;
+    const difficultyBonus = difficulty && template.difficulty === difficulty ? 2 : 1;
+    return Math.max(1, (10 - usageCount) * difficultyBonus);
+  });
+
+  // Weighted random selection
+  const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+  let randomValue = Math.random() * totalWeight;
+  
+  for (let i = 0; i < availableTemplates.length; i++) {
+    randomValue -= weights[i];
+    if (randomValue <= 0) {
+      const selected = availableTemplates[i];
+      console.log(`🎯 Selected template ${selected.id} (weight: ${weights[i]}, usage: ${usage.get(selected.id) || 0})`);
+      return selected;
+    }
+  }
+
+  // Fallback to first available template
+  return availableTemplates[0];
+};
+
+// FIXED: Reset function for development/debugging
+const clearAllStorage = (category: string, grade: number, userId: string) => {
   try {
     localStorage.removeItem(TEMPLATE_COMBINATIONS_KEY(category, grade, userId));
     localStorage.removeItem(TEMPLATE_USAGE_KEY(category, grade, userId));
-    console.log('🧹 Cleared all used combinations and usage statistics');
+    localStorage.removeItem(SESSION_TEMPLATES_KEY(category, grade, userId));
+    console.log('🧹 Cleared all template storage');
   } catch (error) {
     console.warn('🧹 Failed to clear storage:', error);
   }
@@ -135,41 +204,30 @@ export function useTemplateQuestionGeneration(
   const [problems, setProblems] = useState<SelectionQuestion[]>([]);
   const [usedCombinations, setUsedCombinations] = useState<Set<string>>(new Set());
   const [templateUsage, setTemplateUsage] = useState<Map<string, number>>(new Map());
+  const [sessionTemplates, setSessionTemplates] = useState<Set<string>>(new Set());
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationSource, setGenerationSource] = useState<'template' | 'ai' | 'fallback' | null>(null);
   const [sessionId] = useState(() => `template_session_${Date.now()}_${Math.random()}`);
   const [generationErrors, setGenerationErrors] = useState<string[]>([]);
-  
-  // FIXED: Session-based template tracking to prevent immediate repeats
-  const [sessionUsedTemplates, setSessionUsedTemplates] = useState<Set<string>>(new Set());
 
-  // Memoize initialization to prevent infinite loops
+  // FIXED: Initialize data on component mount
   const initializeData = useCallback(() => {
     const storedCombinations = getUsedCombinations(category, grade, userId);
     const storedUsage = getTemplateUsage(category, grade, userId);
+    const storedSessionTemplates = getSessionTemplates(category, grade, userId);
     
-    // FIXED: Auto-reset if too many combinations are stored (prevents exhaustion)
-    const maxCombinations = 1000; // Adjust based on your template pool
-    if (storedCombinations.size > maxCombinations) {
-      console.log(`🧹 Too many combinations (${storedCombinations.size}), clearing to prevent exhaustion`);
-      clearUsedCombinations(category, grade, userId);
-      setUsedCombinations(new Set());
-      setTemplateUsage(new Map());
-    } else {
-      setUsedCombinations(storedCombinations);
-      setTemplateUsage(storedUsage);
-    }
+    setUsedCombinations(storedCombinations);
+    setTemplateUsage(storedUsage);
+    setSessionTemplates(storedSessionTemplates);
     
-    // Reset session tracking
-    setSessionUsedTemplates(new Set());
-    
-    console.log(`🔄 Initialized: ${storedCombinations.size} combinations, ${storedUsage.size} usage entries`);
+    console.log(`🔄 Initialized: ${storedCombinations.size} combinations, ${storedUsage.size} usage entries, ${storedSessionTemplates.size} session templates`);
   }, [category, grade, userId]);
 
   useEffect(() => {
     initializeData();
   }, [initializeData]);
 
+  // FIXED: Better template validation
   const validateTemplatesForCategory = useCallback((templates: QuestionTemplate[]) => {
     console.log('🔍 Validating templates for category:', category);
     const validationResults = TemplateValidator.runComprehensiveValidation(templates);
@@ -187,7 +245,7 @@ export function useTemplateQuestionGeneration(
       setGenerationErrors(prev => [...prev, ...validationResults.criticalIssues.slice(0, 3)]);
     }
 
-    return validationResults.overallHealth >= 0.5; // Lowered threshold to be less restrictive
+    return validationResults.overallHealth >= 0.3; // Lower threshold for more flexibility
   }, [category]);
 
   const generateProblems = useCallback(async () => {
@@ -198,7 +256,7 @@ export function useTemplateQuestionGeneration(
     
     try {
       console.log(`🎯 Generating template-based problems for ${category}, Grade ${grade}`);
-      console.log(`📝 Used combinations: ${usedCombinations.size}, Session templates: ${sessionUsedTemplates.size}`);
+      console.log(`📝 Used combinations: ${usedCombinations.size}, Session templates: ${sessionTemplates.size}`);
 
       // Get available templates for this category and grade
       const availableTemplates = getTemplatesForCategory(category, grade);
@@ -218,8 +276,8 @@ export function useTemplateQuestionGeneration(
         return;
       }
 
-      // FIXED: Generate questions with better template selection
-      const templateProblems = await generateTemplateProblemsWithBetterSelection(availableTemplates);
+      // FIXED: Generate questions with improved template selection
+      const templateProblems = await generateTemplateProblemsWithImprovedSelection(availableTemplates);
       
       if (templateProblems.length >= totalQuestions) {
         const selectedProblems = templateProblems.slice(0, totalQuestions);
@@ -227,7 +285,7 @@ export function useTemplateQuestionGeneration(
         setGenerationSource('template');
         
         console.log(`✅ Using template-generated problems: ${selectedProblems.length}`);
-        console.log(`📊 Questions:`, selectedProblems.map(p => `"${p.question.substring(0, 40)}..."`));
+        console.log(`📋 Questions:`, selectedProblems.map(p => `"${p.question.substring(0, 40)}..."`));
       } else {
         console.log(`⚠️ Templates generated only ${templateProblems.length}/${totalQuestions} questions, trying AI fallback`);
         await fallbackToAI();
@@ -240,98 +298,94 @@ export function useTemplateQuestionGeneration(
     } finally {
       setIsGenerating(false);
     }
-  }, [category, grade, usedCombinations, templateUsage, sessionUsedTemplates, totalQuestions, isGenerating, validateTemplatesForCategory]);
+  }, [category, grade, usedCombinations, templateUsage, sessionTemplates, totalQuestions, isGenerating, validateTemplatesForCategory]);
 
-  // FIXED: Improved template selection with multiple fallback strategies
-  const generateTemplateProblemsWithBetterSelection = async (templates: QuestionTemplate[]): Promise<SelectionQuestion[]> => {
+  // FIXED: Completely rewritten template selection with proper rotation
+  const generateTemplateProblemsWithImprovedSelection = async (templates: QuestionTemplate[]): Promise<SelectionQuestion[]> => {
     const problems: SelectionQuestion[] = [];
     const updatedCombinations = new Set(usedCombinations);
     const updatedUsage = new Map(templateUsage);
-    const sessionTemplates = new Set(sessionUsedTemplates);
+    const updatedSessionTemplates = new Set(sessionTemplates);
     const errors: string[] = [];
 
-    const getDifficultyForQuestion = (questionIndex: number): 'easy' | 'medium' | 'hard' | undefined => {
-      if (questionIndex < 2) return 'easy';
-      if (questionIndex < 4) return 'medium';
-      return 'hard';
-    };
-
-    const maxAttempts = totalQuestions * 30; // Increased attempts
+    const maxAttempts = totalQuestions * 50;
     let attempts = 0;
-    let consecutiveFailures = 0;
 
     while (problems.length < totalQuestions && attempts < maxAttempts) {
       attempts++;
       const questionIndex = problems.length;
       
-      let selectedTemplate: QuestionTemplate | null = null;
+      // FIXED: Progressive difficulty system
+      const getDifficultyForQuestion = (index: number): string | undefined => {
+        if (index < 2) return 'easy';
+        if (index < 4) return 'medium';
+        return 'hard';
+      };
       
-      // Strategy 1: Try intelligent selection
       const preferredDifficulty = getDifficultyForQuestion(questionIndex);
-      selectedTemplate = selectTemplateIntelligently(templates, updatedUsage, preferredDifficulty);
       
-      // Strategy 2: If intelligent selection fails or returns recently used template, try random selection
-      if (!selectedTemplate || sessionTemplates.has(selectedTemplate.id)) {
-        console.log(`🎲 Intelligent selection ${!selectedTemplate ? 'failed' : 'returned recently used template'}, trying random selection`);
-        selectedTemplate = selectRandomTemplate(templates, sessionTemplates);
-      }
-      
-      // Strategy 3: If still no template, ignore session restrictions
-      if (!selectedTemplate) {
-        console.log(`🎲 Random selection failed, ignoring session restrictions`);
-        selectedTemplate = selectRandomTemplate(templates);
-      }
+      // FIXED: Use new template selection with proper rotation
+      const selectedTemplate = selectTemplateWithRotation(
+        templates, 
+        updatedUsage, 
+        updatedSessionTemplates, 
+        preferredDifficulty
+      );
       
       if (!selectedTemplate) {
-        errors.push('No template could be selected with any strategy');
-        console.error('❌ All template selection strategies failed');
+        errors.push('No template could be selected');
+        console.error('❌ Template selection failed');
         break;
       }
 
-      // Generate question with the selected template
       console.log(`🔄 Attempt ${attempts}: Using template ${selectedTemplate.id} (${selectedTemplate.difficulty || 'unknown'})`);
       
-      const generatedQuestion = QuestionGenerator.generateQuestionFromTemplate(selectedTemplate, updatedCombinations);
+      // FIXED: Use improved parameter generation with collision detection
+      const parameterResult = ParameterGenerator.generateUniqueParameters(selectedTemplate, updatedCombinations);
 
-      if (generatedQuestion) {
+      if (parameterResult.isValid) {
         try {
-          const selectionQuestion = convertToSelectionQuestion(generatedQuestion);
-          problems.push(selectionQuestion);
+          // Generate the question text and options
+          const generatedQuestion = QuestionGenerator.generateQuestionFromTemplate(selectedTemplate, updatedCombinations);
           
-          // Update tracking
-          updatedUsage.set(selectedTemplate.id, (updatedUsage.get(selectedTemplate.id) || 0) + 1);
-          sessionTemplates.add(selectedTemplate.id);
-          consecutiveFailures = 0;
-          
-          console.log(`✅ Generated #${problems.length}: "${generatedQuestion.question.substring(0, 50)}..." (${selectedTemplate.id})`);
+          if (generatedQuestion) {
+            const selectionQuestion = convertToSelectionQuestion(generatedQuestion);
+            problems.push(selectionQuestion);
+            
+            // Update all tracking
+            const combinationKey = `${selectedTemplate.id}_${JSON.stringify(parameterResult.parameters)}`;
+            updatedCombinations.add(combinationKey);
+            updatedUsage.set(selectedTemplate.id, (updatedUsage.get(selectedTemplate.id) || 0) + 1);
+            updatedSessionTemplates.add(selectedTemplate.id);
+            
+            console.log(`✅ Generated #${problems.length}: "${generatedQuestion.question.substring(0, 50)}..." (${selectedTemplate.id})`);
+          } else {
+            console.warn(`⚠️ Template ${selectedTemplate.id} failed to generate question`);
+            errors.push(`Failed to generate question from template ${selectedTemplate.id}`);
+          }
         } catch (conversionError) {
           console.error('❌ Error converting generated question:', conversionError);
           errors.push(`Conversion failed for template ${selectedTemplate.id}`);
-          consecutiveFailures++;
         }
       } else {
-        console.warn(`⚠️ Template ${selectedTemplate.id} failed to generate question`);
-        errors.push(`Failed to generate question from template ${selectedTemplate.id}`);
-        consecutiveFailures++;
-        
-        // If we have too many consecutive failures, try resetting combinations
-        if (consecutiveFailures > 10) {
-          console.log('🧹 Too many consecutive failures, partially clearing combinations');
-          const currentSize = updatedCombinations.size;
-          const newCombinations = new Set(Array.from(updatedCombinations).slice(-Math.floor(currentSize / 2)));
-          updatedCombinations.clear();
-          newCombinations.forEach(c => updatedCombinations.add(c));
-          consecutiveFailures = 0;
-        }
+        console.warn(`⚠️ Parameter generation failed for template ${selectedTemplate.id}`);
+        errors.push(`Parameter generation failed for template ${selectedTemplate.id}`);
+      }
+
+      // FIXED: Reset session templates if we've used too many
+      if (updatedSessionTemplates.size >= Math.floor(templates.length * 0.8)) {
+        console.log('🔄 Resetting session template tracking to ensure variety');
+        updatedSessionTemplates.clear();
       }
     }
 
     // Store updated data
     setUsedCombinations(updatedCombinations);
     setTemplateUsage(updatedUsage);
-    setSessionUsedTemplates(sessionTemplates);
+    setSessionTemplates(updatedSessionTemplates);
     storeUsedCombinations(category, grade, userId, updatedCombinations);
     storeTemplateUsage(category, grade, userId, updatedUsage);
+    storeSessionTemplates(category, grade, userId, updatedSessionTemplates);
 
     if (errors.length > 0) {
       console.warn(`⚠️ Generation completed with ${errors.length} errors:`, errors.slice(0, 5));
@@ -404,12 +458,13 @@ export function useTemplateQuestionGeneration(
         body: {
           category,
           grade,
-          count: totalQuestions + 2,
+          count: totalQuestions + 3,
           excludeQuestions,
           sessionId,
           globalQuestionCount: usedCombinations.size,
-          requestId: `${Date.now()}_${Math.random()}`, // FIXED: Better request ID generation
-          forceVariation: true // NEW: Force the AI to create varied questions
+          requestId: `fallback_${Date.now()}_${Math.random()}`,
+          forceVariation: true,
+          templateSessionId: sessionId
         }
       });
 
@@ -434,46 +489,39 @@ export function useTemplateQuestionGeneration(
     }
   };
 
-  // FIXED: Improved fallback with better randomization
+  // FIXED: Much better fallback with proper randomization
   const generateFallbackProblems = (): void => {
     console.log('⚡ Using improved fallback generation...');
     const fallbackProblems: SelectionQuestion[] = [];
     
-    // FIXED: Better random ranges to prevent "34 + 27" repetition
-    const getRandomRange = (base: number, variance: number) => {
-      return Math.floor(Math.random() * variance * 2) + base - variance;
-    };
-    
     for (let i = 0; i < totalQuestions; i++) {
-      const timestamp = Date.now() + i; // Ensure different seed for each question
-      const seed = (timestamp + Math.random() * 1000) % 1000;
+      const seed = Math.random() * 1000000;
       
       if (category === 'Mathematik') {
-        // FIXED: Much wider ranges and varied operations
         const operations = ['+', '-', '*'];
-        const operation = operations[Math.floor((seed * 3) % operations.length)];
+        const operation = operations[Math.floor(Math.random() * operations.length)];
         
         let a, b, answer, questionText;
         
         if (operation === '+') {
-          a = getRandomRange(15, 10); // 5-25
-          b = getRandomRange(12, 8);  // 4-20
+          a = Math.floor(Math.random() * 50) + 10; // 10-59
+          b = Math.floor(Math.random() * 40) + 5;  // 5-44
           answer = a + b;
           questionText = `${a} + ${b} = ?`;
         } else if (operation === '-') {
-          a = getRandomRange(30, 15); // 15-45
-          b = getRandomRange(12, 8);  // 4-20
-          answer = Math.max(0, a - b);
+          a = Math.floor(Math.random() * 80) + 30; // 30-109
+          b = Math.floor(Math.random() * 25) + 5;  // 5-29
+          answer = a - b;
           questionText = `${a} - ${b} = ?`;
         } else { // multiplication
-          a = getRandomRange(6, 3);   // 3-9
-          b = getRandomRange(5, 2);   // 3-7
+          a = Math.floor(Math.random() * 12) + 3;  // 3-14
+          b = Math.floor(Math.random() * 8) + 2;   // 2-9
           answer = a * b;
           questionText = `${a} × ${b} = ?`;
         }
         
         fallbackProblems.push({
-          id: Math.floor(seed * 1000000),
+          id: Math.floor(seed),
           questionType: 'text-input',
           question: questionText,
           answer: answer,
@@ -481,13 +529,12 @@ export function useTemplateQuestionGeneration(
           explanation: `Fallback ${operation === '+' ? 'Addition' : operation === '-' ? 'Subtraktion' : 'Multiplikation'}`
         });
       } else if (category === 'Deutsch') {
-        const words = ['Hund', 'Katze', 'Baum', 'Haus', 'Auto', 'Buch', 'Tisch', 'Stuhl', 'Blume', 'Vogel'];
-        const wordIndex = Math.floor(seed % words.length);
-        const word = words[wordIndex];
+        const words = ['Hund', 'Katze', 'Baum', 'Haus', 'Auto', 'Buch', 'Tisch', 'Stuhl', 'Blume', 'Vogel', 'Sonne', 'Mond', 'Stern', 'Wasser', 'Feuer'];
+        const word = words[Math.floor(Math.random() * words.length)];
         const syllableCount = Math.max(1, Math.ceil(word.length / 2.5));
         
         fallbackProblems.push({
-          id: Math.floor(seed * 1000000),
+          id: Math.floor(seed),
           questionType: 'text-input',
           question: `Wie viele Silben hat das Wort "${word}"?`,
           answer: syllableCount,
@@ -495,14 +542,14 @@ export function useTemplateQuestionGeneration(
           explanation: 'Silben zählen'
         });
       } else {
-        const num = Math.floor(seed % 50) + 20; // 20-70
-        const addend = Math.floor(seed % 10) + 1; // 1-10
+        const num = Math.floor(Math.random() * 80) + 20; // 20-99
+        const addend = Math.floor(Math.random() * 15) + 1; // 1-15
         fallbackProblems.push({
-          id: Math.floor(seed * 1000000),
+          id: Math.floor(seed),
           questionType: 'text-input',
           question: `Was ist ${num} + ${addend}?`,
           answer: num + addend,
-          type: category.toLowerCase() as 'math' | 'german' | 'english' | 'geography' | 'history' | 'physics' | 'biology' | 'chemistry' | 'latin',
+          type: category.toLowerCase() as any,
           explanation: 'Einfache Rechnung'
         });
       }
@@ -513,19 +560,26 @@ export function useTemplateQuestionGeneration(
     setGenerationSource('fallback');
   };
 
+  // FIXED: Enhanced debugging and stats
   const getGenerationStats = () => {
     return {
       totalCombinations: usedCombinations.size,
-      sessionTemplates: sessionUsedTemplates.size,
+      sessionTemplates: sessionTemplates.size,
       templateUsage: Object.fromEntries(templateUsage),
       availableTemplates: getTemplatesForCategory(category, grade).length,
       generationSource,
       generationErrors,
       auditLog: QuestionGenerator.getAuditLog().slice(-10),
-      // NEW: Reset function for debugging
+      // Enhanced reset function
       resetData: () => {
-        clearUsedCombinations(category, grade, userId);
+        clearAllStorage(category, grade, userId);
         initializeData();
+      },
+      // Force refresh
+      forceRefresh: () => {
+        setSessionTemplates(new Set());
+        storeSessionTemplates(category, grade, userId, new Set());
+        generateProblems();
       }
     };
   };
@@ -534,7 +588,7 @@ export function useTemplateQuestionGeneration(
     problems,
     usedCombinations,
     templateUsage,
-    sessionUsedTemplates,
+    sessionUsedTemplates: sessionTemplates,
     sessionId,
     isGenerating,
     generationSource,
