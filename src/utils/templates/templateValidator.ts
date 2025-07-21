@@ -1,40 +1,88 @@
+
 import { QuestionTemplate, GeneratedQuestion } from '../questionTemplates';
 
 export interface ValidationResult {
   isValid: boolean;
   errors: string[];
+  warnings: string[];
+}
+
+export interface ComprehensiveValidationResult {
+  isValid: boolean;
+  errors: string[];
   validTemplates: number;
   totalIssues: number;
-  criticalIssues: number;
+  criticalIssues: string[];
   overallHealth: number;
-  templateResults?: any[];
+  templateResults: Map<string, ValidationResult>;
 }
 
 export class TemplateValidator {
   
-  static runComprehensiveValidation(templates: QuestionTemplate[]): ValidationResult {
-    const errors: string[] = [];
+  static runComprehensiveValidation(templates: QuestionTemplate[]): ComprehensiveValidationResult {
+    const templateResults = new Map<string, ValidationResult>();
+    const allErrors: string[] = [];
+    const criticalIssues: string[] = [];
     
     for (const template of templates) {
-      if (!this.validateTemplateStructure(template)) {
-        errors.push(`Invalid template structure: ${template.id}`);
+      const result = this.validateTemplateStructure(template);
+      templateResults.set(template.id, result);
+      
+      if (!result.isValid) {
+        allErrors.push(...result.errors);
+        criticalIssues.push(...result.errors);
       }
+    }
+    
+    const validTemplates = templates.filter(t => templateResults.get(t.id)?.isValid).length;
+    const overallHealth = templates.length > 0 ? validTemplates / templates.length : 0;
+    
+    return {
+      isValid: allErrors.length === 0,
+      errors: allErrors,
+      validTemplates,
+      totalIssues: allErrors.length,
+      criticalIssues,
+      overallHealth,
+      templateResults
+    };
+  }
+
+  private static validateTemplateStructure(template: QuestionTemplate): ValidationResult {
+    const errors: string[] = [];
+    const warnings: string[] = [];
+    
+    if (!template.id) {
+      errors.push('Template missing ID');
+    }
+    
+    if (!template.category) {
+      errors.push('Template missing category');
+    }
+    
+    if (!template.grade) {
+      errors.push('Template missing grade');
+    }
+    
+    if (!template.type) {
+      errors.push('Template missing type');
+    }
+    
+    if (!template.template) {
+      errors.push('Template missing template string');
+    }
+    
+    if (!template.parameters || template.parameters.length === 0) {
+      warnings.push('Template has no parameters');
     }
     
     return {
       isValid: errors.length === 0,
       errors,
-      validTemplates: templates.length - errors.length,
-      totalIssues: errors.length,
-      criticalIssues: errors.length,
-      overallHealth: ((templates.length - errors.length) / templates.length) * 100,
-      templateResults: []
+      warnings
     };
   }
 
-  private static validateTemplateStructure(template: QuestionTemplate): boolean {
-    return !!(template.id && template.category && template.grade && template.type);
-  }
   static validateQuestion(template: QuestionTemplate, generatedQuestion: GeneratedQuestion): boolean {
     try {
       if (template.category === 'Mathematik') {

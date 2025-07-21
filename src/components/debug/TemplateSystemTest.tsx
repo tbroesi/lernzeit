@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { TemplateValidator, ValidationResult } from '@/utils/templates/templateValidator';
+import { TemplateValidator, ComprehensiveValidationResult } from '@/utils/templates/templateValidator';
 import { QuestionGenerator } from '@/utils/templates/questionGenerator';
 import { getTemplatesForCategory, questionTemplates } from '@/utils/questionTemplates';
 import { Badge } from '@/components/ui/badge';
@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 export function TemplateSystemTest() {
   const [isRunning, setIsRunning] = useState(false);
   const [testResults, setTestResults] = useState<{
-    validationResults: Map<string, ValidationResult>;
+    validationResults: ComprehensiveValidationResult;
     generationTests: any[];
     overallHealth: number;
     summary: string;
@@ -103,7 +103,7 @@ Generation Summary:
       `.trim();
 
       setTestResults({
-        validationResults: validationResults.templateResults,
+        validationResults,
         generationTests,
         overallHealth: validationResults.overallHealth,
         summary
