@@ -184,6 +184,87 @@ export type Database = {
           },
         ]
       }
+      generated_templates: {
+        Row: {
+          category: string
+          content: string
+          content_hash: string
+          created_at: string
+          grade: number
+          id: string
+          is_active: boolean
+          quality_score: number
+          question_type: string
+          updated_at: string
+          usage_count: number
+        }
+        Insert: {
+          category: string
+          content: string
+          content_hash: string
+          created_at?: string
+          grade: number
+          id?: string
+          is_active?: boolean
+          quality_score?: number
+          question_type?: string
+          updated_at?: string
+          usage_count?: number
+        }
+        Update: {
+          category?: string
+          content?: string
+          content_hash?: string
+          created_at?: string
+          grade?: number
+          id?: string
+          is_active?: boolean
+          quality_score?: number
+          question_type?: string
+          updated_at?: string
+          usage_count?: number
+        }
+        Relationships: []
+      }
+      generation_sessions: {
+        Row: {
+          average_quality_score: number
+          category: string
+          created_at: string
+          grade: number
+          id: string
+          request_count: number
+          session_id: string
+          templates_generated: number
+          total_duration_ms: number
+          updated_at: string
+        }
+        Insert: {
+          average_quality_score?: number
+          category: string
+          created_at?: string
+          grade: number
+          id?: string
+          request_count?: number
+          session_id: string
+          templates_generated?: number
+          total_duration_ms?: number
+          updated_at?: string
+        }
+        Update: {
+          average_quality_score?: number
+          category?: string
+          created_at?: string
+          grade?: number
+          id?: string
+          request_count?: number
+          session_id?: string
+          templates_generated?: number
+          total_duration_ms?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       invitation_codes: {
         Row: {
           child_id: string | null
@@ -336,6 +417,50 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      template_metrics: {
+        Row: {
+          created_at: string
+          curriculum_alignment: number
+          difficulty_appropriateness: number
+          evaluation_timestamp: string
+          id: string
+          overall_score: number
+          request_id: string | null
+          template_id: string
+          uniqueness_score: number
+        }
+        Insert: {
+          created_at?: string
+          curriculum_alignment?: number
+          difficulty_appropriateness?: number
+          evaluation_timestamp?: string
+          id?: string
+          overall_score?: number
+          request_id?: string | null
+          template_id: string
+          uniqueness_score?: number
+        }
+        Update: {
+          created_at?: string
+          curriculum_alignment?: number
+          difficulty_appropriateness?: number
+          evaluation_timestamp?: string
+          id?: string
+          overall_score?: number
+          request_id?: string | null
+          template_id?: string
+          uniqueness_score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_metrics_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "generated_templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_achievements: {
         Row: {
