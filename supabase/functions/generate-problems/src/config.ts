@@ -28,15 +28,16 @@ export const corsHeaders = {
 // Generation Constants
 export const GENERATION_CONSTANTS = {
   MAX_PROBLEMS_PER_REQUEST: 10,
-  MIN_QUALITY_SCORE: 0.7,
+  MIN_QUALITY_SCORE: 0.6, // Slightly lower for faster generation
   DEFAULT_TEMPERATURE: 0.8,
   MAX_TEMPERATURE: 1.0,
   MIN_TEMPERATURE: 0.7,
   DEFAULT_TOP_P: 0.9,
-  DEFAULT_TOP_K: 50,
-  MAX_OUTPUT_TOKENS: 4000,
-  MAX_RETRIES: 3,
-  UNIQUENESS_THRESHOLD: 0.7
+  DEFAULT_TOP_K: 40, // Reduced for faster responses
+  MAX_OUTPUT_TOKENS: 2500, // Reduced from 4000 for faster generation
+  MAX_RETRIES: 2, // Reduced from 3 for faster failure handling
+  UNIQUENESS_THRESHOLD: 0.7,
+  RESPONSE_TIMEOUT_MS: 15000 // 15 second timeout
 };
 
 // Database Constants

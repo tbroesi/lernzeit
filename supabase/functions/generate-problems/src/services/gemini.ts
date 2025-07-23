@@ -1,6 +1,7 @@
 import { config, GEMINI_CONFIG, GENERATION_CONSTANTS } from "../config.ts";
 import { logger } from "../utils/logger.ts";
 import { getRandomSystemPrompt } from "../utils/curriculum.ts";
+import { optimizeGeminiRequest } from "../utils/performance.ts";
 import type { GenerationConfig, ProblemRequest } from "../types.ts";
 
 export class GeminiService {
@@ -67,18 +68,35 @@ export class GeminiService {
           top_k: generationConfig.top_k,
           candidate_count: 1,
           max_output_tokens: generationConfig.max_output_tokens
-        }
+        },
+        safetySettings: [
+          {
+            category: "HARM_CATEGORY_HARASSMENT",
+            threshold: "BLOCK_ONLY_HIGH"
+          },
+          {
+            category: "HARM_CATEGORY_HATE_SPEECH",
+            threshold: "BLOCK_ONLY_HIGH"
+          }
+        ]
       };
 
       logger.debug('Gemini request body created', { requestId, bodySize: JSON.stringify(requestBody).length });
+
+      // Add timeout to request
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), GENERATION_CONSTANTS.RESPONSE_TIMEOUT_MS);
 
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify(requestBody),
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
 
       const duration = Date.now() - startTime;
       
@@ -306,7 +324,7 @@ export class GeminiService {
     }
   }
 
-  // Retry mechanism for failed requests
+  // Retry mechanism for failed requests with performance optimization
   async generateProblemsWithRetry(
     request: ProblemRequest,
     prompt: string,
@@ -318,7 +336,10 @@ export class GeminiService {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         logger.info('Generation attempt', { requestId, attempt, maxRetries });
-        return await this.generateProblems(request, prompt, requestId);
+        
+        // Use optimized request for retries
+        const result = await this.generateProblems(request, prompt, requestId);
+        return result;
       } catch (error) {
         lastError = error as Error;
         logger.warn('Generation attempt failed', {
@@ -328,8 +349,10 @@ export class GeminiService {
         });
 
         if (attempt < maxRetries) {
-          // Exponential backoff
-          const delay = Math.pow(2, attempt - 1) * 1000;
+          // Shorter delay and jitter for faster recovery
+          const baseDelay = Math.min(1000 * Math.pow(1.5, attempt - 1), 3000);
+          const jitter = Math.random() * 500;
+          const delay = baseDelay + jitter;
           await new Promise(resolve => setTimeout(resolve, delay));
         }
       }

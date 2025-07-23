@@ -6,6 +6,7 @@ import { generateCurriculumPrompt } from "../utils/curriculum.ts";
 import { validateGeneratedProblems } from "../utils/validator.ts";
 import { logger } from "../utils/logger.ts";
 import { GENERATION_CONSTANTS } from "../config.ts";
+import { PerformanceTimer, promptCache } from "../utils/performance.ts";
 import type { ProblemRequest, SelectionQuestion, GeneratedTemplate } from "../types.ts";
 
 export class TemplateGenerator {
@@ -22,17 +23,26 @@ export class TemplateGenerator {
   }
 
   async generateProblems(request: ProblemRequest): Promise<{ problems: SelectionQuestion[] }> {
-    const startTime = Date.now();
+    const timer = new PerformanceTimer();
     
     try {
       logger.requestStarted(this.requestId, request);
+      timer.checkpoint('request_started');
       
-      // Generate curriculum-aligned prompt
-      const curriculumPrompt = generateCurriculumPrompt(request.category, request.grade);
-      const enhancedPrompt = this.diversityEngine.enhancePromptForDiversity(
-        curriculumPrompt, 
-        request.excludeQuestions || []
-      );
+      // Generate curriculum-aligned prompt with caching
+      const excludeCount = request.excludeQuestions?.length || 0;
+      let enhancedPrompt = promptCache.get(request.category, request.grade, excludeCount);
+      
+      if (!enhancedPrompt) {
+        const curriculumPrompt = generateCurriculumPrompt(request.category, request.grade);
+        enhancedPrompt = this.diversityEngine.enhancePromptForDiversity(
+          curriculumPrompt, 
+          request.excludeQuestions || []
+        );
+        promptCache.set(request.category, request.grade, excludeCount, enhancedPrompt);
+      }
+      
+      timer.checkpoint('prompt_generated');
 
       // Generate problems using Gemini with retries
       const rawResponse = await this.geminiService.generateProblemsWithRetry(
@@ -51,16 +61,27 @@ export class TemplateGenerator {
         request
       );
 
-      // Store successful templates in database
-      await this.storeGeneratedTemplates(qualityFilteredProblems, request);
+      // Store successful templates in database (async, don't wait)
+      this.storeGeneratedTemplatesAsync(qualityFilteredProblems, request);
 
-      const duration = Date.now() - startTime;
-      logger.requestCompleted(this.requestId, duration, qualityFilteredProblems.length);
+      timer.checkpoint('completed');
+      const performanceReport = timer.getReport();
+      logger.requestCompleted(this.requestId, performanceReport.total, qualityFilteredProblems.length);
+      
+      // Log performance metrics for monitoring
+      if (performanceReport.total > 10000) { // Log slow requests
+        logger.warn('Slow request detected', {
+          requestId: this.requestId,
+          performance: performanceReport,
+          category: request.category,
+          grade: request.grade
+        });
+      }
 
       return { problems: qualityFilteredProblems };
 
     } catch (error) {
-      const duration = Date.now() - startTime;
+      const duration = timer.getDuration();
       logger.requestFailed(this.requestId, duration, error as Error);
       throw error;
     }
@@ -140,31 +161,34 @@ export class TemplateGenerator {
     return filteredProblems;
   }
 
-  private async storeGeneratedTemplates(
+  private async storeGeneratedTemplatesAsync(
     problems: SelectionQuestion[],
     request: ProblemRequest
   ): Promise<void> {
-    try {
-      for (const problem of problems) {
-        const template: Omit<GeneratedTemplate, 'id' | 'created_at' | 'updated_at'> = {
-          content: problem.question,
-          category: request.category,
-          grade: request.grade,
-          question_type: problem.questionType,
-          quality_score: 0.8, // Will be properly calculated
-          usage_count: 0,
-          is_active: true,
-          content_hash: await this.generateContentHash(problem.question)
-        };
+    // Run asynchronously to not block response
+    setTimeout(async () => {
+      try {
+        for (const problem of problems) {
+          const template: Omit<GeneratedTemplate, 'id' | 'created_at' | 'updated_at'> = {
+            content: problem.question,
+            category: request.category,
+            grade: request.grade,
+            question_type: problem.questionType,
+            quality_score: 0.8, // Will be properly calculated
+            usage_count: 0,
+            is_active: true,
+            content_hash: await this.generateContentHash(problem.question)
+          };
 
-        await this.databaseService.storeTemplate(template, this.requestId);
+          await this.databaseService.storeTemplate(template, this.requestId);
+        }
+      } catch (error) {
+        logger.warn('Failed to store some templates', {
+          requestId: this.requestId,
+          error: error.message
+        });
       }
-    } catch (error) {
-      logger.warn('Failed to store some templates', {
-        requestId: this.requestId,
-        error: error.message
-      });
-    }
+    }, 0);
   }
 
   private async generateContentHash(content: string): Promise<string> {
