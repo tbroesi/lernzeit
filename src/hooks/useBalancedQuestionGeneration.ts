@@ -65,17 +65,28 @@ export function useBalancedQuestionGeneration(
         .limit(totalQuestions * 2); // Get more than needed for rotation
 
       if (error) {
-        console.error('❌ Error loading templates:', error);
+        console.error('❌ Database error loading templates:', error);
+        console.error('❌ Error details:', { 
+          message: error.message, 
+          code: error.code, 
+          details: error.details,
+          hint: error.hint 
+        });
         return [];
       }
 
       console.log(`📊 Raw database query result: ${templates?.length || 0} templates found`);
       if (templates) {
-        console.log('📋 Template categories found:', templates.map(t => t.category));
+        console.log('📋 Template categories found:', templates.map(t => ({ 
+          id: t.id, 
+          category: t.category, 
+          content: t.content?.substring(0, 50) + '...' 
+        })));
       }
 
       if (!templates || templates.length === 0) {
         console.warn(`📭 No templates found in database for category="${category}", grade=${grade}`);
+        console.warn('📭 This triggers the fallback to AI generation or simple fallback');
         return [];
       }
 
