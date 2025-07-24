@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { SelectionQuestion } from '@/types/questionTypes';
 import { supabase } from '@/lib/supabase';
@@ -89,20 +88,20 @@ export function useImprovedQuestionGeneration(
         });
 
       } else if (category === 'Deutsch') {
-        // Grade-appropriate German problems
+        // Grade-appropriate German problems - Fixed typing
         const germanProblems = [
           // Grades 1-2: Basic word recognition
           ...(grade <= 2 ? [
             {
               question: 'Welches Wort ist richtig geschrieben?',
-              type: 'multiple-choice' as const,
+              questionType: 'multiple-choice' as const,
               options: ['Hund', 'Hunt', 'Hundt', 'Huntd'],
               correctAnswer: 0,
               explanation: 'Das Wort "Hund" wird mit "d" am Ende geschrieben.'
             },
             {
               question: 'Wie viele Buchstaben hat das Wort "Katze"?',
-              type: 'text-input' as const,
+              questionType: 'text-input' as const,
               answer: '5',
               explanation: 'Das Wort "Katze" hat 5 Buchstaben: K-a-t-z-e.'
             }
@@ -112,14 +111,14 @@ export function useImprovedQuestionGeneration(
           ...(grade >= 3 && grade <= 4 ? [
             {
               question: 'Welche Wortart ist "schnell"?',
-              type: 'multiple-choice' as const,
+              questionType: 'multiple-choice' as const,
               options: ['Nomen', 'Verb', 'Adjektiv', 'Artikel'],
               correctAnswer: 2,
               explanation: '"Schnell" ist ein Adjektiv (Eigenschaftswort).'
             },
             {
               question: 'Wie lautet die Mehrzahl von "Baum"?',
-              type: 'text-input' as const,
+              questionType: 'text-input' as const,
               answer: 'Bäume',
               explanation: 'Die Mehrzahl von "Baum" ist "Bäume".'
             }
@@ -129,14 +128,14 @@ export function useImprovedQuestionGeneration(
           ...(grade >= 5 ? [
             {
               question: 'In welcher Zeitform steht "Er ist gegangen"?',
-              type: 'multiple-choice' as const,
+              questionType: 'multiple-choice' as const,
               options: ['Präsens', 'Präteritum', 'Perfekt', 'Futur'],
               correctAnswer: 2,
               explanation: '"Er ist gegangen" steht im Perfekt (vollendete Gegenwart).'
             },
             {
               question: 'Welcher Fall wird hier verwendet: "Ich gebe dem Kind einen Ball"?',
-              type: 'text-input' as const,
+              questionType: 'text-input' as const,
               answer: 'Dativ',
               explanation: '"Dem Kind" steht im Dativ (3. Fall).'
             }
@@ -145,19 +144,27 @@ export function useImprovedQuestionGeneration(
 
         const problem = germanProblems[Math.floor(Math.random() * germanProblems.length)];
         
-        templateProblems.push({
-          id,
-          questionType: problem.type,
-          question: problem.question,
-          ...(problem.type === 'multiple-choice' ? {
+        // Create properly typed question based on questionType
+        if (problem.questionType === 'multiple-choice') {
+          templateProblems.push({
+            id,
+            questionType: 'multiple-choice',
+            question: problem.question,
             options: problem.options,
-            correctAnswer: problem.correctAnswer
-          } : {
-            answer: problem.answer
-          }),
-          type: 'german',
-          explanation: problem.explanation
-        });
+            correctAnswer: problem.correctAnswer,
+            type: 'german',
+            explanation: problem.explanation
+          });
+        } else {
+          templateProblems.push({
+            id,
+            questionType: 'text-input',
+            question: problem.question,
+            answer: problem.answer,
+            type: 'german',
+            explanation: problem.explanation
+          });
+        }
       }
     }
     

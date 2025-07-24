@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { SelectionQuestion } from '@/types/questionTypes';
 import { supabase } from '@/lib/supabase';
@@ -148,13 +147,13 @@ export function useBalancedQuestionGeneration(
           ...(grade <= 2 ? [
             {
               question: 'Welcher Buchstabe kommt nach "F"?',
-              type: 'text-input' as const,
+              questionType: 'text-input' as const,
               answer: 'G',
               explanation: 'Nach dem Buchstaben "F" kommt "G" im Alphabet.'
             },
             {
               question: 'Wie viele Silben hat das Wort "Blume"?',
-              type: 'text-input' as const,
+              questionType: 'text-input' as const,
               answer: '2',
               explanation: 'Das Wort "Blume" hat 2 Silben: Blu-me.'
             }
@@ -164,14 +163,14 @@ export function useBalancedQuestionGeneration(
           ...(grade >= 3 && grade <= 4 ? [
             {
               question: 'Welche Wortart ist "schön"?',
-              type: 'multiple-choice' as const,
+              questionType: 'multiple-choice' as const,
               options: ['Nomen', 'Verb', 'Adjektiv', 'Artikel'],
               correctAnswer: 2,
               explanation: '"Schön" ist ein Adjektiv (Eigenschaftswort).'
             },
             {
               question: 'Wie heißt die Mehrzahl von "Maus"?',
-              type: 'text-input' as const,
+              questionType: 'text-input' as const,
               answer: 'Mäuse',
               explanation: 'Die Mehrzahl von "Maus" ist "Mäuse".'
             }
@@ -181,14 +180,14 @@ export function useBalancedQuestionGeneration(
           ...(grade >= 5 ? [
             {
               question: 'In welcher Zeitform steht "Ich habe gelesen"?',
-              type: 'multiple-choice' as const,
+              questionType: 'multiple-choice' as const,
               options: ['Präsens', 'Präteritum', 'Perfekt', 'Futur'],
               correctAnswer: 2,
               explanation: '"Ich habe gelesen" steht im Perfekt (vollendete Gegenwart).'
             },
             {
               question: 'Welcher Fall wird hier verwendet: "Ich schenke der Mutter Blumen"?',
-              type: 'text-input' as const,
+              questionType: 'text-input' as const,
               answer: 'Dativ',
               explanation: '"Der Mutter" steht im Dativ (3. Fall).'
             }
@@ -197,19 +196,27 @@ export function useBalancedQuestionGeneration(
         
         const problem = germanProblems[Math.floor(Math.random() * germanProblems.length)];
         
-        templateProblems.push({
-          id,
-          questionType: problem.type,
-          question: problem.question,
-          ...(problem.type === 'multiple-choice' ? {
+        // Create properly typed question based on questionType
+        if (problem.questionType === 'multiple-choice') {
+          templateProblems.push({
+            id,
+            questionType: 'multiple-choice',
+            question: problem.question,
             options: problem.options,
-            correctAnswer: problem.correctAnswer
-          } : {
-            answer: problem.answer
-          }),
-          type: 'german',
-          explanation: problem.explanation
-        });
+            correctAnswer: problem.correctAnswer,
+            type: 'german',
+            explanation: problem.explanation
+          });
+        } else {
+          templateProblems.push({
+            id,
+            questionType: 'text-input',
+            question: problem.question,
+            answer: problem.answer,
+            type: 'german',
+            explanation: problem.explanation
+          });
+        }
       }
     }
     
