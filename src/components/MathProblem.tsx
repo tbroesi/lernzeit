@@ -408,7 +408,9 @@ export function MathProblem({ grade, onBack, onComplete, userId }: MathProblemPr
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const answer = parseInt(userAnswer);
+    // Support both comma and dot as decimal separator
+    const normalizedAnswer = userAnswer.replace(',', '.');
+    const answer = parseFloat(normalizedAnswer);
     
     if (isNaN(answer)) return;
     

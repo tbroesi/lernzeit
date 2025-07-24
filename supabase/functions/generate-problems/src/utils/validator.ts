@@ -147,7 +147,21 @@ function getCategoryKeywords(category: string, grade: number): string[] {
       4: ['schriftlich', 'dezimal', 'komma', 'prozent'],
       5: ['bruchrechnung', 'prozentrechnung', 'gleichung'],
     },
+    'math': {
+      1: ['addition', 'subtraktion', 'zahlen', 'zählen', 'plus', 'minus'],
+      2: ['einmaleins', 'multiplikation', 'verdoppeln', 'halbieren'],
+      3: ['division', 'teilen', 'bruch', 'geometrie'],
+      4: ['schriftlich', 'dezimal', 'komma', 'prozent'],
+      5: ['bruchrechnung', 'prozentrechnung', 'gleichung'],
+    },
     'deutsch': {
+      1: ['buchstabe', 'silbe', 'wort', 'groß', 'klein'],
+      2: ['satzzeichen', 'nomen', 'verb', 'punkt', 'komma'],
+      3: ['adjektiv', 'zeitform', 'präsens', 'präteritum'],
+      4: ['satzglied', 'subjekt', 'prädikat', 'objekt'],
+      5: ['konjugation', 'deklination', 'fall', 'kasus'],
+    },
+    'german': {
       1: ['buchstabe', 'silbe', 'wort', 'groß', 'klein'],
       2: ['satzzeichen', 'nomen', 'verb', 'punkt', 'komma'],
       3: ['adjektiv', 'zeitform', 'präsens', 'präteritum'],

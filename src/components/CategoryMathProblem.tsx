@@ -149,15 +149,16 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
     
     switch (question.questionType) {
       case 'text-input':
-        const userAnswerNormalized = userAnswer.trim().toLowerCase();
-        const correctAnswerNormalized = question.answer.toString().toLowerCase();
+        // Normalize both user input and correct answer for comparison
+        const userAnswerNormalized = userAnswer.trim().toLowerCase().replace(',', '.');
+        const correctAnswerNormalized = question.answer.toString().toLowerCase().replace(',', '.');
         
         // Check exact match first
         if (userAnswerNormalized === correctAnswerNormalized) {
           return true;
         }
         
-        // For numeric answers, parse and compare
+        // For numeric answers, parse and compare (support both , and . as decimal separator)
         const userNum = parseFloat(userAnswerNormalized);
         const correctNum = parseFloat(correctAnswerNormalized);
         
