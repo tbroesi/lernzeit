@@ -58,10 +58,12 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
   const currentQuestion: SelectionQuestion | undefined = problems[currentQuestionIndex];
 
   useEffect(() => {
-    if (gameStarted && problems.length === 0) {
+    console.log(`🔄 Game effect: gameStarted=${gameStarted}, problems.length=${problems.length}, isGenerating=${isGenerating}`);
+    if (gameStarted && problems.length === 0 && !isGenerating) {
+      console.log('🔄 Regenerating problems because game started but no problems available');
       generateProblems();
     }
-  }, [gameStarted, problems.length, generateProblems]);
+  }, [gameStarted, problems.length, isGenerating, generateProblems]);
 
   // Reset question timer when starting new question
   useEffect(() => {
@@ -140,6 +142,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
   useEffect(() => {
     console.log('🚀 CategoryMathProblem loaded/changed - Auto-generating problems');
     console.log(`📊 Parameters: grade=${grade}, category=${category}, userId=${user?.id || 'anonymous'}`);
+    console.log(`📊 Current problems.length: ${problems.length}, isGenerating: ${isGenerating}`);
     
     // Reset all game state when parameters change
     setCurrentQuestionIndex(0);
@@ -150,7 +153,12 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
     setSessionEndTime(null);
     resetAnswers();
     
-    generateProblems();
+    console.log('🎯 About to call generateProblems()');
+    generateProblems().then(() => {
+      console.log('✅ generateProblems() completed');
+    }).catch((error) => {
+      console.error('❌ generateProblems() failed:', error);
+    });
   }, [grade, category, user?.id]); // Fixed: Remove generateProblems from dependencies
 
   const startGame = () => {
