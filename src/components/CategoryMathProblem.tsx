@@ -136,7 +136,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
     analyzeAndTest();
   }, [user, problems, category, grade]);
 
-  // Auto-generate problems when component loads OR when grade/category changes
+  // Auto-generate problems when component loads OR when grade/category changes  
   useEffect(() => {
     console.log('🚀 CategoryMathProblem loaded/changed - Auto-generating problems');
     console.log(`📊 Parameters: grade=${grade}, category=${category}, userId=${user?.id || 'anonymous'}`);
@@ -151,7 +151,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
     resetAnswers();
     
     generateProblems();
-  }, [generateProblems, grade, category]);
+  }, [grade, category, user?.id]); // Fixed: Remove generateProblems from dependencies
 
   const startGame = () => {
     setGameStarted(true);
