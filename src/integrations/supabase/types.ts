@@ -569,6 +569,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      trigger_template_generation: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       update_achievement_progress: {
         Args: {
           p_user_id: string
