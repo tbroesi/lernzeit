@@ -46,26 +46,39 @@ export function useBalancedQuestionGeneration(
     }
   };
 
-  // Load templates from database - PRIMARY METHOD
+  // PHASE 1: Enhanced Database Template Loading with Diagnosis
   const loadTemplatesFromDatabase = async (): Promise<SelectionQuestion[]> => {
-    console.log('📂 Loading templates from database');
-    console.log(`🔍 Looking for: category="${category}", grade=${grade}`);
+    console.log('🚀 PHASE 1: Enhanced Database Template Loading');
+    console.log(`🔍 Target: category="${category}", grade=${grade}, userId="${userId}"`);
     
     try {
       const excludedQuestions = await getExcludedQuestions(category, grade, userId);
+      console.log(`🚫 Excluded questions: ${excludedQuestions.length}`);
       
-      // Get templates from database - try both category name variations
+      // DIAGNOSIS: Check category mapping inconsistencies
+      const categoryVariations = [
+        category,
+        category.toLowerCase(),
+        category.charAt(0).toUpperCase() + category.slice(1).toLowerCase(),
+        // German-specific mappings
+        ...(category.toLowerCase() === 'mathematik' || category.toLowerCase() === 'math' ? ['Mathematik', 'math', 'mathematik'] : []),
+        ...(category.toLowerCase() === 'deutsch' || category.toLowerCase() === 'german' ? ['Deutsch', 'german', 'deutsch'] : [])
+      ];
+      
+      console.log(`🗺️ Trying category variations:`, categoryVariations);
+      
+      // Enhanced database query with better error handling
       const { data: templates, error } = await supabase
         .from('generated_templates')
         .select('*')
-        .in('category', [category, category.toLowerCase(), 'Mathematik', 'Deutsch']) // Try multiple variations
+        .in('category', categoryVariations)
         .eq('grade', grade)
         .eq('is_active', true)
-        .order('usage_count', { ascending: true }) // Prefer less used templates
-        .limit(totalQuestions * 2); // Get more than needed for rotation
+        .order('quality_score', { ascending: false }) // Prioritize high-quality templates
+        .limit(totalQuestions * 3); // Get more templates for better selection
 
       if (error) {
-        console.error('❌ Database error loading templates:', error);
+        console.error('❌ CRITICAL: Database error loading templates:', error);
         console.error('❌ Error details:', { 
           message: error.message, 
           code: error.code, 
@@ -75,227 +88,383 @@ export function useBalancedQuestionGeneration(
         return [];
       }
 
-      console.log(`📊 Raw database query result: ${templates?.length || 0} templates found`);
-      if (templates) {
-        console.log('📋 Template categories found:', templates.map(t => ({ 
-          id: t.id, 
+      console.log(`📊 Database query success: ${templates?.length || 0} templates found`);
+      
+      if (templates && templates.length > 0) {
+        console.log('📋 Template analysis:', templates.map(t => ({ 
+          id: t.id.substring(0, 8), 
           category: t.category, 
-          content: t.content?.substring(0, 50) + '...' 
+          grade: t.grade,
+          quality: t.quality_score,
+          type: t.question_type,
+          contentPreview: t.content?.substring(0, 50) + '...' 
         })));
       }
 
       if (!templates || templates.length === 0) {
-        console.warn(`📭 No templates found in database for category="${category}", grade=${grade}`);
-        console.warn('📭 This triggers the fallback to AI generation or simple fallback');
+        console.warn(`📭 ISSUE: No templates found for any category variation`);
+        console.warn(`📭 Category variations tried:`, categoryVariations);
+        console.warn(`📭 Grade: ${grade}`);
+        console.warn(`📭 This indicates missing templates in database - triggering fallback`);
         return [];
       }
 
-      // Filter templates by category match (case insensitive)
-      const categoryLower = category.toLowerCase();
-      const matchingTemplates = templates.filter(template => {
-        const templateCategory = template.category?.toLowerCase();
-        return templateCategory === categoryLower || 
-               (categoryLower === 'mathematik' && templateCategory === 'math') ||
-               (categoryLower === 'deutsch' && templateCategory === 'german');
-      });
-
-      console.log(`🎯 Filtered templates: ${matchingTemplates.length} matching templates for category "${category}"`);
-
-      // Shuffle templates for randomization using Fisher-Yates algorithm
-      const shuffledTemplates = [...matchingTemplates];
-      for (let i = shuffledTemplates.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffledTemplates[i], shuffledTemplates[j]] = [shuffledTemplates[j], shuffledTemplates[i]];
-      }
+      // PHASE 2: Robust template parsing with better error handling
+      console.log('🔧 PHASE 2: Enhanced Template Parsing');
       
-      console.log(`🔀 Templates shuffled for random selection`);
-
-      // Convert templates to SelectionQuestion format and filter excluded
       const questions: SelectionQuestion[] = [];
+      const parseErrors: string[] = [];
       
-      for (const template of shuffledTemplates) {
+      for (const template of templates) {
         if (questions.length >= totalQuestions) break;
         
         try {
-          console.log(`🔧 Processing template:`, {
-            id: template.id,
+          console.log(`🔧 Processing template ${template.id}:`, {
             category: template.category,
-            question_type: template.question_type,
-            contentPreview: template.content?.substring(0, 100) + '...'
+            grade: template.grade,
+            type: template.question_type,
+            quality: template.quality_score
           });
 
-          // Check if content is JSON or plain text
-          let parsedContent;
-          let questionText;
-          let answerValue;
+          // ROBUST PARSING: Multiple parsing strategies
+          const parseResult = parseTemplateContent(template);
           
-          try {
-            // Try to parse as JSON first
-            parsedContent = JSON.parse(template.content);
-            questionText = parsedContent.question || template.content;
-            answerValue = parsedContent.answer || parsedContent.correctAnswer || '';
-            console.log(`📄 Parsed JSON content:`, parsedContent);
-          } catch (jsonError) {
-            // If not JSON, treat as plain text question
-            console.log(`📄 Plain text content detected:`, template.content);
-            questionText = template.content;
-            
-            // Extract answer from simple math questions
-            if (template.category === 'Mathematik' && template.content.includes('=')) {
-              const match = template.content.match(/(.+?)=\s*\?/);
-              if (match) {
-                try {
-                  // Enhanced math expression calculator
-                  let expression = match[1].trim();
-                  
-                  // Handle different operation symbols
-                  expression = expression
-                    .replace(/×/g, '*')
-                    .replace(/÷/g, '/')
-                    .replace(/:/g, '/')
-                    .replace(/\s+/g, ''); // Remove spaces
-                  
-                  // Safety check for valid math expressions only
-                  if (/^[\d+\-*/.(),\s]+$/.test(expression)) {
-                    const result = eval(expression);
-                    answerValue = Number.isInteger(result) ? result.toString() : result.toFixed(2);
-                    console.log(`🧮 Calculated answer: ${match[1].trim()} = ${answerValue}`);
-                  } else {
-                    console.warn(`⚠️ Invalid math expression: ${expression}`);
-                    // Try to extract number from the end of the question text
-                    const numberMatch = template.content.match(/(\d+(?:[.,]\d+)?)\s*$/);
-                    answerValue = numberMatch ? numberMatch[1].replace(',', '.') : 'Fehler';
-                  }
-                } catch (calculationError) {
-                  console.error(`❌ Calculation failed for: ${match[1]}`, calculationError);
-                  // Try to extract a number from the template content as last resort
-                  const numberMatch = template.content.match(/(\d+(?:[.,]\d+)?)/g);
-                  if (numberMatch && numberMatch.length >= 2) {
-                    // For simple addition/subtraction, try basic calculation
-                    const nums = numberMatch.map(n => parseFloat(n.replace(',', '.')));
-                    if (template.content.includes('+')) {
-                      answerValue = (nums[0] + nums[1]).toString();
-                    } else if (template.content.includes('-')) {
-                      answerValue = (nums[0] - nums[1]).toString();
-                    } else if (template.content.includes('×') || template.content.includes('*')) {
-                      answerValue = (nums[0] * nums[1]).toString();
-                    } else {
-                      answerValue = 'Berechnung fehlgeschlagen';
-                    }
-                  } else {
-                    answerValue = 'Berechnung fehlgeschlagen';
-                  }
-                }
-              } else {
-                console.warn(`⚠️ No math pattern found in: ${template.content}`);
-                answerValue = 'Muster nicht erkannt';
-              }
-            } else {
-              // For non-math templates, try to extract answer from content
-              const answerMatch = template.content.match(/antwort[:\s]*([^.!?]*)/i);
-              answerValue = answerMatch ? answerMatch[1].trim() : 'Antwort nicht gefunden';
-            }
+          if (!parseResult.success) {
+            parseErrors.push(`Template ${template.id}: ${parseResult.error}`);
+            console.warn(`⚠️ Parse failed for ${template.id}: ${parseResult.error}`);
+            continue;
           }
+          
+          const { questionText, answerValue, parsedContent } = parseResult;
           
           // Skip if excluded
           if (excludedQuestions.includes(questionText)) {
-            console.log(`⏭️ Skipping excluded question: ${questionText}`);
+            console.log(`⏭️ Skipping excluded question: ${questionText.substring(0, 30)}...`);
+            continue;
+          }
+          
+          // VALIDATION: Ensure content quality before adding
+          if (!validateQuestionContent(questionText, answerValue, template)) {
+            console.warn(`⚠️ Content validation failed for template ${template.id}`);
             continue;
           }
           
           // Convert to SelectionQuestion format
-          const questionType = template.question_type || 'text-input';
+          const question = createSelectionQuestion(
+            template, 
+            questionText, 
+            answerValue, 
+            parsedContent,
+            category
+          );
           
-          const question: SelectionQuestion = {
-            id: Math.floor(Math.random() * 1000000),
-            question: questionText,
-            options: parsedContent?.options || [],
-            correctAnswer: typeof parsedContent?.correctAnswer === 'number' ? parsedContent.correctAnswer : 0,
-            explanation: parsedContent?.explanation || `Die Antwort ist: ${answerValue}`,
-            questionType: questionType as any,
-            type: categoryLower === 'mathematik' ? 'math' : categoryLower === 'deutsch' ? 'german' : 'math'
-          };
-
-          // Add answer property for text-input questions
-          if (questionType === 'text-input') {
-            (question as any).answer = answerValue;
-          }
-          
-          console.log(`✅ Converted template to question:`, {
-            id: question.id,
-            question: question.question,
-            questionType: question.questionType,
-            answer: questionType === 'text-input' ? answerValue : 'N/A'
+          console.log(`✅ Converted template ${template.id}:`, {
+            question: question.question.substring(0, 50) + '...',
+            type: question.questionType,
+            hasAnswer: question.questionType === 'text-input' ? !!(question as any).answer : 'N/A'
           });
           
           questions.push(question);
           
-          // Update usage count (don't await to avoid blocking)
-          try {
-            await supabase
-              .from('generated_templates')
-              .update({ usage_count: (template.usage_count || 0) + 1 })
-              .eq('id', template.id);
-            console.log(`📈 Updated usage count for template ${template.id}`);
-          } catch (err) {
-            console.warn(`⚠️ Failed to update usage count:`, err);
-          }
+          // Update usage count asynchronously
+          updateTemplateUsageAsync(template.id, template.usage_count);
             
         } catch (parseError) {
-          console.error('❌ Error parsing template content:', parseError, 'Template:', template);
+          const errorMsg = `Parse error for template ${template.id}: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`;
+          parseErrors.push(errorMsg);
+          console.error('❌', errorMsg, parseError);
           continue;
         }
       }
 
-      console.log(`✅ Successfully converted ${questions.length} templates to questions`);
+      if (parseErrors.length > 0) {
+        console.warn(`⚠️ Template parsing issues (${parseErrors.length}):`, parseErrors.slice(0, 3));
+      }
+
+      console.log(`✅ PHASE 1 SUCCESS: Converted ${questions.length}/${totalQuestions} templates to questions`);
       return questions;
       
     } catch (error) {
-      console.error('❌ Error in loadTemplatesFromDatabase:', error);
+      console.error('❌ CRITICAL ERROR in loadTemplatesFromDatabase:', error);
       return [];
     }
   };
 
-  // Fallback: Generate new templates if needed
+  // PHASE 2: Robust Template Content Parsing
+  const parseTemplateContent = (template: any): { 
+    success: boolean; 
+    questionText?: string; 
+    answerValue?: string; 
+    parsedContent?: any; 
+    error?: string 
+  } => {
+    try {
+      // Strategy 1: Try JSON parsing
+      try {
+        const parsedContent = JSON.parse(template.content);
+        const questionText = parsedContent.question || template.content;
+        const answerValue = parsedContent.answer || parsedContent.correctAnswer || '';
+        
+        console.log(`📄 JSON parse success for ${template.id}`);
+        return { 
+          success: true, 
+          questionText, 
+          answerValue: String(answerValue), 
+          parsedContent 
+        };
+      } catch (jsonError) {
+        // Continue to next strategy
+      }
+      
+      // Strategy 2: Plain text with math expression extraction
+      const content = template.content;
+      console.log(`📄 Plain text parsing for ${template.id}: "${content.substring(0, 100)}..."`);
+      
+      // Enhanced math expression handling
+      if (template.category === 'Mathematik' || template.category === 'math') {
+        const mathResult = extractMathAnswer(content);
+        if (mathResult.success) {
+          return {
+            success: true,
+            questionText: content,
+            answerValue: mathResult.answer,
+            parsedContent: null
+          };
+        }
+      }
+      
+      // Strategy 3: Extract answer from German text patterns
+      if (template.category === 'Deutsch' || template.category === 'german') {
+        const germanResult = extractGermanAnswer(content);
+        if (germanResult.success) {
+          return {
+            success: true,
+            questionText: content,
+            answerValue: germanResult.answer,
+            parsedContent: null
+          };
+        }
+      }
+      
+      // Strategy 4: Default text extraction
+      const answerMatch = content.match(/antwort[:\s]*([^.!?\n]*)/i) || 
+                          content.match(/lösung[:\s]*([^.!?\n]*)/i) ||
+                          content.match(/ergebnis[:\s]*([^.!?\n]*)/i);
+      
+      const answerValue = answerMatch ? answerMatch[1].trim() : 'Antwort nicht extrahiert';
+      
+      return {
+        success: true,
+        questionText: content,
+        answerValue,
+        parsedContent: null
+      };
+      
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown parsing error'
+      };
+    }
+  };
+
+  // Enhanced math answer extraction
+  const extractMathAnswer = (content: string): { success: boolean; answer?: string } => {
+    try {
+      // Pattern 1: Question with = ?
+      const equalMatch = content.match(/(.+?)=\s*\?/);
+      if (equalMatch) {
+        let expression = equalMatch[1].trim();
+        
+        // Normalize operators
+        expression = expression
+          .replace(/×/g, '*')
+          .replace(/÷/g, '/')
+          .replace(/:/g, '/')
+          .replace(/\s+/g, '');
+        
+        // Safety check for valid math expressions
+        if (/^[\d+\-*/.(),\s]+$/.test(expression)) {
+          const result = eval(expression);
+          const answer = Number.isInteger(result) ? result.toString() : result.toFixed(2);
+          console.log(`🧮 Math calculation: ${equalMatch[1].trim()} = ${answer}`);
+          return { success: true, answer };
+        }
+      }
+      
+      // Pattern 2: Simple arithmetic extraction
+      const numbers = content.match(/\b\d+(?:[.,]\d+)?\b/g);
+      if (numbers && numbers.length >= 2) {
+        const nums = numbers.map(n => parseFloat(n.replace(',', '.')));
+        
+        if (content.includes('+')) {
+          return { success: true, answer: (nums[0] + nums[1]).toString() };
+        } else if (content.includes('-')) {
+          return { success: true, answer: (nums[0] - nums[1]).toString() };
+        } else if (content.includes('×') || content.includes('*')) {
+          return { success: true, answer: (nums[0] * nums[1]).toString() };
+        } else if (content.includes('÷') || content.includes('/')) {
+          return { success: true, answer: (nums[0] / nums[1]).toFixed(2) };
+        }
+      }
+      
+      return { success: false };
+    } catch (error) {
+      console.warn(`⚠️ Math extraction failed:`, error);
+      return { success: false };
+    }
+  };
+
+  // Enhanced German answer extraction
+  const extractGermanAnswer = (content: string): { success: boolean; answer?: string } => {
+    const patterns = [
+      /antwort[:\s]*([^.!?\n]*)/i,
+      /lösung[:\s]*([^.!?\n]*)/i,
+      /richtig[:\s]*([^.!?\n]*)/i,
+      /korrekt[:\s]*([^.!?\n]*)/i
+    ];
+    
+    for (const pattern of patterns) {
+      const match = content.match(pattern);
+      if (match && match[1].trim()) {
+        return { success: true, answer: match[1].trim() };
+      }
+    }
+    
+    return { success: false };
+  };
+
+  // Content validation
+  const validateQuestionContent = (questionText: string, answerValue: string, template: any): boolean => {
+    if (!questionText || questionText.trim().length < 5) {
+      console.warn(`⚠️ Question too short: "${questionText}"`);
+      return false;
+    }
+    
+    if (!answerValue || answerValue.includes('fehler') || answerValue.includes('Fehler')) {
+      console.warn(`⚠️ Invalid answer: "${answerValue}"`);
+      return false;
+    }
+    
+    if (questionText.length > 500) {
+      console.warn(`⚠️ Question too long: ${questionText.length} chars`);
+      return false;
+    }
+    
+    return true;
+  };
+
+  // Create SelectionQuestion object
+  const createSelectionQuestion = (
+    template: any, 
+    questionText: string, 
+    answerValue: string, 
+    parsedContent: any,
+    category: string
+  ): SelectionQuestion => {
+    const questionType = template.question_type || 'text-input';
+    const categoryLower = category.toLowerCase();
+    
+    const question: SelectionQuestion = {
+      id: Math.floor(Math.random() * 1000000),
+      question: questionText,
+      options: parsedContent?.options || [],
+      correctAnswer: typeof parsedContent?.correctAnswer === 'number' ? parsedContent.correctAnswer : 0,
+      explanation: parsedContent?.explanation || `Die Antwort ist: ${answerValue}`,
+      questionType: questionType as any,
+      type: categoryLower === 'mathematik' || categoryLower === 'math' ? 'math' : 
+            categoryLower === 'deutsch' || categoryLower === 'german' ? 'german' : 'math'
+    };
+
+    // Add answer property for text-input questions
+    if (questionType === 'text-input') {
+      (question as any).answer = answerValue;
+    }
+    
+    return question;
+  };
+
+  // Async usage update to avoid blocking
+  const updateTemplateUsageAsync = async (templateId: string, currentUsage: number) => {
+    try {
+      await supabase
+        .from('generated_templates')
+        .update({ usage_count: (currentUsage || 0) + 1 })
+        .eq('id', templateId);
+      console.log(`📈 Updated usage count for template ${templateId}`);
+    } catch (err) {
+      console.warn(`⚠️ Failed to update usage count for ${templateId}:`, err);
+    }
+  };
+
+  // PHASE 3: Controlled AI Fallback Generation
   const generateFallbackTemplates = async (): Promise<SelectionQuestion[]> => {
-    console.log('🆘 Fallback: Generating new templates via AI');
+    console.log('🆘 PHASE 3: Controlled AI Fallback Generation');
+    console.log('⚠️ This should only trigger when database templates are completely unavailable');
     
     const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error('AI generation timeout')), 15000);
+      setTimeout(() => reject(new Error('AI generation timeout after 20s')), 20000);
     });
     
     try {
       const excludedQuestions = await getExcludedQuestions(category, grade, userId);
+      console.log(`🚫 AI generation excluding ${excludedQuestions.length} questions`);
       
+      // Enhanced AI request with better parameters
       const aiPromise = supabase.functions.invoke('generate-problems', {
         body: {
           category,
           grade,
-          count: Math.min(totalQuestions, 5), // Generate fewer for fallback
+          count: totalQuestions, // Generate full amount for AI fallback
           excludeQuestions: excludedQuestions,
           sessionId,
-          requestId: `fallback_${Date.now()}`,
-          gradeRequirement: `grade_${grade}_appropriate`,
-          qualityThreshold: 0.6 // Lower threshold for fallback
+          requestId: `controlled_fallback_${Date.now()}`,
+          gradeRequirement: `grade_${grade}_curriculum_aligned`,
+          qualityThreshold: 0.7, // Higher threshold for better quality
+          diversityRequirement: true,
+          enhancedPrompt: true
         }
       });
       
+      console.log('🔄 Invoking AI generation edge function...');
       const response = await Promise.race([aiPromise, timeoutPromise]);
       
       if (response.error) {
-        console.warn('❌ Fallback AI generation failed:', response.error);
+        console.error('❌ AI generation failed:', response.error);
+        console.error('❌ Response details:', response);
         return [];
       }
       
       const problems = response.data?.problems || [];
-      console.log(`🆘 Fallback generated ${problems.length} problems`);
+      console.log(`🆘 AI generated ${problems.length}/${totalQuestions} problems`);
       
-      return problems.map((problem: SelectionQuestion) => ({
-        ...problem,
-        explanation: problem.explanation || `Erklärung für: ${problem.question}`
-      }));
+      if (problems.length === 0) {
+        console.warn('❌ AI generated zero problems - potential configuration issue');
+        return [];
+      }
+      
+      // Validate AI-generated problems
+      const validatedProblems = problems
+        .filter((problem: any) => {
+          if (!problem.question || !problem.explanation) {
+            console.warn('⚠️ Invalid AI problem structure:', problem);
+            return false;
+          }
+          return true;
+        })
+        .map((problem: SelectionQuestion) => ({
+          ...problem,
+          explanation: problem.explanation || `AI-generierte Erklärung für: ${problem.question}`
+        }));
+      
+      console.log(`✅ AI fallback validation: ${validatedProblems.length}/${problems.length} problems validated`);
+      return validatedProblems;
+      
     } catch (error) {
-      console.warn('❌ Fallback generation failed:', error);
+      console.error('❌ AI fallback generation failed:', error);
+      if (error instanceof Error) {
+        console.error('❌ Error details:', error.message, error.stack);
+      }
       return [];
     }
   };
@@ -580,18 +749,20 @@ export function useBalancedQuestionGeneration(
     return simpleProblems;
   }, [grade, totalQuestions]);
 
+  // PHASE 4: Controlled Generation with Strict Hierarchy
   const generateProblems = useCallback(async () => {
     // Create unique parameter string to prevent duplicate calls
     const currentParams = `${category}-${grade}-${userId}-${totalQuestions}`;
     
-    // Prevent infinite loops and duplicate executions
+    // ENHANCED: Prevent infinite loops and duplicate executions
     if (generationRef.current.isActive) {
       console.log('⚠️ Generation already in progress, skipping...');
       return;
     }
     
+    // RESTRICTED: Only allow simple fallback after multiple failed attempts
     if (generationRef.current.lastParams === currentParams && generationRef.current.attempts >= generationRef.current.maxAttempts) {
-      console.log('⚠️ Max attempts reached for these parameters, using simple fallback');
+      console.warn('⚠️ Max attempts reached - using controlled simple fallback');
       const simpleFallback = generateSimpleFallback();
       setProblems(simpleFallback);
       setGenerationSource('simple');
@@ -607,77 +778,136 @@ export function useBalancedQuestionGeneration(
     generationRef.current.attempts++;
     generationRef.current.isActive = true;
     
-    console.log('🎯 Starting balanced question generation');
-    console.log(`📊 Target: ${totalQuestions} questions for ${category}, Grade ${grade}, User: ${userId} (Attempt: ${generationRef.current.attempts})`);
+    console.log('🚀 PHASE 4: Controlled Question Generation with Strict Hierarchy');
+    console.log(`📊 Target: ${totalQuestions} questions for ${category}, Grade ${grade}, User: ${userId}`);
+    console.log(`🔄 Attempt: ${generationRef.current.attempts}/${generationRef.current.maxAttempts}`);
     
     setIsGenerating(true);
     setProblems([]); // Clear existing problems
     
     try {
-      // Set timeout to prevent hanging
+      // Extended timeout for comprehensive generation
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Generation timeout')), 30000);
+        setTimeout(() => reject(new Error('Generation timeout after 45s')), 45000);
       });
       
       const generationPromise = (async () => {
-        // PRIMARY: Load templates from database
-        console.log('📂 Attempting template loading from database...');
+        console.log('===============================================');
+        console.log('🎯 HIERARCHY LEVEL 1: DATABASE TEMPLATES (PRIMARY)');
+        console.log('===============================================');
+        
         const databaseTemplates = await loadTemplatesFromDatabase();
+        console.log(`📊 Database result: ${databaseTemplates.length}/${totalQuestions} questions`);
         
-        console.log(`🔍 Template Loading Result: ${databaseTemplates.length}/${totalQuestions} questions`);
-        
+        // SUCCESS: Database templates are sufficient
         if (databaseTemplates.length >= totalQuestions) {
-          console.log('✅ Using database templates - sufficient quantity');
+          console.log('✅ SUCCESS: Database templates provide full coverage');
+          console.log('🎯 Using database templates as primary source');
           const finalQuestions = databaseTemplates.slice(0, totalQuestions);
           return { questions: finalQuestions, source: 'template' as const };
-        } else if (databaseTemplates.length > 0) {
-          console.log(`⚠️ Only ${databaseTemplates.length} templates available, filling with template generation`);
+        }
+        
+        // PARTIAL: Database templates provide partial coverage
+        if (databaseTemplates.length > 0) {
+          console.log(`⚠️ PARTIAL: Database has ${databaseTemplates.length}/${totalQuestions} templates`);
+          console.log('🔧 Supplementing with local template generation');
+          
           const remainingCount = totalQuestions - databaseTemplates.length;
           const templateProblems = await generateTemplateProblems();
-          const mixedProblems = [...databaseTemplates, ...templateProblems.slice(0, remainingCount)];
+          
+          const mixedProblems = [
+            ...databaseTemplates,
+            ...templateProblems.slice(0, remainingCount)
+          ];
+          
+          console.log(`✅ MIXED SUCCESS: ${databaseTemplates.length} database + ${templateProblems.slice(0, remainingCount).length} template = ${mixedProblems.length} total`);
           return { questions: mixedProblems, source: 'template' as const };
         }
         
-        // SECONDARY: Try AI template generation if no templates in database
-        console.log('🆘 No templates in database, trying AI generation');
-        const fallbackProblems = await generateFallbackTemplates();
+        console.log('===============================================');
+        console.log('🆘 HIERARCHY LEVEL 2: AI GENERATION (SECONDARY)');
+        console.log('===============================================');
+        console.log('⚠️ No database templates available - this indicates a data issue');
         
+        const fallbackProblems = await generateFallbackTemplates();
+        console.log(`📊 AI generation result: ${fallbackProblems.length}/${totalQuestions} questions`);
+        
+        // SUCCESS: AI provides sufficient questions
         if (fallbackProblems.length >= totalQuestions) {
-          console.log('✅ Using AI generated problems');
+          console.log('✅ AI SUCCESS: Full coverage from AI generation');
           return { questions: fallbackProblems.slice(0, totalQuestions), source: 'ai' as const };
-        } else if (fallbackProblems.length > 0) {
-          console.log(`⚠️ Only ${fallbackProblems.length} AI problems, filling with template generation`);
+        }
+        
+        // PARTIAL: AI provides some questions
+        if (fallbackProblems.length > 0) {
+          console.log(`⚠️ AI PARTIAL: ${fallbackProblems.length}/${totalQuestions} from AI`);
+          console.log('🔧 Supplementing with local template generation');
+          
           const remainingCount = totalQuestions - fallbackProblems.length;
           const templateProblems = await generateTemplateProblems();
-          const mixedProblems = [...fallbackProblems, ...templateProblems.slice(0, remainingCount)];
+          
+          const mixedProblems = [
+            ...fallbackProblems,
+            ...templateProblems.slice(0, remainingCount)
+          ];
+          
+          console.log(`✅ AI-TEMPLATE MIX: ${fallbackProblems.length} AI + ${templateProblems.slice(0, remainingCount).length} template = ${mixedProblems.length} total`);
           return { questions: mixedProblems, source: 'ai' as const };
         }
         
-        // TERTIARY: Use template generation as final fallback
-        console.log('🔧 Using template generation as final fallback');
+        console.log('===============================================');
+        console.log('🔧 HIERARCHY LEVEL 3: LOCAL TEMPLATES (FINAL)');
+        console.log('===============================================');
+        console.log('⚠️ Both database and AI failed - using local generation');
+        
         const templateProblems = await generateTemplateProblems();
-        return { questions: templateProblems.slice(0, totalQuestions), source: 'template' as const };
+        console.log(`📊 Local template result: ${templateProblems.length}/${totalQuestions} questions`);
+        
+        if (templateProblems.length >= totalQuestions) {
+          console.log('✅ LOCAL SUCCESS: Full coverage from local templates');
+          return { questions: templateProblems.slice(0, totalQuestions), source: 'template' as const };
+        }
+        
+        // If we still don't have enough, we have a serious problem
+        console.error('❌ CRITICAL: All generation methods failed to provide sufficient questions');
+        console.error(`❌ Got ${templateProblems.length}/${totalQuestions} questions total`);
+        
+        // Return what we have, even if incomplete
+        return { questions: templateProblems, source: 'template' as const };
       })();
       
       const result = await Promise.race([generationPromise, timeoutPromise]);
       
-      console.log('📋 Generated questions:', result.questions.map(q => ({ id: q.id, question: q.question.substring(0, 50) })));
+      console.log('===============================================');
+      console.log('📋 GENERATION COMPLETE - FINAL RESULT');
+      console.log('===============================================');
+      console.log(`✅ Generated ${result.questions.length}/${totalQuestions} questions`);
+      console.log(`🎯 Source: ${result.source}`);
+      console.log('📝 Questions:', result.questions.map((q, i) => `${i + 1}. ${q.question.substring(0, 60)}...`));
+      
+      if (result.questions.length < totalQuestions) {
+        console.warn(`⚠️ INCOMPLETE: Only ${result.questions.length}/${totalQuestions} questions generated`);
+      }
+      
       setProblems(result.questions);
       setGenerationSource(result.source);
-      console.log('✅ Problems state updated successfully');
+      console.log('✅ State updated successfully');
       
     } catch (error) {
-      console.error('❌ Error in generateProblems:', error);
+      console.error('===============================================');
+      console.error('❌ CRITICAL ERROR IN GENERATION PIPELINE');
+      console.error('===============================================');
+      console.error('❌ Error details:', error);
       
-      // Emergency fallback with timeout protection
-      console.log('🚨 Emergency fallback to simple generation');
+      // EMERGENCY: Last resort simple fallback
+      console.log('🚨 EMERGENCY FALLBACK: Using simple math generation');
       try {
         const emergencyProblems = generateSimpleFallback();
         setProblems(emergencyProblems);
         setGenerationSource('simple');
-        console.log('✅ Emergency fallback completed');
+        console.log('✅ Emergency fallback completed successfully');
       } catch (emergencyError) {
-        console.error('❌ Emergency fallback failed:', emergencyError);
+        console.error('❌ EMERGENCY FALLBACK FAILED:', emergencyError);
         setProblems([]);
         setGenerationSource(null);
       }
@@ -685,7 +915,7 @@ export function useBalancedQuestionGeneration(
     } finally {
       generationRef.current.isActive = false;
       setIsGenerating(false);
-      console.log('🏁 Generation process completed, isGenerating set to false');
+      console.log('🏁 Generation process completed - state cleanup done');
     }
   }, [category, grade, userId, totalQuestions]); // Stable dependencies only
   
