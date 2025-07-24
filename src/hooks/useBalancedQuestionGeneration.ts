@@ -86,12 +86,13 @@ export function useBalancedQuestionGeneration(
       if (!usedQuestions.has(question)) {
         usedQuestions.add(question);
         generatedProblems.push({
-          id: Math.random(),
-          type: 'text-input',
+          id: Math.floor(Math.random() * 1000000),
+          type: 'math',
+          questionType: 'text-input',
           question,
           answer: (a + b).toString(),
           explanation: `${a} + ${b} = ${a + b}`
-        } as SelectionQuestion);
+        });
       }
     }
 
@@ -144,12 +145,13 @@ export function useBalancedQuestionGeneration(
     }
 
     return {
-      id: Math.random(),
-      type: 'text-input',
+      id: Math.floor(Math.random() * 1000000),
+      type: 'math',
+      questionType: 'text-input',
       question: `Was ist ${a} ${operation} ${b}?`,
       answer: answer.toString(),
       explanation: `${a} ${operation} ${b} = ${answer}`
-    } as SelectionQuestion;
+    };
   };
 
   const generateGermanProblem = (grade: number, usedQuestions: Set<string>, excludedQuestions: string[]): SelectionQuestion | null => {
@@ -201,8 +203,8 @@ export function useBalancedQuestionGeneration(
       };
       
       return {
-        id: `german_fallback_${Date.now()}_${Math.random()}`,
-        type: 'text-input',
+        id: Math.floor(Math.random() * 1000000),
+        type: 'german',
         questionType: 'text-input',
         question: `Wie heißt die Mehrzahl von "${randomWord}"?`,
         answer: pluralMap[randomWord] || randomWord + 'e',
@@ -212,8 +214,8 @@ export function useBalancedQuestionGeneration(
     
     const randomQuestion = availableQuestions[Math.floor(Math.random() * availableQuestions.length)];
     return {
-      id: `german_${Date.now()}_${Math.random()}`,
-      type: 'text-input',
+      id: Math.floor(Math.random() * 1000000),
+      type: 'german',
       questionType: 'text-input',
       question: randomQuestion.question,
       answer: randomQuestion.answer,
@@ -232,8 +234,8 @@ export function useBalancedQuestionGeneration(
       const answer = a + b;
       
       simpleProblems.push({
-        id: `simple_${Date.now()}_${i}`,
-        type: 'text-input',
+        id: Math.floor(Math.random() * 1000000),
+        type: 'math',
         questionType: 'text-input',
         question: `${a} + ${b} = ?`,
         answer: answer.toString(),

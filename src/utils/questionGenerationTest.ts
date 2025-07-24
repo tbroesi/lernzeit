@@ -72,14 +72,20 @@ export function testQuestionQuality(questions: SelectionQuestion[], grade: numbe
     }
     
     // Check answer presence
-    if (!question.answer && question.questionType === 'text-input') {
-      issues.push(`Question ${index + 1} missing answer`);
-      questionScore -= 0.5;
+    if (question.questionType === 'text-input') {
+      const textQuestion = question as any;
+      if (!textQuestion.answer) {
+        issues.push(`Question ${index + 1} missing answer`);
+        questionScore -= 0.5;
+      }
     }
     
-    if (question.questionType === 'multiple-choice' && (!question.options || question.options.length < 2)) {
-      issues.push(`Question ${index + 1} has insufficient options`);
-      questionScore -= 0.4;
+    if (question.questionType === 'multiple-choice') {
+      const mcQuestion = question as any;
+      if (!mcQuestion.options || mcQuestion.options.length < 2) {
+        issues.push(`Question ${index + 1} has insufficient options`);
+        questionScore -= 0.4;
+      }
     }
     
     // Check explanation presence

@@ -50,51 +50,73 @@ export function CategoryMathProblem({ category, grade, onComplete }: CategoryMat
     }
   }, [gameStarted, problems.length, generateProblems]);
 
-  // Analyze last session for AI-generated questions
+  // Enhanced session analysis and testing
   useEffect(() => {
-    const analyzeLastSession = async () => {
+    const analyzeAndTest = async () => {
       if (!user) return;
       
       try {
+        // Analyze last session
         const { data: sessions, error } = await supabase
           .from('game_sessions')
           .select('*')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
-          .limit(1);
+          .limit(2);
           
         if (error) {
-          console.error('Error fetching last session:', error);
+          console.error('Error fetching sessions:', error);
           return;
         }
         
         if (sessions && sessions.length > 0) {
-          const lastSession = sessions[0];
-          console.log('🔍 Last session analysis:', {
-            session_id: lastSession.id,
-            question_source: lastSession.question_source,
-            category: lastSession.category,
-            grade: lastSession.grade,
-            score: lastSession.score,
-            total_questions: lastSession.total_questions,
-            created_at: lastSession.created_at
-          });
+          console.log('🔍 Last 2 sessions analysis:', sessions.map(session => ({
+            session_id: session.id,
+            question_source: session.question_source,
+            category: session.category,
+            grade: session.grade,
+            score: session.score,
+            created_at: session.created_at
+          })));
           
-          if (lastSession.question_source === 'ai') {
-            console.log('✅ AI-generated questions were used in the last session');
-          } else {
-            console.log(`📝 Template/Simple questions were used (source: ${lastSession.question_source})`);
-          }
-        } else {
-          console.log('No previous sessions found');
+          const aiSessions = sessions.filter(s => s.question_source === 'ai');
+          const templateSessions = sessions.filter(s => s.question_source === 'template');
+          
+          console.log(`📊 Session Source Analysis: ${aiSessions.length} AI sessions, ${templateSessions.length} template sessions`);
         }
+
+        // Test current generation system if problems exist
+        if (problems.length > 0) {
+          const { testDuplicateProtection, logTestResults, runGenerationTests } = await import('@/utils/questionGenerationTest');
+          
+          // Run comprehensive tests
+          const testResults = await runGenerationTests(
+            problems, 
+            grade || 4, 
+            user.id, 
+            category, 
+            []
+          );
+          
+          console.log('🧪 Running automated generation tests...');
+          logTestResults(testResults);
+          
+          // Test for specific duplicate issues
+          const duplicateTest = testDuplicateProtection(problems);
+          if (duplicateTest.hasDuplicates) {
+            console.warn('⚠️ DUPLICATE DETECTION ALERT:', duplicateTest.duplicates);
+          } else {
+            console.log('✅ No duplicates detected in current question set');
+          }
+        }
+        
       } catch (error) {
-        console.error('Error analyzing last session:', error);
+        console.error('Error in analysis and testing:', error);
       }
     };
 
-    analyzeLastSession();
-  }, [user]);
+    analyzeAndTest();
+  }, [user, problems, category, grade]);
 
   const startGame = () => {
     setGameStarted(true);
