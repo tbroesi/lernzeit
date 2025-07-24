@@ -76,12 +76,14 @@ export class GermanMathParser {
   private static parseDirectEquation(content: string): MathParseResult {
     // Enhanced pattern to catch German decimal format and various operators
     const patterns = [
+      // Order of operations patterns: addition/subtraction with multiplication/division
+      /(\d+(?:[,\.]\d+)?)\s*([+\-])\s*(\d+(?:[,\.]\d+)?)\s*([×÷*/:×])\s*(\d+(?:[,\.]\d+)?)\s*=\s*\?/,
+      /(\d+(?:[,\.]\d+)?)\s*([×÷*/:×])\s*(\d+(?:[,\.]\d+)?)\s*([+\-])\s*(\d+(?:[,\.]\d+)?)\s*=\s*\?/,
+      // Simple operations
       /(\d+(?:[,\.]\d+)?)\s*([+\-×÷*/:×])\s*(\d+(?:[,\.]\d+)?)\s*=\s*\?/,
       /(\d+(?:[,\.]\d+)?)\s*([+\-×÷*/:×])\s*(\d+(?:[,\.]\d+)?)/,
       /(\d+)\s*×\s*(\d+)\s*=\s*\?/,
-      /(\d+)\s*÷\s*(\d+)\s*=\s*\?\s*Rest\s*\?/,
-      // Complex expressions with order of operations  
-      /(\d+)\s*×\s*(\d+)\s*([+\-])\s*(\d+)\s*=\s*\?/
+      /(\d+)\s*÷\s*(\d+)\s*=\s*\?\s*Rest\s*\?/
     ];
     
     for (const pattern of patterns) {
@@ -89,24 +91,52 @@ export class GermanMathParser {
       if (match) {
         console.log('🔍 Math parser match:', { pattern: pattern.source, match, content });
         
-        // Handle complex expressions like "12 × 2 + 5 = ?"
-        if (match[4]) {
+        // Handle complex expressions with order of operations like "17 + 8 × 3 = ?" or "18 + 7 × 4 = ?"
+        if (match[5]) {
           const num1 = this.parseGermanNumber(match[1]);
-          const num2 = this.parseGermanNumber(match[2]);
-          const operator2 = match[3];
-          const num3 = this.parseGermanNumber(match[4]);
+          const operator1 = match[2];
+          const num2 = this.parseGermanNumber(match[3]);
+          const operator2 = match[4];
+          const num3 = this.parseGermanNumber(match[5]);
           
           if (num1 !== null && num2 !== null && num3 !== null) {
-            // Apply order of operations: multiplication first, then addition/subtraction
-            const firstResult = num1 * num2;
-            const finalResult = operator2 === '+' ? firstResult + num3 : firstResult - num3;
+            let finalResult: number;
             
-            console.log('🔍 Complex calculation:', { num1, num2, num3, operator2, firstResult, finalResult });
+            // Apply order of operations based on operator precedence
+            if ((operator2 === '×' || operator2 === '*' || operator2 === '÷' || operator2 === '/' || operator2 === ':') &&
+                (operator1 === '+' || operator1 === '-')) {
+              // Multiplication/division has higher precedence: a + b × c = a + (b × c)
+              const secondResult = this.calculateOperation(num2, operator2, num3);
+              if (secondResult !== null) {
+                finalResult = this.calculateOperation(num1, operator1, secondResult) || 0;
+              } else {
+                return { success: false };
+              }
+            } else if ((operator1 === '×' || operator1 === '*' || operator1 === '÷' || operator1 === '/' || operator1 === ':') &&
+                       (operator2 === '+' || operator2 === '-')) {
+              // Multiplication/division has higher precedence: a × b + c = (a × b) + c
+              const firstResult = this.calculateOperation(num1, operator1, num2);
+              if (firstResult !== null) {
+                finalResult = this.calculateOperation(firstResult, operator2, num3) || 0;
+              } else {
+                return { success: false };
+              }
+            } else {
+              // Same precedence, left to right: (a op1 b) op2 c
+              const firstResult = this.calculateOperation(num1, operator1, num2);
+              if (firstResult !== null) {
+                finalResult = this.calculateOperation(firstResult, operator2, num3) || 0;
+              } else {
+                return { success: false };
+              }
+            }
+            
+            console.log('🔍 Complex calculation:', { num1, operator1, num2, operator2, num3, finalResult });
             
             return {
               success: true,
               answer: this.formatGermanNumber(finalResult),
-              expression: `${num1} × ${num2} ${operator2} ${num3}`
+              expression: `${num1} ${operator1} ${num2} ${operator2} ${num3}`
             };
           }
         }
@@ -238,17 +268,34 @@ export class GermanMathParser {
       }
     }
     
-    // Division word problems: "24 Äpfel sollen gleichmäßig auf 4 Kinder verteilt werden"
+    // Division word problems: "42 Äpfel sollen gleichmäßig auf 5 Kinder verteilt werden"
     const divisionMatch = content.match(/(\d+)\s*\w+.*?auf\s*(\d+)\s*\w+.*?verteilt/i);
     if (divisionMatch) {
       const total = parseInt(divisionMatch[1]);
       const groups = parseInt(divisionMatch[2]);
       if (total > 0 && groups > 0) {
-        const perGroup = Math.floor(total / groups);
+        const result = total / groups;
+        // For exact division, return integer; for non-exact, return decimal
+        const answer = Number.isInteger(result) ? result.toString() : this.formatGermanNumber(result);
         return {
           success: true,
-          answer: perGroup.toString(),
+          answer: answer,
           expression: `${total} ÷ ${groups}`
+        };
+      }
+    }
+    
+    // Multiplication word problems: "Anna kauft 6 Packungen Kekse. Jede Packung hat 8 Kekse"
+    const multiplicationMatch = content.match(/(\d+)\s*Packungen?.*?(\d+)\s*\w+.*?(?:insgesamt|hat\s+sie)/i);
+    if (multiplicationMatch) {
+      const packages = parseInt(multiplicationMatch[1]);
+      const perPackage = parseInt(multiplicationMatch[2]);
+      if (packages > 0 && perPackage > 0) {
+        const total = packages * perPackage;
+        return {
+          success: true,
+          answer: total.toString(),
+          expression: `${packages} × ${perPackage}`
         };
       }
     }

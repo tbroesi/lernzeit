@@ -577,17 +577,31 @@ export class EnhancedTemplateGenerator {
         String(correctAnswer).includes('/') || 
         template.id.includes('comparison') ||
         template.template?.includes('größer') ||
-        template.template?.includes('kleiner')
+        template.template?.includes('kleiner') ||
+        template.template?.includes('Bruch')
       )) {
-        // For math comparison/fraction questions, add math-appropriate options
-        const mathOptions = ['0,2', '0,5', '1,0', '1,5', '2,0', '0,25', '0,75'];
-        const filteredOptions = mathOptions.filter(opt => opt !== String(correctAnswer));
-        
-        // Add 3 random math options
-        for (let i = 0; i < 3 && filteredOptions.length > 0; i++) {
-          const randomIndex = Math.floor(Math.random() * filteredOptions.length);
-          options.push(filteredOptions[randomIndex]);
-          filteredOptions.splice(randomIndex, 1);
+        // For fraction comparison questions, provide actual fraction options
+        if (template.template?.includes('Bruch')) {
+          const fractionOptions = ['1/6', '1/4', '1/3', '1/2', '2/3', '3/4'];
+          const filteredOptions = fractionOptions.filter(opt => opt !== String(correctAnswer));
+          
+          // Add 3 random fraction options
+          for (let i = 0; i < 3 && filteredOptions.length > 0; i++) {
+            const randomIndex = Math.floor(Math.random() * filteredOptions.length);
+            options.push(filteredOptions[randomIndex]);
+            filteredOptions.splice(randomIndex, 1);
+          }
+        } else {
+          // For other math comparison questions, add math-appropriate options
+          const mathOptions = ['0,2', '0,5', '1,0', '1,5', '2,0', '0,25', '0,75'];
+          const filteredOptions = mathOptions.filter(opt => opt !== String(correctAnswer));
+          
+          // Add 3 random math options
+          for (let i = 0; i < 3 && filteredOptions.length > 0; i++) {
+            const randomIndex = Math.floor(Math.random() * filteredOptions.length);
+            options.push(filteredOptions[randomIndex]);
+            filteredOptions.splice(randomIndex, 1);
+          }
         }
       } else {
         // For non-math answers
