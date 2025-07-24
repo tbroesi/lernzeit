@@ -171,7 +171,9 @@ export function useBalancedQuestionGeneration(
     
     // Try to generate unique questions
     let attempts = 0;
-    const maxAttempts = totalQuestions * 3;
+    const maxAttempts = totalQuestions * 5; // Increased attempts
+    
+    console.log(`🎯 Generating ${totalQuestions} ${category} questions for grade ${grade}`);
     
     while (generatedProblems.length < totalQuestions && attempts < maxAttempts) {
       attempts++;
@@ -184,6 +186,7 @@ export function useBalancedQuestionGeneration(
               !excludedQuestions.includes(mathProblem.question)) {
             usedQuestions.add(mathProblem.question);
             generatedProblems.push(mathProblem);
+            console.log(`✅ Generated math problem ${generatedProblems.length}/${totalQuestions}: ${mathProblem.question}`);
           }
         } else if (category.toLowerCase() === 'deutsch' || category.toLowerCase() === 'german') {
           const germanProblem = generateGermanProblem(grade, usedQuestions, excludedQuestions);
@@ -191,6 +194,18 @@ export function useBalancedQuestionGeneration(
           if (germanProblem && !usedQuestions.has(germanProblem.question)) {
             usedQuestions.add(germanProblem.question);
             generatedProblems.push(germanProblem);
+            console.log(`✅ Generated German problem ${generatedProblems.length}/${totalQuestions}: ${germanProblem.question}`);
+          }
+        } else {
+          // Default to math for unknown categories
+          console.log(`⚠️ Unknown category ${category}, defaulting to math`);
+          const mathProblem = generateMathProblem(grade);
+          
+          if (!usedQuestions.has(mathProblem.question) && 
+              !excludedQuestions.includes(mathProblem.question)) {
+            usedQuestions.add(mathProblem.question);
+            generatedProblems.push(mathProblem);
+            console.log(`✅ Generated fallback math problem ${generatedProblems.length}/${totalQuestions}: ${mathProblem.question}`);
           }
         }
       } catch (error) {
@@ -198,11 +213,50 @@ export function useBalancedQuestionGeneration(
       }
     }
 
-    // If we still don't have enough questions, fill with simple math
-    while (generatedProblems.length < totalQuestions) {
-      const a = Math.floor(Math.random() * 10) + 1;
-      const b = Math.floor(Math.random() * 10) + 1;
-      const question = `Was ist ${a} + ${b}?`;
+    // If we still don't have enough questions, fill with guaranteed unique simple math
+    let fallbackAttempts = 0;
+    while (generatedProblems.length < totalQuestions && fallbackAttempts < 50) {
+      fallbackAttempts++;
+      
+      // Generate more varied fallback questions based on grade
+      let question: string, answer: string, explanation: string;
+      
+      if (grade <= 2) {
+        let a = Math.floor(Math.random() * 15) + 1;
+        let b = Math.floor(Math.random() * 10) + 1;
+        const operation = Math.random() > 0.5 ? '+' : '-';
+        
+        if (operation === '-' && a < b) {
+          [a, b] = [b, a]; // Ensure positive results
+        }
+        
+        const result = operation === '+' ? a + b : a - b;
+        question = `Was ist ${a} ${operation} ${b}?`;
+        answer = result.toString();
+        explanation = `${a} ${operation} ${b} = ${result}`;
+      } else {
+        const a = Math.floor(Math.random() * 50) + 10;
+        const b = Math.floor(Math.random() * 20) + 5;
+        const operations = ['+', '-', '×'];
+        const operation = operations[Math.floor(Math.random() * operations.length)];
+        
+        let result: number;
+        if (operation === '×') {
+          result = a * b;
+        } else if (operation === '-') {
+          result = Math.max(a, b) - Math.min(a, b);
+          question = `Was ist ${Math.max(a, b)} ${operation} ${Math.min(a, b)}?`;
+        } else {
+          result = a + b;
+        }
+        
+        if (operation !== '-') {
+          question = `Was ist ${a} ${operation} ${b}?`;
+        }
+        
+        answer = result.toString();
+        explanation = `${operation === '-' ? Math.max(a, b) : a} ${operation} ${operation === '-' ? Math.min(a, b) : b} = ${result}`;
+      }
       
       if (!usedQuestions.has(question)) {
         usedQuestions.add(question);
@@ -211,12 +265,14 @@ export function useBalancedQuestionGeneration(
           type: 'math',
           questionType: 'text-input',
           question,
-          answer: (a + b).toString(),
-          explanation: `${a} + ${b} = ${a + b}`
+          answer,
+          explanation
         });
+        console.log(`🔄 Generated fallback problem ${generatedProblems.length}/${totalQuestions}: ${question}`);
       }
     }
 
+    console.log(`📊 Template generation complete: ${generatedProblems.length}/${totalQuestions} questions generated in ${attempts} attempts`);
     return generatedProblems;
   };
 
