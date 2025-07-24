@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useBalancedQuestionGeneration } from '@/hooks/useBalancedQuestionGeneration';
@@ -40,7 +41,8 @@ export function CategoryMathProblem({ category, grade, onComplete }: CategoryMat
   const [currentPlacements, setCurrentPlacements] = useState<Record<string, string>>({});
   const [sessionStartTime] = useState(Date.now());
 
-  const currentQuestion = problems[currentQuestionIndex];
+  // Add proper type guard for currentQuestion
+  const currentQuestion: SelectionQuestion | undefined = problems[currentQuestionIndex];
 
   useEffect(() => {
     if (gameStarted && problems.length === 0) {
@@ -310,7 +312,7 @@ export function CategoryMathProblem({ category, grade, onComplete }: CategoryMat
 
         <GameFeedback 
           feedback={feedback} 
-          explanation={currentQuestion?.explanation} 
+          explanation={currentQuestion.explanation} 
         />
 
         {!feedback && (
@@ -318,9 +320,9 @@ export function CategoryMathProblem({ category, grade, onComplete }: CategoryMat
             <Button 
               onClick={submitAnswer}
               disabled={
-                (currentQuestion?.questionType === 'text-input' && !userAnswer.trim()) ||
-                (currentQuestion?.questionType === 'multiple-choice' && selectedMultipleChoice === null) ||
-                (currentQuestion?.questionType === 'word-selection' && selectedWords.length === 0)
+                (currentQuestion.questionType === 'text-input' && !userAnswer.trim()) ||
+                (currentQuestion.questionType === 'multiple-choice' && selectedMultipleChoice === null) ||
+                (currentQuestion.questionType === 'word-selection' && selectedWords.length === 0)
               }
               size="lg"
               className="w-full"
