@@ -403,51 +403,55 @@ export function useBalancedQuestionGeneration(
         setGenerationSource('template');
         return;
       } else if (databaseTemplates.length > 0) {
-        console.log(`⚠️ Only ${databaseTemplates.length} templates available, need ${totalQuestions - databaseTemplates.length} more`);
-        // Try to get remaining from fallback generation
+        console.log(`⚠️ Only ${databaseTemplates.length} templates available, filling with template generation`);
+        // Try to get remaining from template generation
         const remainingCount = totalQuestions - databaseTemplates.length;
-        const fallbackProblems = await generateFallbackTemplates();
-        const mixedProblems = [...databaseTemplates, ...fallbackProblems.slice(0, remainingCount)];
+        const templateProblems = await generateTemplateProblems();
+        const mixedProblems = [...databaseTemplates, ...templateProblems.slice(0, remainingCount)];
         setProblems(mixedProblems);
         setGenerationSource('template');
         return;
       }
       
-      // Fallback to AI template generation if no templates in database
-      console.log('🆘 No templates in database, trying to generate new ones');
+      // SECONDARY: Try AI template generation if no templates in database
+      console.log('🆘 No templates in database, trying AI generation');
       const fallbackProblems = await generateFallbackTemplates();
       
       if (fallbackProblems.length >= totalQuestions) {
-        console.log('✅ Using fallback generated problems');
+        console.log('✅ Using AI generated problems');
         setProblems(fallbackProblems.slice(0, totalQuestions));
+        setGenerationSource('ai');
+        return;
+      } else if (fallbackProblems.length > 0) {
+        console.log(`⚠️ Only ${fallbackProblems.length} AI problems, filling with template generation`);
+        // Mix AI and template problems
+        const remainingCount = totalQuestions - fallbackProblems.length;
+        const templateProblems = await generateTemplateProblems();
+        const mixedProblems = [...fallbackProblems, ...templateProblems.slice(0, remainingCount)];
+        setProblems(mixedProblems);
         setGenerationSource('ai');
         return;
       }
       
-      // Fall back to improved local templates
-      console.log('🎨 AI insufficient, using improved template problems');
-      const localTemplates = await generateTemplateProblems();
-      setProblems(localTemplates);
+      // TERTIARY: Use template generation as final fallback
+      console.log('🔧 Using template generation as final fallback');
+      const templateProblems = await generateTemplateProblems();
+      setProblems(templateProblems.slice(0, totalQuestions));
       setGenerationSource('template');
       
     } catch (error) {
-      console.error('❌ Generation failed, using simple fallback:', error);
-      const simpleProblems = generateSimpleFallback();
-      setProblems(simpleProblems);
+      console.error('❌ Error in generateProblems:', error);
+      
+      // Emergency fallback
+      console.log('🚨 Emergency fallback to template generation');
+      const emergencyProblems = await generateTemplateProblems();
+      setProblems(emergencyProblems.slice(0, totalQuestions));
       setGenerationSource('simple');
+      
     } finally {
       setIsGenerating(false);
-      
-      const excludedQuestions = await getExcludedQuestions(category, grade, userId);
-      console.log('📊 Question generation complete:', {
-        totalGenerated: problems.length,
-        source: generationSource,
-        sessionId,
-        excluded: excludedQuestions?.length || 0
-      });
     }
-  }, [isGenerating, totalQuestions, generateSimpleFallback]);
-
+  }, [grade, category, userId, totalQuestions, loadTemplatesFromDatabase, generateFallbackTemplates, generateTemplateProblems]);
   return {
     problems,
     isGenerating,
