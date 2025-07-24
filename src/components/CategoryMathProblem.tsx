@@ -8,8 +8,7 @@ import { useChildSettings } from '@/hooks/useChildSettings';
 import { useScreenTimeLimit } from '@/hooks/useScreenTimeLimit';
 import { useAchievements, NewAchievement } from '@/hooks/useAchievements';
 import { AchievementPopup } from '@/components/AchievementPopup';
-import { useTemplateQuestionGeneration } from '@/hooks/useTemplateQuestionGeneration';
-import { DebugInfo } from '@/components/game/DebugInfo';
+import { useSimpleQuestionGeneration } from '@/hooks/useSimpleQuestionGeneration';
 import { GameProgress } from '@/components/game/GameProgress';
 import { QuestionRenderer } from '@/components/game/QuestionRenderer';
 import { GameFeedback } from '@/components/game/GameFeedback';
@@ -43,14 +42,13 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
   const totalQuestions = 5;
   const { 
     problems, 
-    usedCombinations, 
-    sessionId, 
     isGenerating,
     generationSource,
+    sessionId,
     generateProblems 
-  } = useTemplateQuestionGeneration(category, grade, userId, totalQuestions);
+  } = useSimpleQuestionGeneration(category, grade, userId, totalQuestions);
 
-  // Memoize timer effect to prevent re-creation
+  // Timer effect
   useEffect(() => {
     if (!gameStarted) return;
     
@@ -61,24 +59,18 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
     return () => clearInterval(timer);
   }, [gameStarted]);
 
-  // FIXED: Better initialization to prevent loops
-  const initializeGame = useCallback(async () => {
-    if (problems.length === 0 && !isGenerating) {
-      console.log('🎮 Initializing game with template system...');
-      await generateProblems();
-      setGameStarted(true);
+  // Initialize game
+  useEffect(() => {
+    if (problems.length === 0 && !isGenerating && !gameStarted) {
+      console.log('🎮 Initializing simple game...');
+      generateProblems();
     } else if (problems.length > 0 && !gameStarted) {
-      console.log('🎮 Problems ready, starting game...');
+      console.log('🎮 Starting game with problems...');
       setGameStarted(true);
     }
   }, [problems.length, isGenerating, gameStarted, generateProblems]);
 
-  useEffect(() => {
-    initializeGame();
-  }, [initializeGame]);
-
   const resetAnswerState = useCallback(() => {
-    console.log('🔄 Resetting answer state');
     setUserAnswer('');
     setSelectedMultipleChoice(null);
     setSelectedWords([]);
@@ -86,34 +78,26 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
   }, []);
 
   const handleWordToggle = useCallback((wordIndex: number) => {
-    console.log('🔤 Word toggle:', wordIndex, 'Current selection:', selectedWords);
     setSelectedWords(prev => 
       prev.includes(wordIndex) 
         ? prev.filter(i => i !== wordIndex)
         : [...prev, wordIndex]
     );
-  }, [selectedWords]);
+  }, []);
 
   const handleMatchingComplete = useCallback((isCorrect: boolean) => {
-    console.log('🎯 Matching game completed:', isCorrect);
     setFeedback(isCorrect ? 'correct' : 'incorrect');
     setIsQuestionComplete(true);
-
     if (isCorrect) {
       setCorrectAnswers(prev => prev + 1);
     }
   }, []);
 
   const handleNextQuestion = useCallback(() => {
-    console.log('➡️ Moving to next question from:', currentProblem);
-    
     if (currentProblem + 1 >= totalQuestions) {
-      console.log('🏁 Game completing - all questions answered');
       completeGame();
     } else {
-      const nextProblem = currentProblem + 1;
-      console.log('➡️ Setting next problem to:', nextProblem);
-      setCurrentProblem(nextProblem);
+      setCurrentProblem(prev => prev + 1);
       resetAnswerState();
       setFeedback(null);
     }
@@ -124,8 +108,6 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
 
     const problem = problems[currentProblem];
     let isCorrect = false;
-
-    console.log('🔍 Checking answer for question type:', problem.questionType);
 
     switch (problem.questionType) {
       case 'multiple-choice':
@@ -144,10 +126,6 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
                    sortedSelected.every((index, i) => index === sortedCorrect[i]);
         break;
         
-      case 'matching':
-        console.log('⚠️ Matching questions should not reach checkAnswer - handled by component');
-        return;
-        
       case 'text-input':
       default:
         if (problem.questionType === 'text-input') {
@@ -159,8 +137,6 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
         }
         break;
     }
-
-    console.log('Final answer result:', isCorrect);
 
     setFeedback(isCorrect ? 'correct' : 'incorrect');
     setIsQuestionComplete(true);
@@ -201,7 +177,6 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
     if (canEarnMoreTime) {
       const theoreticalTimeEarned = correctAnswers * secondsPerTask;
       timeEarned = Math.max(0, theoreticalTimeEarned - timeElapsed);
-      console.log(`🎯 Time calculation: ${correctAnswers} correct × ${secondsPerTask}s = ${theoreticalTimeEarned}s theoretical, spent ${timeElapsed}s, final bonus: ${timeEarned}s`);
     }
 
     try {
@@ -307,7 +282,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
       case 'word-selection':
         return selectedWords.length > 0;
       case 'matching':
-        return false; // Matching questions handle their own completion
+        return false;
       case 'text-input':
       default:
         return userAnswer.trim() !== '';
@@ -322,14 +297,9 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
         <Card className="w-full max-w-md">
           <CardContent className="p-8 text-center">
             <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
-            <p>Aufgaben werden generiert...</p>
-            {generationSource && (
-              <p className="text-sm text-muted-foreground mt-2">
-                System: {generationSource === 'template' ? 'Template-System (Verbessert)' : generationSource === 'ai' ? 'KI-Unterstützung' : 'Backup-System'}
-              </p>
-            )}
-            <p className="text-xs text-muted-foreground mt-1">
-              Sitzung: {sessionId.substring(0, 8)}...
+            <p>Aufgaben werden erstellt...</p>
+            <p className="text-sm text-muted-foreground mt-2">
+              System: {generationSource === 'ai' ? 'KI-Generierung' : 'Vereinfachte Generierung'}
             </p>
           </CardContent>
         </Card>
@@ -367,18 +337,6 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack, userI
               </div>
             </CardHeader>
           </Card>
-
-          <DebugInfo
-            currentProblem={currentProblem}
-            totalQuestions={totalQuestions}
-            globalQuestionsCount={usedCombinations.size}
-            sessionId={sessionId}
-            category={category}
-            grade={grade}
-            problemsLength={problems.length}
-            currentQuestionType={currentQuestionData?.questionType}
-            generationSource={generationSource || undefined}
-          />
 
           <Card className="shadow-card">
             <CardHeader>
