@@ -17,9 +17,8 @@ WICHTIGE DIVERSITÄTS-REGELN:
 - Variiere Fragestrukturen und Formulierungen  
 - Nutze unterschiedliche Unterthemen
 - Erstelle verschiedene Schwierigkeitsgrade
-- ZWINGEND: Mindestens 50% Multiple-Choice Fragen für Mathematik
-- FOKUS GEOMETRIE: Bei Mathe immer auch Geometrie-Aufgaben (Formen, Fläche, Umfang)
-- Bevorzuge interaktive Fragetypen (multiple-choice, word-selection, matching)
+- Nutze alle verfügbaren Fragetypen (text-input, multiple-choice, word-selection, matching)
+- Wähle den Typ, der am besten zum Lernziel passt
 
 ANTWORTFORMAT: Verwende JSON mit strukturiertem Format für bessere Verarbeitung.`;
   }

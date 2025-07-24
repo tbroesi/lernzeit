@@ -204,20 +204,13 @@ export function generateCurriculumPrompt(category: string, grade: number): strin
   const skillsText = objectives.skills.join(', ');
   const examplesText = objectives.examples.join(' | ');
   
-  // Ensure variety of question types, especially for mathematics
-  const questionTypeRequirement = category.toLowerCase() === 'mathematik' ? 
-    `
-WICHTIG - FRAGETYPEN-VIELFALT:
-- Mindestens 40% Multiple-Choice Fragen für bessere Interaktivität
-- Text-Input Fragen für offene Antworten
-- Bei Geometrie: Immer Flächenberechnung, Umfang, Formen erkennen
-- Verschiedene Kontexte: Sachaufgaben, reine Rechnung, Textverständnis
-
-GEOMETRIE-FOKUS für Klasse ${grade}:
-- Klasse 1-2: Formen erkennen (Dreieck, Quadrat, Rechteck, Kreis)
-- Klasse 3-4: Umfang und Flächenberechnung, Würfel und Quader
-- Klasse 5+: Erweiterte geometrische Berechnungen
-` : '';
+  // Balanced approach - mention variety without forcing specific percentages
+  const questionTypeGuidance = `
+AUFGABENVIELFALT:
+- Nutze alle verfügbaren Fragetypen: text-input, multiple-choice, word-selection, matching
+- Wähle den Typ, der am besten zum jeweiligen Lernziel passt
+- Berücksichtige verschiedene Lernstile und Interaktionsformen
+`;
 
   return `Erstelle Aufgaben für ${category}, Klasse ${grade} basierend auf dem offiziellen Lehrplan:
 
@@ -225,7 +218,7 @@ THEMEN: ${topicsText}
 FÄHIGKEITEN: ${skillsText}
 BEISPIELE: ${examplesText}
 SCHWIERIGKEIT: ${objectives.complexity}
-${questionTypeRequirement}
+${questionTypeGuidance}
 
 Die Aufgaben müssen strikt dem Curriculum entsprechen und dem Entwicklungsstand von Klasse ${grade} angemessen sein.`;
 }
