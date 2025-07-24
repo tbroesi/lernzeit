@@ -31,6 +31,7 @@ interface ChildSettingsMenuProps {
   profile: any;
   onSignOut: () => void;
   onBack: () => void;
+  initialSection?: string; // Add optional initial section parameter
 }
 
 interface ParentInfo {
@@ -41,8 +42,8 @@ interface ParentInfo {
   displayName?: string;
 }
 
-export function ChildSettingsMenu({ user, profile, onSignOut, onBack }: ChildSettingsMenuProps) {
-  const [activeSection, setActiveSection] = useState<string | null>(null);
+export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSection }: ChildSettingsMenuProps) {
+  const [activeSection, setActiveSection] = useState<string | null>(initialSection || null);
   const [parentInfo, setParentInfo] = useState<ParentInfo | null>(null);
   const [loadingParentInfo, setLoadingParentInfo] = useState(true);
   const [checkingRelationship, setCheckingRelationship] = useState(false);

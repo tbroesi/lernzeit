@@ -14,6 +14,7 @@ import { ChildLinking } from '@/components/ChildLinking';
 import { ChildSettingsMenu } from '@/components/ChildSettingsMenu';
 import { ParentSettingsMenu } from '@/components/ParentSettingsMenu';
 import { AchievementDisplay } from '@/components/AchievementDisplay';
+import { AchievementQuickView } from '@/components/AchievementQuickView';
 import { ProfileEdit } from '@/components/ProfileEdit';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useChildSettings } from '@/hooks/useChildSettings';
@@ -29,6 +30,7 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
+  const [settingsInitialSection, setSettingsInitialSection] = useState<string | undefined>();
   const [showProfileEdit, setShowProfileEdit] = useState(false);
   const [totalTimeEarned, setTotalTimeEarned] = useState(0);
   const [gamesPlayed, setGamesPlayed] = useState(0);
@@ -228,7 +230,11 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
         user={user} 
         profile={profile} 
         onSignOut={onSignOut} 
-        onBack={() => setShowSettingsMenu(false)} 
+        onBack={() => {
+          setShowSettingsMenu(false);
+          setSettingsInitialSection(undefined);
+        }}
+        initialSection={settingsInitialSection}
       />
     );
   }
@@ -382,18 +388,16 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
             </Card>
           </div>
 
-          {/* Achievements Display - Compact for dashboard */}
-          <AchievementDisplay userId={user.id} variant="compact" />
 
           {/* Quick Actions */}
           <div className="grid grid-cols-2 gap-4">
-            <Card className="shadow-card bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
-              <CardContent className="p-4 text-center">
-                <Star className="w-8 h-8 text-purple-600 mx-auto mb-2" />
-                <div className="text-sm font-medium text-purple-700">Level 1</div>
-                <div className="text-xs text-purple-600">Lern-Einsteiger</div>
-              </CardContent>
-            </Card>
+            <AchievementQuickView 
+              userId={user.id} 
+              onClick={() => {
+                setSettingsInitialSection('achievements');
+                setShowSettingsMenu(true);
+              }} 
+            />
             <Card className="shadow-card bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-200">
               <CardContent className="p-4 text-center">
                 <Zap className="w-8 h-8 text-blue-600 mx-auto mb-2" />
