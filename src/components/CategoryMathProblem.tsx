@@ -48,6 +48,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
   const [selectedWords, setSelectedWords] = useState<number[]>([]);
   const [currentPlacements, setCurrentPlacements] = useState<Record<string, string>>({});
   const [sessionStartTime] = useState(Date.now());
+  const [sessionEndTime, setSessionEndTime] = useState<number | null>(null);
   const [questionStartTime, setQuestionStartTime] = useState(Date.now());
   const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
   const [newAchievements, setNewAchievements] = useState<any[]>([]);
@@ -275,12 +276,14 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
       setFeedback(null);
       resetAnswers();
     } else {
+      // Capture the end time once when the game completes
+      setSessionEndTime(Date.now());
       setGameCompleted(true);
     }
   };
 
   const completeGame = async () => {
-    const sessionDuration = Date.now() - sessionStartTime;
+    const finalSessionDuration = Date.now() - sessionStartTime; // Festhalten der Zeit zum Spielende
     
     // Calculate earned time based on child settings
     let earnedSeconds = 0;
@@ -331,7 +334,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
     const timeDisplayData = {
       correctAnswers: score,
       totalQuestions: problems.length,
-      timeSpentSeconds: sessionDuration / 1000,
+      timeSpentSeconds: finalSessionDuration / 1000,
       timePerTask,
       achievementBonusMinutes,
       perfectSessionBonus: perfectSessionBonus / 60 // Convert to minutes for display
@@ -360,20 +363,20 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
                   try {
                     await supabase.from('learning_sessions').insert({
                       user_id: user.id,
-                      category: category.toLowerCase(),
-                      grade,
-                      correct_answers: score,
-                      total_questions: problems.length,
-                      time_spent: sessionDuration / 1000,
-                      time_earned: Math.floor(earnedSeconds / 60), // Store as minutes in database
-                      session_date: new Date().toISOString()
+          category: category.toLowerCase(),
+          grade,
+          correct_answers: score,
+          total_questions: problems.length,
+          time_spent: finalSessionDuration / 1000,
+          time_earned: Math.floor(earnedSeconds / 60), // Store as minutes in database
+          session_date: new Date().toISOString()
                     });
                   } catch (error) {
                     console.error('Error saving session:', error);
                   }
                 }
                 
-                onComplete(Math.floor(earnedSeconds / 60), category);
+    onComplete(Math.floor(earnedSeconds / 60), category);
               }}
               size="lg" 
               className="w-full"
@@ -395,7 +398,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
           grade,
           correct_answers: score,
           total_questions: problems.length,
-          time_spent: sessionDuration / 1000,
+          time_spent: finalSessionDuration / 1000,
           time_earned: Math.floor(earnedSeconds / 60), // Store as minutes in database
           session_date: new Date().toISOString()
         });
@@ -553,8 +556,9 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
     );
   }
 
-  if (gameCompleted) {
-    const sessionDuration = Date.now() - sessionStartTime;
+  if (gameCompleted && sessionEndTime) {
+    // Use the fixed duration that was captured when the game ended
+    const finalSessionDuration = sessionEndTime - sessionStartTime;
     let earnedSeconds = 0;
     let timePerTask = 30;
     
@@ -581,7 +585,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
       <GameCompletionScreen
         score={score}
         totalQuestions={problems.length}
-        sessionDuration={sessionDuration}
+        sessionDuration={finalSessionDuration} // Use fixed duration from capture time
         timePerTask={timePerTask}
         achievementBonusMinutes={achievementBonusMinutes}
         perfectSessionBonus={perfectSessionBonus}
@@ -595,7 +599,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
                 grade,
                 correct_answers: score,
                 total_questions: problems.length,
-                time_spent: sessionDuration / 1000,
+                time_spent: finalSessionDuration / 1000, // Use fixed duration
                 time_earned: Math.floor(earnedSeconds / 60),
                 session_date: new Date().toISOString()
               });
