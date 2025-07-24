@@ -41,15 +41,16 @@ export function useBalancedQuestionGeneration(
   // Load templates from database - PRIMARY METHOD
   const loadTemplatesFromDatabase = async (): Promise<SelectionQuestion[]> => {
     console.log('📂 Loading templates from database');
+    console.log(`🔍 Looking for: category="${category}", grade=${grade}`);
     
     try {
       const excludedQuestions = await getExcludedQuestions(category, grade, userId);
       
-      // Get templates from database
+      // Get templates from database - try both category name variations
       const { data: templates, error } = await supabase
         .from('generated_templates')
         .select('*')
-        .eq('category', category)
+        .in('category', [category, category.toLowerCase(), 'Mathematik', 'Deutsch']) // Try multiple variations
         .eq('grade', grade)
         .eq('is_active', true)
         .order('usage_count', { ascending: true }) // Prefer less used templates
@@ -60,48 +61,91 @@ export function useBalancedQuestionGeneration(
         return [];
       }
 
+      console.log(`📊 Raw database query result: ${templates?.length || 0} templates found`);
+      if (templates) {
+        console.log('📋 Template categories found:', templates.map(t => t.category));
+      }
+
       if (!templates || templates.length === 0) {
-        console.warn('📭 No templates found in database');
+        console.warn(`📭 No templates found in database for category="${category}", grade=${grade}`);
         return [];
       }
 
-      console.log(`📊 Loaded ${templates.length} templates from database`);
+      // Filter templates by category match (case insensitive)
+      const categoryLower = category.toLowerCase();
+      const matchingTemplates = templates.filter(template => {
+        const templateCategory = template.category?.toLowerCase();
+        return templateCategory === categoryLower || 
+               (categoryLower === 'mathematik' && templateCategory === 'math') ||
+               (categoryLower === 'deutsch' && templateCategory === 'german');
+      });
+
+      console.log(`🎯 Filtered templates: ${matchingTemplates.length} matching templates for category "${category}"`);
 
       // Convert templates to SelectionQuestion format and filter excluded
       const questions: SelectionQuestion[] = [];
       
-      for (const template of templates) {
+      for (const template of matchingTemplates) {
         if (questions.length >= totalQuestions) break;
         
         try {
+          console.log(`🔧 Processing template:`, {
+            id: template.id,
+            category: template.category,
+            question_type: template.question_type,
+            contentPreview: template.content?.substring(0, 100) + '...'
+          });
+
           const parsedContent = JSON.parse(template.content);
+          console.log(`📄 Parsed content:`, parsedContent);
           
           // Skip if excluded
           if (excludedQuestions.includes(parsedContent.question)) {
+            console.log(`⏭️ Skipping excluded question: ${parsedContent.question}`);
             continue;
           }
           
           // Convert to SelectionQuestion format
+          const questionType = template.question_type || 'text-input';
+          const questionAnswer = parsedContent.answer || parsedContent.correctAnswer || '';
+          
           const question: SelectionQuestion = {
-            id: Math.floor(Math.random() * 1000000), // Use random number instead of UUID string
+            id: Math.floor(Math.random() * 1000000),
             question: parsedContent.question,
             options: parsedContent.options || [],
-            correctAnswer: parsedContent.correctAnswer || 0,
+            correctAnswer: typeof parsedContent.correctAnswer === 'number' ? parsedContent.correctAnswer : 0,
             explanation: parsedContent.explanation || `Erklärung für: ${parsedContent.question}`,
-            questionType: template.question_type as any,
-            type: category.toLowerCase() as any || 'math'  // Use category as type
+            questionType: questionType as any,
+            type: categoryLower === 'mathematik' ? 'math' : categoryLower === 'deutsch' ? 'german' : 'math'
           };
+
+          // Add answer property for text-input questions
+          if (questionType === 'text-input') {
+            (question as any).answer = questionAnswer;
+          }
+          
+          console.log(`✅ Converted template to question:`, {
+            id: question.id,
+            question: question.question,
+            questionType: question.questionType,
+            hasAnswer: questionType === 'text-input' ? !!questionAnswer : 'N/A'
+          });
           
           questions.push(question);
           
-          // Update usage count
-          await supabase
-            .from('generated_templates')
-            .update({ usage_count: template.usage_count + 1 })
-            .eq('id', template.id);
+          // Update usage count (don't await to avoid blocking)
+          try {
+            await supabase
+              .from('generated_templates')
+              .update({ usage_count: (template.usage_count || 0) + 1 })
+              .eq('id', template.id);
+            console.log(`📈 Updated usage count for template ${template.id}`);
+          } catch (err) {
+            console.warn(`⚠️ Failed to update usage count:`, err);
+          }
             
         } catch (parseError) {
-          console.error('❌ Error parsing template content:', parseError);
+          console.error('❌ Error parsing template content:', parseError, 'Template:', template);
           continue;
         }
       }
