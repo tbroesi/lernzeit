@@ -105,30 +105,42 @@ export function useBalancedQuestionGeneration(
     switch (grade) {
       case 1:
       case 2:
-        a = Math.floor(Math.random() * 10) + 1;
-        b = Math.floor(Math.random() * 10) + 1;
+        if (grade <= 2) {
+          a = Math.floor(Math.random() * 20) + 1;
+          b = Math.floor(Math.random() * 20) + 1;
+        } else if (grade <= 4) {
+          a = Math.floor(Math.random() * 100) + 10;
+          b = Math.floor(Math.random() * 100) + 10;
+        } else {
+          a = Math.floor(Math.random() * 500) + 50;
+          b = Math.floor(Math.random() * 500) + 50;
+        }
+        
         operation = Math.random() > 0.5 ? '+' : '-';
         if (operation === '-' && a < b) [a, b] = [b, a];
         answer = operation === '+' ? a + b : a - b;
         break;
       case 3:
       case 4:
-        if (Math.random() > 0.5) {
-          a = Math.floor(Math.random() * 50) + 1;
-          b = Math.floor(Math.random() * 50) + 1;
+        if (Math.random() > 0.4) {
+          // Complex addition/subtraction for grade 3-4
+          a = Math.floor(Math.random() * 200) + 25;
+          b = Math.floor(Math.random() * 200) + 25;
           operation = Math.random() > 0.5 ? '+' : '-';
           if (operation === '-' && a < b) [a, b] = [b, a];
           answer = operation === '+' ? a + b : a - b;
         } else {
-          a = Math.floor(Math.random() * 10) + 1;
-          b = Math.floor(Math.random() * 10) + 1;
+          // Multiplication with larger numbers
+          a = Math.floor(Math.random() * 25) + 5;
+          b = Math.floor(Math.random() * 15) + 2;
           operation = '×';
           answer = a * b;
         }
         break;
       default:
-        a = Math.floor(Math.random() * 100) + 1;
-        b = Math.floor(Math.random() * 100) + 1;
+        // Advanced math for higher grades
+        a = Math.floor(Math.random() * 1000) + 100;
+        b = Math.floor(Math.random() * 500) + 50;
         const ops = ['+', '-', '×', '÷'];
         operation = ops[Math.floor(Math.random() * ops.length)];
         
@@ -271,6 +283,12 @@ export function useBalancedQuestionGeneration(
       
       const response = await Promise.race([aiPromise, timeoutPromise]);
       
+      console.log('🔍 AI Response received:', {
+        error: response.error,
+        data: response.data,
+        hasProblems: response.data?.problems?.length
+      });
+      
       if (response.error) {
         console.warn('AI generation failed:', response.error);
         return [];
@@ -278,6 +296,11 @@ export function useBalancedQuestionGeneration(
       
       const problems = response.data?.problems || [];
       console.log(`🎯 AI generated ${problems.length} problems`);
+      
+      if (problems.length === 0) {
+        console.warn('🚫 AI returned no problems, falling back to templates');
+        return [];
+      }
       
       return problems.map((problem: SelectionQuestion) => ({
         ...problem,
@@ -294,15 +317,28 @@ export function useBalancedQuestionGeneration(
     
     setIsGenerating(true);
     console.log('🎯 Starting balanced question generation');
+    console.log(`📊 Target: ${totalQuestions} questions for ${category}, Grade ${grade}, User: ${userId}`);
     
     try {
-      // Try AI first
+      // Try AI first with detailed logging
+      console.log('🤖 Attempting AI generation...');
       const aiProblems = await generateAIProblems();
       
+      console.log(`🔍 AI Generation Result: ${aiProblems.length}/${totalQuestions} questions`);
+      
       if (aiProblems.length >= totalQuestions) {
-        console.log('✅ Using AI problems');
+        console.log('✅ Using AI problems - sufficient quantity');
         setProblems(aiProblems.slice(0, totalQuestions));
         setGenerationSource('ai');
+        return;
+      } else if (aiProblems.length > 0) {
+        console.log(`⚠️ AI generated only ${aiProblems.length} questions, need ${totalQuestions - aiProblems.length} more from templates`);
+        // Mix AI and template questions
+        const remainingCount = totalQuestions - aiProblems.length;
+        const templateProblems = await generateTemplateProblems();
+        const mixedProblems = [...aiProblems, ...templateProblems.slice(0, remainingCount)];
+        setProblems(mixedProblems);
+        setGenerationSource('template'); // Mark as template since it's mixed
         return;
       }
       
