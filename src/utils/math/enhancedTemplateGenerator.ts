@@ -518,36 +518,103 @@ export class EnhancedTemplateGenerator {
     correctAnswer: string | number,
     template: QuestionTemplate
   ): { options: string[]; correctIndex: number } {
+    console.log('🎯 Generating multiple choice options for:', { correctAnswer, isNumeric: typeof correctAnswer });
+    
     const options: string[] = [String(correctAnswer)];
     const isNumeric = typeof correctAnswer === 'number' || !isNaN(Number(correctAnswer));
     
     if (isNumeric) {
       const num = Number(correctAnswer);
-      // Generate plausible wrong answers
-      const variations = [
-        num + 1, num - 1, num + 2, num - 2,
-        Math.floor(num * 1.5), Math.floor(num * 0.8),
-        num + 10, num - 5
-      ].filter(n => n !== num && n > 0);
+      // Generate plausible wrong answers based on the number range
+      let variations: number[] = [];
       
-      // Add 3 random variations
-      for (let i = 0; i < 3 && variations.length > 0; i++) {
+      // For decimal numbers
+      if (num % 1 !== 0) {
+        variations = [
+          Math.round((num + 0.1) * 10) / 10,
+          Math.round((num - 0.1) * 10) / 10,
+          Math.round((num + 0.5) * 10) / 10,
+          Math.round((num - 0.5) * 10) / 10,
+          Math.round((num * 1.2) * 10) / 10,
+          Math.round((num * 0.8) * 10) / 10
+        ].filter(n => n !== num && n > 0);
+      } else {
+        // For whole numbers
+        variations = [
+          num + 1, num - 1, num + 2, num - 2,
+          Math.floor(num * 1.5), Math.floor(num * 0.8),
+          num + 5, num - 5
+        ].filter(n => n !== num && n > 0);
+      }
+      
+      // Add 3 unique random variations
+      const addedOptions = new Set<string>([String(correctAnswer)]);
+      while (options.length < 4 && variations.length > 0) {
         const randomIndex = Math.floor(Math.random() * variations.length);
-        options.push(variations[randomIndex].toString());
+        const optionValue = variations[randomIndex].toString().replace('.', ','); // German decimal format
+        
+        if (!addedOptions.has(optionValue)) {
+          options.push(optionValue);
+          addedOptions.add(optionValue);
+        }
+        
         variations.splice(randomIndex, 1);
       }
+      
+      // Fill with more variations if needed
+      while (options.length < 4) {
+        const randomVariation = num + Math.floor(Math.random() * 20) - 10;
+        const optionValue = randomVariation.toString().replace('.', ',');
+        
+        if (randomVariation > 0 && !addedOptions.has(optionValue)) {
+          options.push(optionValue);
+          addedOptions.add(optionValue);
+        }
+      }
     } else {
-      // For non-numeric answers, add some generic wrong options
-      options.push('Falsch', 'Unbekannt', 'Andere');
+      // For non-numeric answers like fractions or comparison results
+      if (template.category === 'Mathematik' && (
+        String(correctAnswer).includes('/') || 
+        template.id.includes('comparison') ||
+        template.template?.includes('größer') ||
+        template.template?.includes('kleiner')
+      )) {
+        // For math comparison/fraction questions, add math-appropriate options
+        const mathOptions = ['0,2', '0,5', '1,0', '1,5', '2,0', '0,25', '0,75'];
+        const filteredOptions = mathOptions.filter(opt => opt !== String(correctAnswer));
+        
+        // Add 3 random math options
+        for (let i = 0; i < 3 && filteredOptions.length > 0; i++) {
+          const randomIndex = Math.floor(Math.random() * filteredOptions.length);
+          options.push(filteredOptions[randomIndex]);
+          filteredOptions.splice(randomIndex, 1);
+        }
+      } else {
+        // For non-math answers
+        options.push('Andere Antwort', 'Nicht korrekt', 'Stimmt nicht');
+      }
     }
     
-    // Shuffle options
-    const correctIndex = Math.floor(Math.random() * options.length);
+    // Properly shuffle options and track correct index
+    const correctAnswerStr = String(correctAnswer);
     const shuffled = [...options];
-    shuffled[0] = options[correctIndex];
-    shuffled[correctIndex] = options[0];
     
-    return { options: shuffled, correctIndex: 0 };
+    // Fisher-Yates shuffle
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    
+    // Find the correct index after shuffling
+    const correctIndex = shuffled.findIndex(option => option === correctAnswerStr);
+    
+    console.log('🎯 Generated options:', { 
+      options: shuffled, 
+      correctIndex, 
+      correctAnswer: correctAnswerStr 
+    });
+    
+    return { options: shuffled, correctIndex };
   }
   
   private static calculateQualityMetrics(questions: SelectionQuestion[]): any {

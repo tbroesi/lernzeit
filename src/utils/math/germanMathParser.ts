@@ -79,19 +79,50 @@ export class GermanMathParser {
       /(\d+(?:[,\.]\d+)?)\s*([+\-×÷*/:×])\s*(\d+(?:[,\.]\d+)?)\s*=\s*\?/,
       /(\d+(?:[,\.]\d+)?)\s*([+\-×÷*/:×])\s*(\d+(?:[,\.]\d+)?)/,
       /(\d+)\s*×\s*(\d+)\s*=\s*\?/,
-      /(\d+)\s*÷\s*(\d+)\s*=\s*\?\s*Rest\s*\?/
+      /(\d+)\s*÷\s*(\d+)\s*=\s*\?\s*Rest\s*\?/,
+      // Complex expressions with order of operations  
+      /(\d+)\s*×\s*(\d+)\s*([+\-])\s*(\d+)\s*=\s*\?/
     ];
     
     for (const pattern of patterns) {
       const match = content.match(pattern);
       if (match) {
+        console.log('🔍 Math parser match:', { pattern: pattern.source, match, content });
+        
+        // Handle complex expressions like "12 × 2 + 5 = ?"
+        if (match[4]) {
+          const num1 = this.parseGermanNumber(match[1]);
+          const num2 = this.parseGermanNumber(match[2]);
+          const operator2 = match[3];
+          const num3 = this.parseGermanNumber(match[4]);
+          
+          if (num1 !== null && num2 !== null && num3 !== null) {
+            // Apply order of operations: multiplication first, then addition/subtraction
+            const firstResult = num1 * num2;
+            const finalResult = operator2 === '+' ? firstResult + num3 : firstResult - num3;
+            
+            console.log('🔍 Complex calculation:', { num1, num2, num3, operator2, firstResult, finalResult });
+            
+            return {
+              success: true,
+              answer: this.formatGermanNumber(finalResult),
+              expression: `${num1} × ${num2} ${operator2} ${num3}`
+            };
+          }
+        }
+        
+        // Handle simple expressions
         const num1 = this.parseGermanNumber(match[1]);
         const operator = match[2];
-        const num2 = this.parseGermanNumber(match[3] || match[2]);
+        const num2 = this.parseGermanNumber(match[3]);
         
-        if (num1 !== null && num2 !== null) {
+        if (num1 !== null && num2 !== null && operator) {
+          console.log('🔍 Simple calculation:', { num1, operator, num2 });
+          
           const result = this.calculateOperation(num1, operator, num2);
           if (result !== null) {
+            console.log('🔍 Calculation result:', result);
+            
             // Handle division with remainder
             if (content.includes('Rest')) {
               const quotient = Math.floor(num1 / num2);

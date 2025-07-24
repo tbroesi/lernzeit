@@ -226,12 +226,25 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
 
   const validateAnswer = (question: SelectionQuestion): boolean => {
     console.log('🔍 Validating answer for question:', question.question);
+    console.log('🔍 Question object:', {
+      questionType: question.questionType,
+      answer: (question as any).answer,
+      correctAnswer: (question as any).correctAnswer,
+      options: (question as any).options,
+      question: question.question
+    });
+    console.log('🔍 User inputs:', {
+      userAnswer,
+      selectedMultipleChoice,
+      selectedWords,
+      currentPlacements
+    });
     
     switch (question.questionType) {
       case 'text-input':
         // Normalize both user input and correct answer for comparison
         const userAnswerNormalized = userAnswer.trim().toLowerCase().replace(',', '.');
-        const correctAnswerNormalized = question.answer.toString().toLowerCase().replace(',', '.');
+        const correctAnswerNormalized = (question as any).answer.toString().toLowerCase().replace(',', '.');
         
         // Check exact match first
         if (userAnswerNormalized === correctAnswerNormalized) {
@@ -249,7 +262,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
         return false;
         
       case 'multiple-choice':
-        return selectedMultipleChoice === question.correctAnswer;
+        return selectedMultipleChoice === (question as any).correctAnswer;
         
       case 'word-selection':
         const correctWordIndices = question.selectableWords
@@ -409,11 +422,18 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
   };
 
   const getCorrectAnswerText = (question: SelectionQuestion): string => {
+    console.log('🎯 Getting correct answer for question:', {
+      questionType: question.questionType,
+      answer: (question as any).answer,
+      correctAnswer: (question as any).correctAnswer,
+      options: (question as any).options
+    });
+    
     switch (question.questionType) {
       case 'text-input':
-        return question.answer.toString();
+        return (question as any).answer.toString();
       case 'multiple-choice':
-        return question.options?.[question.correctAnswer] || 'Unbekannt';
+        return (question as any).options?.[(question as any).correctAnswer] || 'Unbekannt';
       case 'word-selection':
         const correctWords = question.selectableWords
           ?.filter(word => word.isCorrect)
@@ -430,7 +450,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
         return userAnswer || 'Keine Antwort';
       case 'multiple-choice':
         return selectedMultipleChoice !== null 
-          ? question.options?.[selectedMultipleChoice] || 'Unbekannt'
+          ? (question as any).options?.[selectedMultipleChoice] || 'Unbekannt'
           : 'Keine Antwort';
       case 'word-selection':
         const userWords = selectedWords

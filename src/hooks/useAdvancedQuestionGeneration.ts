@@ -511,12 +511,15 @@ export function useAdvancedQuestionGeneration({
 
       // Enhanced parsing for math content
       if (options.enableEnhancedParsing && (template.category === 'Mathematik' || template.category === 'math')) {
+        console.log('🔍 Parsing math content:', template.content);
         const mathResult = GermanMathParser.parse(template.content);
+        console.log('🔍 Math parsing result:', mathResult);
+        
         if (mathResult.success && mathResult.answer !== undefined) {
           return {
             id: Math.floor(Math.random() * 1000000),
             question: template.content,
-            questionType: 'text-input',
+            questionType: 'text-input', // Always use text-input for parsed math
             explanation: mathResult.steps ? mathResult.steps.join(', ') : 'Mathematische Berechnung',
             type: 'math',
             answer: mathResult.answer
