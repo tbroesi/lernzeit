@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useBalancedQuestionGeneration } from '@/hooks/useBalancedQuestionGeneration';
@@ -61,44 +60,80 @@ export function CategoryMathProblem({ category, grade, onComplete }: CategoryMat
     setCurrentPlacements({});
   };
 
-  const submitAnswer = async () => {
-    if (!currentQuestion || feedback) return;
-
-    let isCorrect = false;
+  // Verbesserte Antwort-Validierung
+  const validateAnswer = (question: SelectionQuestion): boolean => {
+    console.log('🔍 Validating answer for question:', question.question);
+    console.log('🔍 Question type:', question.questionType);
     
-    // Check answer based on question type
-    switch (currentQuestion.questionType) {
+    switch (question.questionType) {
       case 'text-input':
-        const normalizedUserAnswer = userAnswer.trim().toLowerCase();
-        const normalizedCorrectAnswer = currentQuestion.answer.toString().toLowerCase();
-        isCorrect = normalizedUserAnswer === normalizedCorrectAnswer;
-        break;
+        const userAnswerNormalized = userAnswer.trim().toLowerCase();
+        const correctAnswerNormalized = question.answer.toString().toLowerCase();
+        
+        console.log('📝 User answer:', userAnswerNormalized);
+        console.log('✅ Correct answer:', correctAnswerNormalized);
+        
+        // Prüfe sowohl exakte Übereinstimmung als auch numerische Gleichheit
+        if (userAnswerNormalized === correctAnswerNormalized) {
+          return true;
+        }
+        
+        // Für numerische Antworten: Parse beide Werte
+        const userNum = parseFloat(userAnswerNormalized);
+        const correctNum = parseFloat(correctAnswerNormalized);
+        
+        if (!isNaN(userNum) && !isNaN(correctNum)) {
+          const isEqual = Math.abs(userNum - correctNum) < 0.001;
+          console.log('🔢 Numeric comparison:', userNum, 'vs', correctNum, '=', isEqual);
+          return isEqual;
+        }
+        
+        return false;
+        
       case 'multiple-choice':
-        isCorrect = selectedMultipleChoice === currentQuestion.correctAnswer;
-        break;
+        console.log('🔘 Selected option:', selectedMultipleChoice);
+        console.log('✅ Correct option:', question.correctAnswer);
+        return selectedMultipleChoice === question.correctAnswer;
+        
       case 'word-selection':
-        const correctWordIndices = currentQuestion.selectableWords
-          .filter(word => word.isCorrect)
-          .map(word => word.index);
-        isCorrect = selectedWords.length === correctWordIndices.length && 
-                   selectedWords.every(index => correctWordIndices.includes(index));
-        break;
+        const correctWordIndices = question.selectableWords
+          ?.filter(word => word.isCorrect)
+          ?.map(word => word.index) || [];
+        
+        console.log('📝 Selected words:', selectedWords);
+        console.log('✅ Correct words:', correctWordIndices);
+        
+        return selectedWords.length === correctWordIndices.length && 
+               selectedWords.every(index => correctWordIndices.includes(index));
+               
       case 'matching':
       case 'drag-drop':
-        // For matching questions, check if all items are in correct categories
-        const correctPlacements = currentQuestion.categories.reduce((acc, cat) => {
-          cat.acceptsItems.forEach(itemId => {
+        const correctPlacements = question.categories?.reduce((acc, cat) => {
+          cat.acceptsItems?.forEach(itemId => {
             acc[itemId] = cat.id;
           });
           return acc;
-        }, {} as Record<string, string>);
+        }, {} as Record<string, string>) || {};
         
-        isCorrect = Object.keys(correctPlacements).every(itemId => 
+        console.log('🔄 Current placements:', currentPlacements);
+        console.log('✅ Correct placements:', correctPlacements);
+        
+        return Object.keys(correctPlacements).every(itemId => 
           currentPlacements[itemId] === correctPlacements[itemId]
         );
-        break;
+        
+      default:
+        console.warn('⚠️ Unknown question type:', question.questionType);
+        return false;
     }
+  };
 
+  const submitAnswer = async () => {
+    if (!currentQuestion || feedback) return;
+
+    const isCorrect = validateAnswer(currentQuestion);
+    
+    console.log('📊 Answer validation result:', isCorrect);
     setFeedback(isCorrect ? 'correct' : 'incorrect');
     
     if (isCorrect) {
@@ -119,7 +154,7 @@ export function CategoryMathProblem({ category, grade, onComplete }: CategoryMat
       }
     }
 
-    // Auto-advance after 2 seconds
+    // Auto-advance after 3 seconds (mehr Zeit für Erklärung)
     setTimeout(() => {
       if (currentQuestionIndex < problems.length - 1) {
         setCurrentQuestionIndex(prev => prev + 1);
@@ -128,7 +163,7 @@ export function CategoryMathProblem({ category, grade, onComplete }: CategoryMat
       } else {
         completeGame();
       }
-    }, 2000);
+    }, 3000);
   };
 
   const completeGame = async () => {
@@ -275,7 +310,7 @@ export function CategoryMathProblem({ category, grade, onComplete }: CategoryMat
 
         <GameFeedback 
           feedback={feedback} 
-          explanation={currentQuestion.explanation} 
+          explanation={currentQuestion?.explanation} 
         />
 
         {!feedback && (
@@ -283,9 +318,9 @@ export function CategoryMathProblem({ category, grade, onComplete }: CategoryMat
             <Button 
               onClick={submitAnswer}
               disabled={
-                (currentQuestion.questionType === 'text-input' && !userAnswer.trim()) ||
-                (currentQuestion.questionType === 'multiple-choice' && selectedMultipleChoice === null) ||
-                (currentQuestion.questionType === 'word-selection' && selectedWords.length === 0)
+                (currentQuestion?.questionType === 'text-input' && !userAnswer.trim()) ||
+                (currentQuestion?.questionType === 'multiple-choice' && selectedMultipleChoice === null) ||
+                (currentQuestion?.questionType === 'word-selection' && selectedWords.length === 0)
               }
               size="lg"
               className="w-full"

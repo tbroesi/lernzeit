@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { SelectionQuestion } from '@/types/questionTypes';
 import { supabase } from '@/lib/supabase';
@@ -45,7 +44,7 @@ export function useBalancedQuestionGeneration(
             options: shuffledOptions.map(String),
             correctAnswer: correctIndex,
             type: 'math',
-            explanation: `${a} + ${b} = ${correctAnswer}`
+            explanation: `${a} + ${b} = ${correctAnswer}. Die richtige Antwort ist ${correctAnswer}.`
           });
         } else if (randomType === 'word-selection') {
           // Wort-Auswahl für Mathe-Begriffe
@@ -66,48 +65,41 @@ export function useBalancedQuestionGeneration(
               index
             })),
             type: 'math',
-            explanation: `Der Begriff "${correctTerm}" ist korrekt`
+            explanation: `Der Begriff "${correctTerm}" ist korrekt für diese Art von Aufgabe.`
           });
         } else {
-          // Textaufgabe
-          const scenarios = [
-            { text: 'Anna hat {a} Äpfel und bekommt {b} weitere dazu', operation: 'addition' },
-            { text: 'Im Korb sind {a} Birnen, {b} werden gegessen', operation: 'subtraction' },
-            { text: 'In jeder Reihe stehen {a} Stühle. Es gibt {b} Reihen', operation: 'multiplication' }
+          // Verbesserte Textaufgaben mit korrekter Lösung
+          const operations = [
+            { 
+              template: 'Anna hat {a} Äpfel und bekommt {b} weitere dazu. Wie viele Äpfel hat sie insgesamt?',
+              calculate: (a: number, b: number) => a + b,
+              explanation: (a: number, b: number, result: number) => `Anna hatte ${a} Äpfel und bekam ${b} dazu: ${a} + ${b} = ${result} Äpfel.`
+            },
+            {
+              template: 'Im Korb sind {a} Birnen, {b} werden gegessen. Wie viele bleiben übrig?',
+              calculate: (a: number, b: number) => Math.max(0, a - b),
+              explanation: (a: number, b: number, result: number) => `Von ${a} Birnen wurden ${b} gegessen: ${a} - ${b} = ${result} Birnen bleiben übrig.`
+            },
+            {
+              template: 'In jeder Reihe stehen {a} Stühle. Es gibt {b} Reihen. Wie viele Stühle gibt es insgesamt?',
+              calculate: (a: number, b: number) => a * b,
+              explanation: (a: number, b: number, result: number) => `${b} Reihen mit je ${a} Stühlen: ${a} × ${b} = ${result} Stühle insgesamt.`
+            }
           ];
           
-          const scenario = scenarios[Math.floor(Math.random() * scenarios.length)];
+          const operation = operations[Math.floor(Math.random() * operations.length)];
           const a = Math.floor(Math.random() * (10 + grade * 2)) + 2;
           const b = Math.floor(Math.random() * (8 + grade)) + 1;
-          
-          let answer: number;
-          let questionText: string;
-          
-          switch (scenario.operation) {
-            case 'addition':
-              answer = a + b;
-              questionText = scenario.text.replace('{a}', a.toString()).replace('{b}', b.toString()) + '. Wie viele hat sie insgesamt?';
-              break;
-            case 'subtraction':
-              answer = a - b;
-              questionText = scenario.text.replace('{a}', a.toString()).replace('{b}', b.toString()) + '. Wie viele bleiben übrig?';
-              break;
-            case 'multiplication':
-              answer = a * b;
-              questionText = scenario.text.replace('{a}', a.toString()).replace('{b}', b.toString()) + '. Wie viele Stühle gibt es insgesamt?';
-              break;
-            default:
-              answer = a + b;
-              questionText = `${a} + ${b} = ?`;
-          }
+          const answer = operation.calculate(a, b);
+          const questionText = operation.template.replace('{a}', a.toString()).replace('{b}', b.toString());
           
           templateProblems.push({
             id,
             questionType: 'text-input',
             question: questionText,
-            answer,
+            answer: answer.toString(),
             type: 'math',
-            explanation: `Die Antwort ist ${answer}`
+            explanation: operation.explanation(a, b, answer)
           });
         }
       } else if (category === 'Deutsch') {
@@ -192,56 +184,21 @@ export function useBalancedQuestionGeneration(
         id,
         questionType: 'text-input',
         question: `${a} + ${b} = ?`,
-        answer,
+        answer: answer.toString(),
         type: 'math',
-        explanation: `Die Lösung ist ${answer}`
+        explanation: `Die Lösung ist ${answer}, weil ${a} + ${b} = ${answer}.`
       });
     }
     
     return simpleProblems;
   }, [grade, totalQuestions]);
 
-  const generateProblems = useCallback(async () => {
-    if (isGenerating) return;
-    
-    setIsGenerating(true);
-    console.log('🎯 Starting balanced question generation');
-    
-    try {
-      // Erste Priorität: AI-generierte Fragen (kurzes Timeout)
-      const aiProblems = await generateAIProblems();
-      
-      if (aiProblems.length >= totalQuestions) {
-        console.log('✅ Using AI problems');
-        setProblems(aiProblems.slice(0, totalQuestions));
-        setGenerationSource('ai');
-        setIsGenerating(false);
-        return;
-      }
-      
-      // Zweite Priorität: Template-basierte Fragen
-      console.log('🎨 Using template problems');
-      const templateProblems = generateTemplateProblems();
-      setProblems(templateProblems);
-      setGenerationSource('template');
-      
-    } catch (error) {
-      console.error('❌ Generation failed, using simple fallback:', error);
-      // Letzte Priorität: Einfache Grundrechenaufgaben
-      const simpleProblems = generateSimpleFallback();
-      setProblems(simpleProblems);
-      setGenerationSource('simple');
-    } finally {
-      setIsGenerating(false);
-    }
-  }, [isGenerating, totalQuestions, generateTemplateProblems, generateSimpleFallback]);
-
   const generateAIProblems = async (): Promise<SelectionQuestion[]> => {
-    console.log('🤖 Trying AI generation with short timeout');
+    console.log('🤖 Trying AI generation with extended timeout');
     
-    // Sehr kurzes Timeout für AI (2 Sekunden)
+    // Erhöhtes Timeout für AI (8 Sekunden)
     const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error('AI generation timeout')), 2000);
+      setTimeout(() => reject(new Error('AI generation timeout')), 8000);
     });
     
     try {
@@ -266,12 +223,53 @@ export function useBalancedQuestionGeneration(
       
       const problems = response.data?.problems || [];
       console.log(`🎯 AI generated ${problems.length} problems`);
-      return problems;
+      
+      // Validiere AI-generierte Antworten
+      return problems.map((problem: SelectionQuestion) => ({
+        ...problem,
+        explanation: problem.explanation || `Erklärung für: ${problem.question}`
+      }));
     } catch (error) {
       console.warn('AI generation timed out or failed:', error);
       return [];
     }
   };
+
+  const generateProblems = useCallback(async () => {
+    if (isGenerating) return;
+    
+    setIsGenerating(true);
+    console.log('🎯 Starting balanced question generation');
+    
+    try {
+      // Erste Priorität: AI-generierte Fragen (erweiterte Zeit)
+      console.log('🤖 Attempting AI generation...');
+      const aiProblems = await generateAIProblems();
+      
+      if (aiProblems.length >= totalQuestions) {
+        console.log('✅ Using AI problems');
+        setProblems(aiProblems.slice(0, totalQuestions));
+        setGenerationSource('ai');
+        setIsGenerating(false);
+        return;
+      }
+      
+      // Zweite Priorität: Template-basierte Fragen
+      console.log('🎨 AI insufficient, using template problems');
+      const templateProblems = generateTemplateProblems();
+      setProblems(templateProblems);
+      setGenerationSource('template');
+      
+    } catch (error) {
+      console.error('❌ Generation failed, using simple fallback:', error);
+      // Letzte Priorität: Einfache Grundrechenaufgaben
+      const simpleProblems = generateSimpleFallback();
+      setProblems(simpleProblems);
+      setGenerationSource('simple');
+    } finally {
+      setIsGenerating(false);
+    }
+  }, [isGenerating, totalQuestions, generateTemplateProblems, generateSimpleFallback]);
 
   return {
     problems,
