@@ -251,5 +251,127 @@ export const mathTemplates: QuestionTemplate[] = [
     explanation: 'Fläche eines Rechtecks berechnen',
     difficulty: 'medium',
     topics: ['geometry', 'area', 'rectangle']
+  },
+
+  // =================== MULTIPLE CHOICE TEMPLATES ===================
+  {
+    id: 'math_2_multiple_choice_addition',
+    category: 'Mathematik',
+    grade: 2,
+    type: 'multiple-choice',
+    template: 'Was ist {a} + {b}?',
+    parameters: [
+      { name: 'a', type: 'number', range: [10, 50] },
+      { name: 'b', type: 'number', range: [10, 50] }
+    ],
+    explanation: 'Addition mit Multiple Choice',
+    difficulty: 'medium',
+    topics: ['addition', 'multiple_choice']
+  },
+
+  {
+    id: 'math_3_multiple_choice_multiplication',
+    category: 'Mathematik',
+    grade: 3,
+    type: 'multiple-choice',
+    template: 'Was ist {a} × {b}?',
+    parameters: [
+      { name: 'a', type: 'number', range: [2, 9] },
+      { name: 'b', type: 'number', range: [2, 9] }
+    ],
+    explanation: 'Multiplikation mit Multiple Choice',
+    difficulty: 'medium',
+    topics: ['multiplication', 'multiple_choice']
+  },
+
+  // =================== WORD SELECTION TEMPLATES ===================
+  {
+    id: 'math_3_word_selection_even_odd',
+    category: 'Mathematik',
+    grade: 3,
+    type: 'text-input',
+    template: 'Ist die Zahl {number} gerade oder ungerade?',
+    parameters: [
+      { name: 'number', type: 'number', range: [2, 20] }
+    ],
+    explanation: 'Gerade und ungerade Zahlen erkennen',
+    difficulty: 'easy',
+    topics: ['numbers', 'even_odd']
+  },
+
+  // =================== DIVISION TEMPLATES ===================
+  {
+    id: 'math_4_division_word_problem',
+    category: 'Mathematik',
+    grade: 4,
+    type: 'text-input',
+    template: '{total} Äpfel sollen gleichmäßig auf {groups} Kinder verteilt werden. Wie viele bekommt jedes Kind?',
+    parameters: [
+      { name: 'total', type: 'number', range: [20, 60] },
+      { name: 'groups', type: 'number', range: [2, 6] }
+    ],
+    explanation: 'Division in Textaufgaben',
+    difficulty: 'medium',
+    topics: ['division', 'word_problem']
+  },
+
+  // =================== MORE VARIED TEXT INPUT ===================
+  {
+    id: 'math_2_word_problem_money',
+    category: 'Mathematik',
+    grade: 2,
+    type: 'text-input',
+    template: 'Anna hat {money1} Euro und bekommt {money2} Euro dazu. Wie viel Geld hat sie jetzt?',
+    parameters: [
+      { name: 'money1', type: 'number', range: [5, 25] },
+      { name: 'money2', type: 'number', range: [3, 20] }
+    ],
+    explanation: 'Geld addieren in Textaufgaben',
+    difficulty: 'medium',
+    topics: ['addition', 'money', 'word_problem']
+  },
+
+  {
+    id: 'math_3_word_problem_time',
+    category: 'Mathematik',
+    grade: 3,
+    type: 'text-input',
+    template: 'Ein Film dauert {duration} Minuten. Wie viele Stunden und Minuten sind das?',
+    parameters: [
+      { name: 'duration', type: 'number', range: [70, 150] }
+    ],
+    explanation: 'Zeit umrechnen: Minuten in Stunden und Minuten',
+    difficulty: 'medium',
+    topics: ['time', 'conversion', 'word_problem']
+  },
+
+  {
+    id: 'math_4_division_simple',
+    category: 'Mathematik',
+    grade: 4,
+    type: 'text-input',
+    template: '{dividend} ÷ {divisor} = ?',
+    parameters: [
+      { name: 'dividend', type: 'number', range: [20, 80] },
+      { name: 'divisor', type: 'number', range: [2, 8] }
+    ],
+    explanation: 'Einfache Division ohne Rest',
+    difficulty: 'medium',
+    topics: ['division', 'exact']
+  },
+
+  {
+    id: 'math_1_number_comparison',
+    category: 'Mathematik',
+    grade: 1,
+    type: 'text-input',
+    template: 'Welche Zahl ist größer: {a} oder {b}?',
+    parameters: [
+      { name: 'a', type: 'number', range: [1, 20] },
+      { name: 'b', type: 'number', range: [1, 20] }
+    ],
+    explanation: 'Zahlen vergleichen',
+    difficulty: 'easy',
+    topics: ['comparison', 'numbers']
   }
 ];

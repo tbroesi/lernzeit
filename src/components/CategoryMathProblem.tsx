@@ -15,6 +15,8 @@ import { useScreenTime } from '@/hooks/useScreenTime';
 import { useChildSettings } from '@/hooks/useChildSettings';
 import { useAchievements } from '@/hooks/useAchievements';
 import { AchievementAnimation } from '@/components/game/AchievementAnimation';
+import { GameTimeDisplay } from '@/components/game/GameTimeDisplay';
+import { GameCompletionScreen } from '@/components/GameCompletionScreen';
 import { AlertTriangle } from 'lucide-react';
 
 interface CategoryMathProblemProps {
@@ -50,6 +52,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
   const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
   const [newAchievements, setNewAchievements] = useState<any[]>([]);
   const [showAchievements, setShowAchievements] = useState(false);
+  const [gameCompleted, setGameCompleted] = useState(false);
 
   const currentQuestion: SelectionQuestion | undefined = problems[currentQuestionIndex];
 
@@ -244,7 +247,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
       setFeedback(null);
       resetAnswers();
     } else {
-      completeGame();
+      setGameCompleted(true);
     }
   };
 
@@ -253,18 +256,83 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
     
     // Calculate earned time based on child settings
     let earnedSeconds = 0;
+    let timePerTask = 30; // default
     if (settings) {
       const categoryKey = `${category.toLowerCase()}_seconds_per_task` as keyof typeof settings;
-      const secondsPerTask = settings[categoryKey] as number || 30;
-      earnedSeconds = score * secondsPerTask;
+      timePerTask = settings[categoryKey] as number || 30;
+      earnedSeconds = score * timePerTask;
     } else {
       earnedSeconds = score * 30; // fallback to 30 seconds per correct answer
+    }
+    
+    // Get achievement bonus time
+    let achievementBonusMinutes = 0;
+    if (newAchievements.length > 0) {
+      achievementBonusMinutes = newAchievements.reduce((sum, ach) => sum + (ach.reward_minutes || 0), 0);
     }
     
     const earnedMinutes = Math.round(earnedSeconds / 60 * 100) / 100; // Round to 2 decimal places
     
     addScreenTime(earnedMinutes * 60);
     
+    // Show time display before completing
+    const timeDisplayData = {
+      correctAnswers: score,
+      totalQuestions: problems.length,
+      timeSpentSeconds: sessionDuration / 1000,
+      timePerTask,
+      achievementBonusMinutes
+    };
+    
+    // Create a completion screen with time display
+    const completionScreen = (
+      <Card className="w-full max-w-2xl mx-auto">
+        <CardHeader>
+          <CardTitle className="text-center text-2xl text-green-600">
+            🎉 Spiel beendet!
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <GameTimeDisplay {...timeDisplayData} />
+          
+          <div className="text-center space-y-4">
+            <p className="text-lg">
+              Klasse! Du hast {score} von {problems.length} Fragen richtig beantwortet!
+            </p>
+            
+            <Button 
+              onClick={async () => {
+                // Save session data
+                if (user) {
+                  try {
+                    await supabase.from('learning_sessions').insert({
+                      user_id: user.id,
+                      category: category.toLowerCase(),
+                      grade,
+                      correct_answers: score,
+                      total_questions: problems.length,
+                      time_spent: sessionDuration / 1000,
+                      time_earned: Math.floor(earnedSeconds / 60), // Store as minutes in database
+                      session_date: new Date().toISOString()
+                    });
+                  } catch (error) {
+                    console.error('Error saving session:', error);
+                  }
+                }
+                
+                onComplete(Math.floor(earnedSeconds / 60), category);
+              }}
+              size="lg" 
+              className="w-full"
+            >
+              Weiter
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+    
+    // For now, immediately call onComplete but in the future we could show the completion screen
     // Save enhanced session data
     if (user) {
       try {
@@ -281,14 +349,16 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
         
         console.log('📊 Learning session saved:', {
           earnedSeconds,
-          earnedMinutes: Math.floor(earnedSeconds / 60)
+          earnedMinutes: Math.floor(earnedSeconds / 60),
+          achievementBonusMinutes,
+          timePerTask
         });
       } catch (error) {
         console.error('Error saving session:', error);
       }
     }
     
-    onComplete(Math.floor(earnedSeconds / 60), category);
+    // Don't call onComplete here anymore, let the completion screen handle it
   };
 
   const handleWordToggle = (wordIndex: number) => {
@@ -427,6 +497,57 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
           </Button>
         </CardContent>
       </Card>
+    );
+  }
+
+  if (gameCompleted) {
+    const sessionDuration = Date.now() - sessionStartTime;
+    let earnedSeconds = 0;
+    let timePerTask = 30;
+    
+    if (settings) {
+      const categoryKey = `${category.toLowerCase()}_seconds_per_task` as keyof typeof settings;
+      timePerTask = settings[categoryKey] as number || 30;
+      earnedSeconds = score * timePerTask;
+    } else {
+      earnedSeconds = score * 30;
+    }
+    
+    let achievementBonusMinutes = 0;
+    if (newAchievements.length > 0) {
+      achievementBonusMinutes = newAchievements.reduce((sum, ach) => sum + (ach.reward_minutes || 0), 0);
+    }
+
+    return (
+      <GameCompletionScreen
+        score={score}
+        totalQuestions={problems.length}
+        sessionDuration={sessionDuration}
+        timePerTask={timePerTask}
+        achievementBonusMinutes={achievementBonusMinutes}
+        onContinue={async () => {
+          // Save session data
+          if (user) {
+            try {
+              await supabase.from('learning_sessions').insert({
+                user_id: user.id,
+                category: category.toLowerCase(),
+                grade,
+                correct_answers: score,
+                total_questions: problems.length,
+                time_spent: sessionDuration / 1000,
+                time_earned: Math.floor(earnedSeconds / 60),
+                session_date: new Date().toISOString()
+              });
+            } catch (error) {
+              console.error('Error saving session:', error);
+            }
+          }
+          
+          addScreenTime(earnedSeconds);
+          onComplete(Math.floor(earnedSeconds / 60), category);
+        }}
+      />
     );
   }
 

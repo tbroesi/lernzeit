@@ -50,13 +50,5 @@ export function QuestionGenerationInfo({ generationSource, isGenerating }: Quest
   
   if (!sourceInfo) return null;
 
-  return (
-    <div className="flex items-center gap-2 text-sm">
-      <Badge variant="outline" className="flex items-center gap-1">
-        {sourceInfo.icon}
-        {sourceInfo.label}
-      </Badge>
-      <span className="text-muted-foreground">{sourceInfo.description}</span>
-    </div>
-  );
+  return null; // Badges are hidden as requested
 }
