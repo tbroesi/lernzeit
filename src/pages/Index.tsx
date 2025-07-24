@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { GradeSelector } from '@/components/GradeSelector';
 import { CategorySelector } from '@/components/CategorySelector';
@@ -206,9 +205,7 @@ const Index = () => {
       <CategoryLearningProblem 
         grade={selectedGrade}
         category={germanCategoryName}
-        onBack={handleBackToGradeSelection}
         onComplete={handleProblemComplete}
-        userId={user?.id}
       />
     );
   }

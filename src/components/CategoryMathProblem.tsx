@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useBalancedQuestionGeneration } from '@/hooks/useBalancedQuestionGeneration';
@@ -15,7 +16,7 @@ import { useScreenTime } from '@/hooks/useScreenTime';
 interface CategoryMathProblemProps {
   category: string;
   grade: number;
-  onComplete: () => void;
+  onComplete: (minutes: number, category: string) => void;
 }
 
 export function CategoryMathProblem({ category, grade, onComplete }: CategoryMathProblemProps) {
@@ -132,9 +133,10 @@ export function CategoryMathProblem({ category, grade, onComplete }: CategoryMat
 
   const completeGame = async () => {
     const sessionDuration = Date.now() - sessionStartTime;
+    const earnedMinutes = Math.max(1, Math.floor((score / problems.length) * 5));
     
     // Add screen time
-    addScreenTime(Math.floor(sessionDuration / 1000));
+    addScreenTime(earnedMinutes * 60);
     
     // Save session data
     if (user) {
@@ -153,7 +155,7 @@ export function CategoryMathProblem({ category, grade, onComplete }: CategoryMat
       }
     }
     
-    onComplete();
+    onComplete(earnedMinutes, category);
   };
 
   const handleWordToggle = (wordIndex: number) => {

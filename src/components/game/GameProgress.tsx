@@ -1,32 +1,30 @@
 
 import React from 'react';
 import { Progress } from '@/components/ui/progress';
-import { Clock } from 'lucide-react';
+import { Trophy } from 'lucide-react';
 
 interface GameProgressProps {
-  currentProblem: number;
+  currentQuestion: number;
   totalQuestions: number;
-  timeElapsed: number;
-  feedback: 'correct' | 'incorrect' | null;
+  score: number;
 }
 
 export function GameProgress({ 
-  currentProblem, 
+  currentQuestion, 
   totalQuestions, 
-  timeElapsed, 
-  feedback 
+  score 
 }: GameProgressProps) {
-  const progress = ((currentProblem + (feedback ? 1 : 0)) / totalQuestions) * 100;
+  const progress = (currentQuestion / totalQuestions) * 100;
   
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between text-sm">
         <div className="flex items-center gap-2 text-muted-foreground">
-          <Clock className="w-4 h-4" />
-          {Math.floor(timeElapsed / 60)}:{(timeElapsed % 60).toString().padStart(2, '0')}
+          <Trophy className="w-4 h-4" />
+          Punkte: {score}
         </div>
         <div className="font-medium">
-          {currentProblem + 1} / {totalQuestions}
+          {currentQuestion} / {totalQuestions}
         </div>
       </div>
       <Progress value={progress} className="h-2" />

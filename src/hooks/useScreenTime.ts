@@ -92,6 +92,12 @@ export function useScreenTime() {
     }
   };
 
+  const addScreenTime = (seconds: number) => {
+    console.log(`Adding ${seconds} seconds of screen time`);
+    // This is a placeholder implementation
+    // In a real app, this would integrate with the actual screen time system
+  };
+
   return {
     isAvailable,
     hasPermission,
@@ -102,5 +108,6 @@ export function useScreenTime() {
     setTimeLimit,
     refreshUsage,
     sendUsageReport,
+    addScreenTime,
   };
 }
