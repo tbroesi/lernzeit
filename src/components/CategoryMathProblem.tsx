@@ -425,24 +425,22 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
     );
   }
 
-  // Auto-complete when game is finished - no redundant completion screen
-  if (gameCompleted && sessionEndTime) {
-    // Use the fixed duration that was captured when the game ended
-    const finalSessionDuration = sessionEndTime - sessionStartTime;
-    let earnedSeconds = 0;
-    let timePerTask = 30;
-    
-    if (settings) {
-      const categoryKey = `${category.toLowerCase()}_seconds_per_task` as keyof typeof settings;
-      timePerTask = settings[categoryKey] as number || 30;
-      earnedSeconds = score * timePerTask;
-    } else {
-      earnedSeconds = score * 30;
-    }
-
-    // Execute completion logic immediately without showing redundant screen
-    React.useEffect(() => {
+  // Auto-complete when game is finished - execute immediately
+  React.useEffect(() => {
+    if (gameCompleted && sessionEndTime) {
       const completeSession = async () => {
+        const finalSessionDuration = sessionEndTime - sessionStartTime;
+        let earnedSeconds = 0;
+        let timePerTask = 30;
+        
+        if (settings) {
+          const categoryKey = `${category.toLowerCase()}_seconds_per_task` as keyof typeof settings;
+          timePerTask = settings[categoryKey] as number || 30;
+          earnedSeconds = score * timePerTask;
+        } else {
+          earnedSeconds = score * 30;
+        }
+
         // Save session data
         if (user) {
           try {
@@ -452,7 +450,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
               grade,
               correct_answers: score,
               total_questions: problems.length,
-              time_spent: finalSessionDuration / 1000, // Use fixed duration
+              time_spent: finalSessionDuration / 1000,
               time_earned: Math.floor(earnedSeconds / 60),
               session_date: new Date().toISOString()
             });
@@ -466,18 +464,8 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
       };
       
       completeSession();
-    }, []); // Run once when this condition is met
-
-    // Show loading while completing
-    return (
-      <Card className="w-full max-w-2xl mx-auto">
-        <CardContent className="text-center py-8">
-          <div className="text-4xl mb-4">⏳</div>
-          <p className="text-lg">Sitzung wird abgeschlossen...</p>
-        </CardContent>
-      </Card>
-    );
-  }
+    }
+  }, [gameCompleted, sessionEndTime]); // Execute when game completes
 
   return (
     <Card className="w-full max-w-2xl mx-auto">

@@ -221,53 +221,57 @@ export function useBalancedQuestionGeneration(
   };
 
   const generateMathProblem = (grade: number): SelectionQuestion => {
+    // Use timestamp and random seed for true uniqueness
+    const seed = Date.now() + Math.random() * 10000;
+    const random = () => (Math.sin(seed + Math.random()) * 10000) % 1;
+    
     let a: number, b: number, operation: string, answer: number;
     
     switch (grade) {
       case 1:
       case 2:
-        if (grade <= 2) {
-          a = Math.floor(Math.random() * 20) + 1;
-          b = Math.floor(Math.random() * 20) + 1;
-        } else if (grade <= 4) {
-          a = Math.floor(Math.random() * 100) + 10;
-          b = Math.floor(Math.random() * 100) + 10;
-        } else {
-          a = Math.floor(Math.random() * 500) + 50;
-          b = Math.floor(Math.random() * 500) + 50;
-        }
+        // Vary range more for grades 1-2
+        const range1 = Math.floor(Math.abs(random()) * 15) + 5; // 5-20
+        a = Math.floor(Math.abs(random()) * range1) + 1;
+        b = Math.floor(Math.abs(random()) * range1) + 1;
         
-        operation = Math.random() > 0.5 ? '+' : '-';
+        operation = Math.abs(random()) > 0.5 ? '+' : '-';
         if (operation === '-' && a < b) [a, b] = [b, a];
         answer = operation === '+' ? a + b : a - b;
         break;
+        
       case 3:
       case 4:
-        if (Math.random() > 0.4) {
-          // Complex addition/subtraction for grade 3-4
-          a = Math.floor(Math.random() * 200) + 25;
-          b = Math.floor(Math.random() * 200) + 25;
-          operation = Math.random() > 0.5 ? '+' : '-';
+        if (Math.abs(random()) > 0.4) {
+          // More varied addition/subtraction for grade 3-4
+          const range3 = Math.floor(Math.abs(random()) * 150) + 50; // 50-200
+          a = Math.floor(Math.abs(random()) * range3) + 25;
+          b = Math.floor(Math.abs(random()) * range3) + 25;
+          operation = Math.abs(random()) > 0.5 ? '+' : '-';
           if (operation === '-' && a < b) [a, b] = [b, a];
           answer = operation === '+' ? a + b : a - b;
         } else {
-          // Multiplication with larger numbers
-          a = Math.floor(Math.random() * 25) + 5;
-          b = Math.floor(Math.random() * 15) + 2;
+          // Varied multiplication
+          a = Math.floor(Math.abs(random()) * 20) + 3; // 3-23
+          b = Math.floor(Math.abs(random()) * 12) + 2; // 2-14
           operation = '×';
           answer = a * b;
         }
         break;
+        
       default:
-        // Advanced math for higher grades
-        a = Math.floor(Math.random() * 1000) + 100;
-        b = Math.floor(Math.random() * 500) + 50;
+        // Much more varied advanced math for higher grades
+        const baseRange = Math.floor(Math.abs(random()) * 800) + 200; // 200-1000
+        a = Math.floor(Math.abs(random()) * baseRange) + 100;
+        b = Math.floor(Math.abs(random()) * (baseRange / 2)) + 50;
+        
         const ops = ['+', '-', '×', '÷'];
-        operation = ops[Math.floor(Math.random() * ops.length)];
+        operation = ops[Math.floor(Math.abs(random()) * ops.length)];
         
         if (operation === '÷') {
-          answer = Math.floor(Math.random() * 20) + 1;
-          a = answer * b;
+          // Ensure clean division with varied results
+          answer = Math.floor(Math.abs(random()) * 25) + 5; // 5-30
+          a = answer * (Math.floor(Math.abs(random()) * 15) + 5); // Varied multiplier
         } else if (operation === '-' && a < b) {
           [a, b] = [b, a];
           answer = a - b;
@@ -278,7 +282,7 @@ export function useBalancedQuestionGeneration(
     }
 
     return {
-      id: Math.floor(Math.random() * 1000000),
+      id: Math.floor(Math.abs(random()) * 1000000),
       type: 'math',
       questionType: 'text-input',
       question: `Was ist ${a} ${operation} ${b}?`,
