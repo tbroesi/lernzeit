@@ -258,11 +258,89 @@ export function useBalancedQuestionGeneration(
     return simpleProblems;
   }, [grade, totalQuestions]);
 
-  const generateAIProblems = async (): Promise<SelectionQuestion[]> => {
-    console.log('🤖 Trying AI generation with improved prompts');
+  // Load templates from database instead of calling AI directly
+  const loadTemplatesFromDatabase = async (): Promise<SelectionQuestion[]> => {
+    console.log('📂 Loading templates from database');
+    
+    try {
+      const excludedQuestions = await getExcludedQuestions(category, grade, userId);
+      
+      // Get templates from database
+      const { data: templates, error } = await supabase
+        .from('generated_templates')
+        .select('*')
+        .eq('category', category)
+        .eq('grade', grade)
+        .eq('is_active', true)
+        .order('usage_count', { ascending: true }) // Prefer less used templates
+        .limit(totalQuestions * 2); // Get more than needed for rotation
+
+      if (error) {
+        console.error('❌ Error loading templates:', error);
+        return [];
+      }
+
+      if (!templates || templates.length === 0) {
+        console.warn('📭 No templates found in database');
+        return [];
+      }
+
+      console.log(`📊 Loaded ${templates.length} templates from database`);
+
+      // Convert templates to SelectionQuestion format and filter excluded
+      const questions: SelectionQuestion[] = [];
+      
+      for (const template of templates) {
+        if (questions.length >= totalQuestions) break;
+        
+        try {
+          const parsedContent = JSON.parse(template.content);
+          
+          // Skip if excluded
+          if (excludedQuestions.includes(parsedContent.question)) {
+            continue;
+          }
+          
+          // Convert to SelectionQuestion format
+          const question: SelectionQuestion = {
+            id: template.id,
+            question: parsedContent.question,
+            options: parsedContent.options || [],
+            correctAnswer: parsedContent.correctAnswer || 0,
+            explanation: parsedContent.explanation || `Erklärung für: ${parsedContent.question}`,
+            questionType: template.question_type as any,
+            type: 'multiple-choice'
+          };
+          
+          questions.push(question);
+          
+          // Update usage count
+          await supabase
+            .from('generated_templates')
+            .update({ usage_count: template.usage_count + 1 })
+            .eq('id', template.id);
+            
+        } catch (parseError) {
+          console.error('❌ Error parsing template content:', parseError);
+          continue;
+        }
+      }
+
+      console.log(`✅ Successfully converted ${questions.length} templates to questions`);
+      return questions;
+      
+    } catch (error) {
+      console.error('❌ Error in loadTemplatesFromDatabase:', error);
+      return [];
+    }
+  };
+
+  // Fallback: Generate new templates if needed
+  const generateFallbackTemplates = async (): Promise<SelectionQuestion[]> => {
+    console.log('🆘 Fallback: Generating new templates via AI');
     
     const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error('AI generation timeout')), 10000);
+      setTimeout(() => reject(new Error('AI generation timeout')), 15000);
     });
     
     try {
@@ -272,42 +350,31 @@ export function useBalancedQuestionGeneration(
         body: {
           category,
           grade,
-          count: totalQuestions,
+          count: Math.min(totalQuestions, 5), // Generate fewer for fallback
           excludeQuestions: excludedQuestions,
           sessionId,
-          requestId: `balanced_${Date.now()}`,
+          requestId: `fallback_${Date.now()}`,
           gradeRequirement: `grade_${grade}_appropriate`,
-          qualityThreshold: 0.7
+          qualityThreshold: 0.6 // Lower threshold for fallback
         }
       });
       
       const response = await Promise.race([aiPromise, timeoutPromise]);
       
-      console.log('🔍 AI Response received:', {
-        error: response.error,
-        data: response.data,
-        hasProblems: response.data?.problems?.length
-      });
-      
       if (response.error) {
-        console.warn('AI generation failed:', response.error);
+        console.warn('❌ Fallback AI generation failed:', response.error);
         return [];
       }
       
       const problems = response.data?.problems || [];
-      console.log(`🎯 AI generated ${problems.length} problems`);
-      
-      if (problems.length === 0) {
-        console.warn('🚫 AI returned no problems, falling back to templates');
-        return [];
-      }
+      console.log(`🆘 Fallback generated ${problems.length} problems`);
       
       return problems.map((problem: SelectionQuestion) => ({
         ...problem,
         explanation: problem.explanation || `Erklärung für: ${problem.question}`
       }));
     } catch (error) {
-      console.warn('AI generation timed out or failed:', error);
+      console.warn('❌ Fallback generation failed:', error);
       return [];
     }
   };
@@ -320,25 +387,25 @@ export function useBalancedQuestionGeneration(
     console.log(`📊 Target: ${totalQuestions} questions for ${category}, Grade ${grade}, User: ${userId}`);
     
     try {
-      // Try AI first with detailed logging
-      console.log('🤖 Attempting AI generation...');
-      const aiProblems = await generateAIProblems();
+      // Primary: Load templates from database
+      console.log('📂 Attempting template loading from database...');
+      const templateProblems = await loadTemplatesFromDatabase();
       
-      console.log(`🔍 AI Generation Result: ${aiProblems.length}/${totalQuestions} questions`);
+      console.log(`🔍 Template Loading Result: ${templateProblems.length}/${totalQuestions} questions`);
       
-      if (aiProblems.length >= totalQuestions) {
-        console.log('✅ Using AI problems - sufficient quantity');
-        setProblems(aiProblems.slice(0, totalQuestions));
-        setGenerationSource('ai');
+      if (templateProblems.length >= totalQuestions) {
+        console.log('✅ Using database templates - sufficient quantity');
+        setProblems(templateProblems.slice(0, totalQuestions));
+        setGenerationSource('template');
         return;
-      } else if (aiProblems.length > 0) {
-        console.log(`⚠️ AI generated only ${aiProblems.length} questions, need ${totalQuestions - aiProblems.length} more from templates`);
-        // Mix AI and template questions
-        const remainingCount = totalQuestions - aiProblems.length;
-        const templateProblems = await generateTemplateProblems();
-        const mixedProblems = [...aiProblems, ...templateProblems.slice(0, remainingCount)];
+      } else if (templateProblems.length > 0) {
+        console.log(`⚠️ Only ${templateProblems.length} templates available, need ${totalQuestions - templateProblems.length} more`);
+        // Try to get remaining from fallback generation
+        const remainingCount = totalQuestions - templateProblems.length;
+        const fallbackProblems = await generateFallbackTemplates();
+        const mixedProblems = [...templateProblems, ...fallbackProblems.slice(0, remainingCount)];
         setProblems(mixedProblems);
-        setGenerationSource('template'); // Mark as template since it's mixed
+        setGenerationSource('template');
         return;
       }
       
