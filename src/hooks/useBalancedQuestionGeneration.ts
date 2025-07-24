@@ -484,11 +484,16 @@ export function useBalancedQuestionGeneration(
   }, [grade, totalQuestions]);
 
   const generateProblems = useCallback(async () => {
-    if (isGenerating) return;
+    if (isGenerating) {
+      console.log('⚠️ Generation already in progress, skipping...');
+      return;
+    }
     
-    setIsGenerating(true);
     console.log('🎯 Starting balanced question generation');
     console.log(`📊 Target: ${totalQuestions} questions for ${category}, Grade ${grade}, User: ${userId}`);
+    
+    setIsGenerating(true);
+    setProblems([]); // Clear existing problems
     
     try {
       // PRIMARY: Load templates from database
@@ -499,8 +504,11 @@ export function useBalancedQuestionGeneration(
       
       if (databaseTemplates.length >= totalQuestions) {
         console.log('✅ Using database templates - sufficient quantity');
-        setProblems(databaseTemplates.slice(0, totalQuestions));
+        const finalQuestions = databaseTemplates.slice(0, totalQuestions);
+        console.log('📋 Final questions to set:', finalQuestions.map(q => ({ id: q.id, question: q.question.substring(0, 50) })));
+        setProblems(finalQuestions);
         setGenerationSource('template');
+        console.log('✅ Problems state updated with database templates');
         return;
       } else if (databaseTemplates.length > 0) {
         console.log(`⚠️ Only ${databaseTemplates.length} templates available, filling with template generation`);
@@ -508,8 +516,10 @@ export function useBalancedQuestionGeneration(
         const remainingCount = totalQuestions - databaseTemplates.length;
         const templateProblems = await generateTemplateProblems();
         const mixedProblems = [...databaseTemplates, ...templateProblems.slice(0, remainingCount)];
+        console.log('📋 Mixed problems to set:', mixedProblems.map(q => ({ id: q.id, question: q.question.substring(0, 50) })));
         setProblems(mixedProblems);
         setGenerationSource('template');
+        console.log('✅ Problems state updated with mixed templates');
         return;
       }
       
@@ -519,8 +529,11 @@ export function useBalancedQuestionGeneration(
       
       if (fallbackProblems.length >= totalQuestions) {
         console.log('✅ Using AI generated problems');
-        setProblems(fallbackProblems.slice(0, totalQuestions));
+        const finalQuestions = fallbackProblems.slice(0, totalQuestions);
+        console.log('📋 AI problems to set:', finalQuestions.map(q => ({ id: q.id, question: q.question.substring(0, 50) })));
+        setProblems(finalQuestions);
         setGenerationSource('ai');
+        console.log('✅ Problems state updated with AI templates');
         return;
       } else if (fallbackProblems.length > 0) {
         console.log(`⚠️ Only ${fallbackProblems.length} AI problems, filling with template generation`);
@@ -528,16 +541,21 @@ export function useBalancedQuestionGeneration(
         const remainingCount = totalQuestions - fallbackProblems.length;
         const templateProblems = await generateTemplateProblems();
         const mixedProblems = [...fallbackProblems, ...templateProblems.slice(0, remainingCount)];
+        console.log('📋 AI+Template problems to set:', mixedProblems.map(q => ({ id: q.id, question: q.question.substring(0, 50) })));
         setProblems(mixedProblems);
         setGenerationSource('ai');
+        console.log('✅ Problems state updated with AI+Template mix');
         return;
       }
       
       // TERTIARY: Use template generation as final fallback
       console.log('🔧 Using template generation as final fallback');
       const templateProblems = await generateTemplateProblems();
-      setProblems(templateProblems.slice(0, totalQuestions));
+      const finalQuestions = templateProblems.slice(0, totalQuestions);
+      console.log('📋 Template fallback problems to set:', finalQuestions.map(q => ({ id: q.id, question: q.question.substring(0, 50) })));
+      setProblems(finalQuestions);
       setGenerationSource('template');
+      console.log('✅ Problems state updated with template fallback');
       
     } catch (error) {
       console.error('❌ Error in generateProblems:', error);
@@ -545,11 +563,15 @@ export function useBalancedQuestionGeneration(
       // Emergency fallback
       console.log('🚨 Emergency fallback to template generation');
       const emergencyProblems = await generateTemplateProblems();
-      setProblems(emergencyProblems.slice(0, totalQuestions));
+      const finalQuestions = emergencyProblems.slice(0, totalQuestions);
+      console.log('📋 Emergency problems to set:', finalQuestions.map(q => ({ id: q.id, question: q.question.substring(0, 50) })));
+      setProblems(finalQuestions);
       setGenerationSource('simple');
+      console.log('✅ Problems state updated with emergency fallback');
       
     } finally {
       setIsGenerating(false);
+      console.log('🏁 Generation process completed, isGenerating set to false');
     }
   }, [grade, category, userId, totalQuestions]); // Fixed: Remove function dependencies that cause recreations
   return {

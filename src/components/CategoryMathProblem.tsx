@@ -424,6 +424,13 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
   }
 
   if (isGenerating || problems.length === 0) {
+    console.log('🔄 RENDER: Loading state triggered', {
+      isGenerating,
+      problemsLength: problems.length,
+      gameStarted,
+      currentQuestion: !!currentQuestion
+    });
+    
     return (
       <Card className="w-full max-w-2xl mx-auto">
         <CardContent className="text-center py-12">
@@ -432,16 +439,30 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
           <p className="text-sm text-muted-foreground mt-2">
             Bereite verschiedene Fragetypen vor
           </p>
+          <div className="mt-4 text-xs opacity-60">
+            Debug: isGenerating={String(isGenerating)}, problems={problems.length}, gameStarted={String(gameStarted)}
+          </div>
         </CardContent>
       </Card>
     );
   }
 
   if (!currentQuestion) {
+    console.log('❌ RENDER: No current question available', {
+      problemsLength: problems.length,
+      currentQuestionIndex,
+      gameStarted,
+      isGenerating,
+      problems: problems.map(p => ({ id: p.id, question: p.question.substring(0, 50) }))
+    });
+    
     return (
       <Card className="w-full max-w-2xl mx-auto">
         <CardContent className="text-center py-8">
           <p className="text-lg">Keine Fragen verfügbar</p>
+          <div className="mt-2 text-xs opacity-60">
+            Debug: problems={problems.length}, index={currentQuestionIndex}, generating={String(isGenerating)}
+          </div>
           <Button onClick={generateProblems} className="mt-4">
             Erneut versuchen
           </Button>
