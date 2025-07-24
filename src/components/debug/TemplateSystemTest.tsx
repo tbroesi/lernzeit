@@ -8,7 +8,7 @@ import { getTemplatesForCategory, questionTemplates } from '@/utils/questionTemp
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
-import { useBalancedQuestionGeneration } from '@/hooks/useBalancedQuestionGeneration';
+import { useAdvancedQuestionGeneration } from '@/hooks/useAdvancedQuestionGeneration';
 
 interface DatabaseStats {
   totalTemplates: number;
@@ -31,7 +31,13 @@ export function TemplateSystemTest() {
     isGenerating,
     generationSource,
     generateProblems
-  } = useBalancedQuestionGeneration(testCategory, testGrade, user?.id || 'test', 5);
+  } = useAdvancedQuestionGeneration({
+    category: testCategory,
+    grade: testGrade,
+    userId: user?.id || 'test',
+    totalQuestions: 5,
+    autoGenerate: false
+  });
   
   const [testResults, setTestResults] = useState<{
     validationResults: ComprehensiveValidationResult;

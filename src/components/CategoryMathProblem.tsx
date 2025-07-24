@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { useQuestionGenerationManager } from '@/hooks/useQuestionGenerationManager';
+import { useAdvancedQuestionGeneration } from '@/hooks/useAdvancedQuestionGeneration';
 import { QuestionRenderer } from '@/components/game/QuestionRenderer';
 import { GameProgress } from '@/components/game/GameProgress';
 import { GameFeedback } from '@/components/game/GameFeedback';
@@ -40,7 +40,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
     canRetry,
     manualRetry,
     refreshQuestions
-  } = useQuestionGenerationManager({
+  } = useAdvancedQuestionGeneration({
     category,
     grade,
     userId: user?.id || 'anonymous',

@@ -30,13 +30,23 @@ export interface GenerationMetrics {
   averageQuality: number;
 }
 
-export function useAdvancedQuestionGeneration(
-  category: string,
-  grade: number,
-  userId: string,
-  totalQuestions: number = 5,
-  options: Partial<AdvancedGenerationOptions> = {}
-) {
+interface UseAdvancedQuestionGenerationProps {
+  category: string;
+  grade: number;
+  userId: string;
+  totalQuestions?: number;
+  autoGenerate?: boolean;
+  options?: Partial<AdvancedGenerationOptions>;
+}
+
+export function useAdvancedQuestionGeneration({
+  category,
+  grade,
+  userId,
+  totalQuestions = 5,
+  autoGenerate = true,
+  options = {}
+}: UseAdvancedQuestionGenerationProps) {
   const [problems, setProblems] = useState<SelectionQuestion[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationSource, setGenerationSource] = useState<'database' | 'template' | 'ai' | 'hybrid' | null>(null);
@@ -68,6 +78,13 @@ export function useAdvancedQuestionGeneration(
   };
 
   const finalOptions = { ...defaultOptions, ...options };
+  
+  // Auto-generate on mount if enabled
+  useEffect(() => {
+    if (autoGenerate && problems.length === 0 && !isGenerating) {
+      generateProblems();
+    }
+  }, [autoGenerate, category, grade, userId, totalQuestions]);
 
   // Main generation function with intelligent fallback chain
   const generateProblems = useCallback(async (): Promise<void> => {
@@ -217,7 +234,7 @@ export function useAdvancedQuestionGeneration(
       setIsGenerating(false);
       generationRef.current.isActive = false;
     }
-  }, [category, grade, userId, totalQuestions, finalOptions]);
+  }, [category, grade, userId, totalQuestions, finalOptions, sessionId]);
 
   // Enhanced Database Generation
   const generateFromDatabase = async (
@@ -543,7 +560,12 @@ export function useAdvancedQuestionGeneration(
   return {
     problems,
     isGenerating,
-    generationSource,
+    isInitialized: problems.length >= totalQuestions && !isGenerating,
+    generationSource: generationSource as 'template' | 'ai' | 'simple',
+    generationError: null,
+    canRetry: true,
+    manualRetry: generateProblems,
+    refreshQuestions: generateProblems,
     metrics,
     sessionId,
     generateProblems,
