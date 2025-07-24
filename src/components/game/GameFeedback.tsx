@@ -1,20 +1,25 @@
 
 import React from 'react';
-import { Check, X } from 'lucide-react';
+import { Check, X, Flag, ArrowRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface GameFeedbackProps {
   feedback: 'correct' | 'incorrect' | null;
   explanation?: string;
+  onReportIssue?: () => void;
+  onSkipFeedback?: () => void;
 }
 
 export function GameFeedback({ 
   feedback, 
-  explanation 
+  explanation,
+  onReportIssue,
+  onSkipFeedback
 }: GameFeedbackProps) {
   if (!feedback) return null;
 
   return (
-    <div className={`text-center p-6 rounded-lg border-2 ${
+    <div className={`p-6 rounded-lg border-2 ${
       feedback === 'correct' 
         ? 'bg-green-50 text-green-800 border-green-200' 
         : 'bg-red-50 text-red-800 border-red-200'
@@ -36,6 +41,32 @@ export function GameFeedback({
           <p className="text-sm">{explanation}</p>
         </div>
       )}
+
+      <div className="flex gap-2 mt-4 justify-center">
+        {onReportIssue && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={onReportIssue}
+            className="flex items-center gap-1"
+          >
+            <Flag className="w-4 h-4" />
+            Problem melden
+          </Button>
+        )}
+        
+        {onSkipFeedback && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={onSkipFeedback}
+            className="flex items-center gap-1"
+          >
+            <ArrowRight className="w-4 h-4" />
+            Weiter
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

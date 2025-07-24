@@ -142,10 +142,14 @@ export type Database = {
       }
       game_sessions: {
         Row: {
+          category: string | null
           correct_answers: number
           created_at: string | null
+          duration_seconds: number | null
           grade: number
           id: string
+          question_source: string | null
+          score: number | null
           session_date: string | null
           time_earned: number
           time_spent: number
@@ -153,10 +157,14 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          category?: string | null
           correct_answers?: number
           created_at?: string | null
+          duration_seconds?: number | null
           grade: number
           id?: string
+          question_source?: string | null
+          score?: number | null
           session_date?: string | null
           time_earned?: number
           time_spent?: number
@@ -164,10 +172,14 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          category?: string | null
           correct_answers?: number
           created_at?: string | null
+          duration_seconds?: number | null
           grade?: number
           id?: string
+          question_source?: string | null
+          score?: number | null
           session_date?: string | null
           time_earned?: number
           time_spent?: number
@@ -415,6 +427,42 @@ export type Database = {
           name?: string | null
           role?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      question_feedback: {
+        Row: {
+          category: string
+          created_at: string
+          feedback_details: string | null
+          feedback_type: string
+          grade: number
+          id: string
+          question_content: string
+          question_type: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          feedback_details?: string | null
+          feedback_type: string
+          grade: number
+          id?: string
+          question_content: string
+          question_type: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          feedback_details?: string | null
+          feedback_type?: string
+          grade?: number
+          id?: string
+          question_content?: string
+          question_type?: string
+          user_id?: string
         }
         Relationships: []
       }

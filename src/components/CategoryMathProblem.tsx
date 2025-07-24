@@ -6,13 +6,14 @@ import { QuestionRenderer } from '@/components/game/QuestionRenderer';
 import { GameProgress } from '@/components/game/GameProgress';
 import { GameFeedback } from '@/components/game/GameFeedback';
 import { QuestionGenerationInfo } from '@/components/game/QuestionGenerationInfo';
+import { QuestionFeedbackDialog } from '@/components/game/QuestionFeedbackDialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SelectionQuestion } from '@/types/questionTypes';
 import { supabase } from '@/lib/supabase';
 import { useScreenTime } from '@/hooks/useScreenTime';
+import { AlertTriangle } from 'lucide-react';
 
-// Define the props for the component
 interface CategoryMathProblemProps {
   category: string;
   grade: number;
@@ -23,7 +24,6 @@ export function CategoryMathProblem({ category, grade, onComplete }: CategoryMat
   const { user } = useAuth();
   const { addScreenTime } = useScreenTime();
   
-  // Verwende den neuen balanced hook
   const { 
     problems, 
     isGenerating, 
@@ -40,8 +40,9 @@ export function CategoryMathProblem({ category, grade, onComplete }: CategoryMat
   const [selectedWords, setSelectedWords] = useState<number[]>([]);
   const [currentPlacements, setCurrentPlacements] = useState<Record<string, string>>({});
   const [sessionStartTime] = useState(Date.now());
+  const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
+  const [feedbackAdvanceTimer, setFeedbackAdvanceTimer] = useState<NodeJS.Timeout | null>(null);
 
-  // Add proper type guard for currentQuestion
   const currentQuestion: SelectionQuestion | undefined = problems[currentQuestionIndex];
 
   useEffect(() => {
@@ -49,6 +50,15 @@ export function CategoryMathProblem({ category, grade, onComplete }: CategoryMat
       generateProblems();
     }
   }, [gameStarted, problems.length, generateProblems]);
+
+  // Clear timer on unmount
+  useEffect(() => {
+    return () => {
+      if (feedbackAdvanceTimer) {
+        clearTimeout(feedbackAdvanceTimer);
+      }
+    };
+  }, [feedbackAdvanceTimer]);
 
   const startGame = () => {
     setGameStarted(true);
@@ -62,48 +72,36 @@ export function CategoryMathProblem({ category, grade, onComplete }: CategoryMat
     setCurrentPlacements({});
   };
 
-  // Verbesserte Antwort-Validierung
   const validateAnswer = (question: SelectionQuestion): boolean => {
     console.log('🔍 Validating answer for question:', question.question);
-    console.log('🔍 Question type:', question.questionType);
     
     switch (question.questionType) {
       case 'text-input':
         const userAnswerNormalized = userAnswer.trim().toLowerCase();
         const correctAnswerNormalized = question.answer.toString().toLowerCase();
         
-        console.log('📝 User answer:', userAnswerNormalized);
-        console.log('✅ Correct answer:', correctAnswerNormalized);
-        
-        // Prüfe sowohl exakte Übereinstimmung als auch numerische Gleichheit
+        // Check exact match first
         if (userAnswerNormalized === correctAnswerNormalized) {
           return true;
         }
         
-        // Für numerische Antworten: Parse beide Werte
+        // For numeric answers, parse and compare
         const userNum = parseFloat(userAnswerNormalized);
         const correctNum = parseFloat(correctAnswerNormalized);
         
         if (!isNaN(userNum) && !isNaN(correctNum)) {
-          const isEqual = Math.abs(userNum - correctNum) < 0.001;
-          console.log('🔢 Numeric comparison:', userNum, 'vs', correctNum, '=', isEqual);
-          return isEqual;
+          return Math.abs(userNum - correctNum) < 0.001;
         }
         
         return false;
         
       case 'multiple-choice':
-        console.log('🔘 Selected option:', selectedMultipleChoice);
-        console.log('✅ Correct option:', question.correctAnswer);
         return selectedMultipleChoice === question.correctAnswer;
         
       case 'word-selection':
         const correctWordIndices = question.selectableWords
           ?.filter(word => word.isCorrect)
           ?.map(word => word.index) || [];
-        
-        console.log('📝 Selected words:', selectedWords);
-        console.log('✅ Correct words:', correctWordIndices);
         
         return selectedWords.length === correctWordIndices.length && 
                selectedWords.every(index => correctWordIndices.includes(index));
@@ -117,15 +115,11 @@ export function CategoryMathProblem({ category, grade, onComplete }: CategoryMat
           return acc;
         }, {} as Record<string, string>) || {};
         
-        console.log('🔄 Current placements:', currentPlacements);
-        console.log('✅ Correct placements:', correctPlacements);
-        
         return Object.keys(correctPlacements).every(itemId => 
           currentPlacements[itemId] === correctPlacements[itemId]
         );
         
       default:
-        console.warn('⚠️ Unknown question type:', question.questionType);
         return false;
     }
   };
@@ -135,7 +129,6 @@ export function CategoryMathProblem({ category, grade, onComplete }: CategoryMat
 
     const isCorrect = validateAnswer(currentQuestion);
     
-    console.log('📊 Answer validation result:', isCorrect);
     setFeedback(isCorrect ? 'correct' : 'incorrect');
     
     if (isCorrect) {
@@ -156,26 +149,36 @@ export function CategoryMathProblem({ category, grade, onComplete }: CategoryMat
       }
     }
 
-    // Auto-advance after 3 seconds (mehr Zeit für Erklärung)
-    setTimeout(() => {
-      if (currentQuestionIndex < problems.length - 1) {
-        setCurrentQuestionIndex(prev => prev + 1);
-        setFeedback(null);
-        resetAnswers();
-      } else {
-        completeGame();
-      }
-    }, 3000);
+    // Extended feedback time - 5 seconds for better learning
+    const timer = setTimeout(() => {
+      advanceToNextQuestion();
+    }, 5000);
+    
+    setFeedbackAdvanceTimer(timer);
+  };
+
+  const advanceToNextQuestion = () => {
+    if (feedbackAdvanceTimer) {
+      clearTimeout(feedbackAdvanceTimer);
+      setFeedbackAdvanceTimer(null);
+    }
+
+    if (currentQuestionIndex < problems.length - 1) {
+      setCurrentQuestionIndex(prev => prev + 1);
+      setFeedback(null);
+      resetAnswers();
+    } else {
+      completeGame();
+    }
   };
 
   const completeGame = async () => {
     const sessionDuration = Date.now() - sessionStartTime;
     const earnedMinutes = Math.max(1, Math.floor((score / problems.length) * 5));
     
-    // Add screen time
     addScreenTime(earnedMinutes * 60);
     
-    // Save session data
+    // Save enhanced session data
     if (user) {
       try {
         await supabase.from('game_sessions').insert({
@@ -185,7 +188,10 @@ export function CategoryMathProblem({ category, grade, onComplete }: CategoryMat
           score,
           total_questions: problems.length,
           duration_seconds: Math.floor(sessionDuration / 1000),
-          question_source: generationSource || 'unknown'
+          question_source: generationSource || 'unknown',
+          correct_answers: score,
+          time_earned: earnedMinutes,
+          time_spent: sessionDuration / 1000
         });
       } catch (error) {
         console.error('Error saving session:', error);
@@ -217,15 +223,41 @@ export function CategoryMathProblem({ category, grade, onComplete }: CategoryMat
       setScore(prev => prev + 1);
     }
 
-    setTimeout(() => {
-      if (currentQuestionIndex < problems.length - 1) {
-        setCurrentQuestionIndex(prev => prev + 1);
-        setFeedback(null);
-        resetAnswers();
-      } else {
-        completeGame();
-      }
-    }, 2000);
+    const timer = setTimeout(() => {
+      advanceToNextQuestion();
+    }, 5000);
+    
+    setFeedbackAdvanceTimer(timer);
+  };
+
+  const handleQuestionFeedback = async (feedbackType: string, details?: string) => {
+    if (!currentQuestion || !user) return;
+
+    try {
+      await supabase.from('question_feedback').insert({
+        user_id: user.id,
+        question_content: currentQuestion.question,
+        question_type: currentQuestion.questionType,
+        feedback_type: feedbackType,
+        feedback_details: details,
+        category: category.toLowerCase(),
+        grade
+      });
+      
+      console.log('Feedback submitted successfully');
+    } catch (error) {
+      console.error('Error submitting feedback:', error);
+    }
+    
+    setShowFeedbackDialog(false);
+  };
+
+  const handleSkipFeedback = () => {
+    if (feedbackAdvanceTimer) {
+      clearTimeout(feedbackAdvanceTimer);
+      setFeedbackAdvanceTimer(null);
+    }
+    advanceToNextQuestion();
   };
 
   if (!gameStarted) {
@@ -313,6 +345,8 @@ export function CategoryMathProblem({ category, grade, onComplete }: CategoryMat
         <GameFeedback 
           feedback={feedback} 
           explanation={currentQuestion.explanation} 
+          onReportIssue={() => setShowFeedbackDialog(true)}
+          onSkipFeedback={feedback ? handleSkipFeedback : undefined}
         />
 
         {!feedback && (
@@ -332,6 +366,12 @@ export function CategoryMathProblem({ category, grade, onComplete }: CategoryMat
           </div>
         )}
       </CardContent>
+
+      <QuestionFeedbackDialog
+        isOpen={showFeedbackDialog}
+        onClose={() => setShowFeedbackDialog(false)}
+        onSubmit={handleQuestionFeedback}
+      />
     </Card>
   );
 }
