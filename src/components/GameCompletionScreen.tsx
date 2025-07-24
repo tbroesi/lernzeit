@@ -9,6 +9,7 @@ interface GameCompletionScreenProps {
   sessionDuration: number;
   timePerTask: number;
   achievementBonusMinutes: number;
+  perfectSessionBonus?: number; // in minutes
   onContinue: () => void;
 }
 
@@ -18,11 +19,13 @@ export function GameCompletionScreen({
   sessionDuration,
   timePerTask,
   achievementBonusMinutes,
+  perfectSessionBonus = 0,
   onContinue
 }: GameCompletionScreenProps) {
   const earnedSeconds = score * timePerTask;
   const timeSpentSeconds = Math.round(sessionDuration / 1000);
-  const netTimeSeconds = Math.max(0, earnedSeconds - timeSpentSeconds + (achievementBonusMinutes * 60));
+  const perfectSessionBonusSeconds = perfectSessionBonus * 60;
+  const netTimeSeconds = Math.max(0, earnedSeconds - timeSpentSeconds + (achievementBonusMinutes * 60) + perfectSessionBonusSeconds);
   const efficiency = Math.round((score / totalQuestions) * 100);
 
   return (
@@ -78,6 +81,19 @@ export function GameCompletionScreen({
               </div>
             </div>
 
+            {/* Perfect Session Bonus */}
+            {perfectSessionBonus > 0 && (
+              <div className="flex items-center justify-between p-3 bg-white/50 dark:bg-black/20 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <Trophy className="w-5 h-5 text-green-600" />
+                  <span className="font-medium">Perfect Session Bonus:</span>
+                </div>
+                <div className="text-lg font-mono font-bold text-green-600">
+                  +{perfectSessionBonusSeconds}s
+                </div>
+              </div>
+            )}
+
             {/* Achievement Bonus */}
             {achievementBonusMinutes > 0 && (
               <div className="flex items-center justify-between p-3 bg-white/50 dark:bg-black/20 rounded-lg">
@@ -98,6 +114,7 @@ export function GameCompletionScreen({
                 <div className="font-mono text-lg mb-3">
                   {earnedSeconds}s
                   {timeSpentSeconds > 0 && ` - ${timeSpentSeconds}s`}
+                  {perfectSessionBonus > 0 && ` + ${perfectSessionBonusSeconds}s`}
                   {achievementBonusMinutes > 0 && ` + ${achievementBonusMinutes * 60}s`}
                   = <span className="font-bold text-2xl text-green-600">{netTimeSeconds}s</span>
                 </div>

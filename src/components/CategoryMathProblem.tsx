@@ -219,16 +219,42 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
             increment: 1
           });
           
+          // Update question-solved achievements
           const achievementResult = await updateProgress(
             category.toLowerCase(),
             'questions_solved',
             1
           );
           
-          console.log('🏆 Achievement result:', achievementResult);
+          // Update total questions achievement
+          const totalQuestionsResult = await updateProgress(
+            'general',
+            'total_questions',
+            1
+          );
+
+          // Update subjects mastered achievement
+          const subjectsResult = await updateProgress(
+            'general',
+            'subjects_mastered',
+            0 // Will be calculated by the function
+          );
           
-          if (achievementResult && achievementResult.length > 0) {
-            setNewAchievements(achievementResult);
+          console.log('🏆 Achievement results:', {
+            regular: achievementResult,
+            total: totalQuestionsResult,
+            subjects: subjectsResult
+          });
+          
+          // Combine all new achievements
+          const allNewAchievements = [
+            ...(achievementResult || []),
+            ...(totalQuestionsResult || []),
+            ...(subjectsResult || [])
+          ];
+          
+          if (allNewAchievements.length > 0) {
+            setNewAchievements(allNewAchievements);
             setShowAchievements(true);
           }
         } catch (error) {
@@ -267,13 +293,37 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
       earnedSeconds = score * 30; // fallback to 30 seconds per correct answer
     }
     
+    // Perfect session bonus: 1 minute for all 5 correct
+    let perfectSessionBonus = 0;
+    if (score === problems.length && problems.length >= 5) {
+      perfectSessionBonus = 60; // 60 seconds = 1 minute
+      console.log('🎯 Perfect session bonus awarded!');
+      
+      // Update perfect session achievements
+      if (user) {
+        try {
+          const perfectSessionResult = await updateProgress(
+            'general',
+            'perfect_sessions',
+            1
+          );
+          
+          if (perfectSessionResult && perfectSessionResult.length > 0) {
+            setNewAchievements(prev => [...prev, ...perfectSessionResult]);
+          }
+        } catch (error) {
+          console.error('❌ Perfect session achievement error:', error);
+        }
+      }
+    }
+    
     // Get achievement bonus time
     let achievementBonusMinutes = 0;
     if (newAchievements.length > 0) {
       achievementBonusMinutes = newAchievements.reduce((sum, ach) => sum + (ach.reward_minutes || 0), 0);
     }
     
-    const earnedMinutes = Math.round(earnedSeconds / 60 * 100) / 100; // Round to 2 decimal places
+    const earnedMinutes = Math.round((earnedSeconds + perfectSessionBonus) / 60 * 100) / 100; // Round to 2 decimal places
     
     addScreenTime(earnedMinutes * 60);
     
@@ -283,7 +333,8 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
       totalQuestions: problems.length,
       timeSpentSeconds: sessionDuration / 1000,
       timePerTask,
-      achievementBonusMinutes
+      achievementBonusMinutes,
+      perfectSessionBonus: perfectSessionBonus / 60 // Convert to minutes for display
     };
     
     // Create a completion screen with time display
@@ -520,6 +571,12 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
       achievementBonusMinutes = newAchievements.reduce((sum, ach) => sum + (ach.reward_minutes || 0), 0);
     }
 
+    // Calculate perfect session bonus for display
+    let perfectSessionBonus = 0;
+    if (score === problems.length && problems.length >= 5) {
+      perfectSessionBonus = 1; // 1 minute bonus
+    }
+
     return (
       <GameCompletionScreen
         score={score}
@@ -527,6 +584,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
         sessionDuration={sessionDuration}
         timePerTask={timePerTask}
         achievementBonusMinutes={achievementBonusMinutes}
+        perfectSessionBonus={perfectSessionBonus}
         onContinue={async () => {
           // Save session data
           if (user) {

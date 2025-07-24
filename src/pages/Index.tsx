@@ -4,7 +4,7 @@ import { CategorySelector } from '@/components/CategorySelector';
 import { CategoryMathProblem as CategoryLearningProblem } from '@/components/CategoryMathProblem';
 import { AuthForm } from '@/components/auth/AuthForm';
 import { UserProfile } from '@/components/auth/UserProfile';
-import { AchievementsBadge } from '@/components/AchievementsBadge';
+
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
