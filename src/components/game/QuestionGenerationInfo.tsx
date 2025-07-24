@@ -23,8 +23,8 @@ export function QuestionGenerationInfo({ generationSource, isGenerating }: Quest
       case 'ai':
         return {
           icon: <Bot className="h-4 w-4" />,
-          label: 'KI-generiert',
-          description: 'Vielfältige, intelligente Fragen',
+          label: 'Intelligente Fragen',
+          description: 'Adaptiv und lehrreich',
           color: 'bg-green-500'
         };
       case 'template':

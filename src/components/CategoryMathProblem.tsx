@@ -18,9 +18,10 @@ interface CategoryMathProblemProps {
   category: string;
   grade: number;
   onComplete: (minutes: number, category: string) => void;
+  onBack?: () => void;
 }
 
-export function CategoryMathProblem({ category, grade, onComplete }: CategoryMathProblemProps) {
+export function CategoryMathProblem({ category, grade, onComplete, onBack }: CategoryMathProblemProps) {
   const { user } = useAuth();
   const { addScreenTime } = useScreenTime();
   
@@ -302,13 +303,54 @@ export function CategoryMathProblem({ category, grade, onComplete }: CategoryMat
     setShowFeedbackDialog(false);
   };
 
+  const getCorrectAnswerText = (question: SelectionQuestion): string => {
+    switch (question.questionType) {
+      case 'text-input':
+        return question.answer.toString();
+      case 'multiple-choice':
+        return question.options?.[question.correctAnswer] || 'Unbekannt';
+      case 'word-selection':
+        const correctWords = question.selectableWords
+          ?.filter(word => word.isCorrect)
+          ?.map(word => word.word) || [];
+        return correctWords.join(', ');
+      default:
+        return 'Siehe Erklärung';
+    }
+  };
+
+  const getUserAnswerText = (question: SelectionQuestion): string => {
+    switch (question.questionType) {
+      case 'text-input':
+        return userAnswer || 'Keine Antwort';
+      case 'multiple-choice':
+        return selectedMultipleChoice !== null 
+          ? question.options?.[selectedMultipleChoice] || 'Unbekannt'
+          : 'Keine Antwort';
+      case 'word-selection':
+        const userWords = selectedWords
+          .map(index => question.selectableWords?.find(word => word.index === index)?.word)
+          .filter(Boolean);
+        return userWords.join(', ') || 'Keine Auswahl';
+      default:
+        return 'Siehe Details';
+    }
+  };
+
   if (!gameStarted) {
     return (
       <Card className="w-full max-w-2xl mx-auto">
         <CardHeader>
-          <CardTitle className="text-center">
-            {category} - Klasse {grade}
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-center flex-1">
+              {category} - Klasse {grade}
+            </CardTitle>
+            {onBack && (
+              <Button variant="outline" size="sm" onClick={onBack}>
+                Zurück
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="text-center space-y-6">
           <p className="text-lg">
@@ -356,7 +398,14 @@ export function CategoryMathProblem({ category, grade, onComplete }: CategoryMat
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
         <div className="flex justify-between items-center">
-          <CardTitle>{category} - Klasse {grade}</CardTitle>
+          <div className="flex items-center gap-4">
+            {onBack && (
+              <Button variant="outline" size="sm" onClick={onBack}>
+                Zurück
+              </Button>
+            )}
+            <CardTitle>{category} - Klasse {grade}</CardTitle>
+          </div>
           <QuestionGenerationInfo 
             generationSource={generationSource} 
             isGenerating={isGenerating} 
@@ -386,7 +435,9 @@ export function CategoryMathProblem({ category, grade, onComplete }: CategoryMat
 
         <GameFeedback 
           feedback={feedback} 
-          explanation={currentQuestion.explanation} 
+          explanation={currentQuestion.explanation}
+          correctAnswer={feedback === 'incorrect' ? getCorrectAnswerText(currentQuestion) : undefined}
+          userAnswer={feedback === 'incorrect' ? getUserAnswerText(currentQuestion) : undefined}
           onReportIssue={() => setShowFeedbackDialog(true)}
           onSkipFeedback={feedback ? advanceToNextQuestion : undefined}
         />

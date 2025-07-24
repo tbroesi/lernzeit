@@ -206,6 +206,7 @@ const Index = () => {
         grade={selectedGrade}
         category={germanCategoryName}
         onComplete={handleProblemComplete}
+        onBack={() => setSelectedCategory(null)}
       />
     );
   }

@@ -9,8 +9,8 @@ const corsHeaders = {
 // Configuration
 const SUBJECTS = ['Mathematik', 'Deutsch', 'Englisch', 'Geographie', 'Geschichte', 'Physik', 'Biologie', 'Chemie', 'Latein'];
 const GRADES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-const TEMPLATES_PER_SUBJECT_GRADE = 20;
-const MAX_TEMPLATES_TO_KEEP = 30; // Keep more than needed for rotation
+const TEMPLATES_PER_SUBJECT_GRADE = 50;
+const MAX_TEMPLATES_TO_KEEP = 75; // Keep more than needed for rotation and diversity
 
 interface TemplateGenerationRequest {
   category: string;
@@ -105,6 +105,11 @@ serve(async (req) => {
           results.generated += generatedCount;
           results.subjects.push(`${subject}-${grade}`);
 
+          // Add diversity factor - don't generate too many similar templates in one batch
+          if (generatedCount > 0) {
+            await new Promise(resolve => setTimeout(resolve, 2000)); // Longer delay for diversity
+          }
+          
           // Clean up old templates if we have too many
           if (existingCount + generatedCount > MAX_TEMPLATES_TO_KEEP) {
             const { error: deleteError } = await supabase

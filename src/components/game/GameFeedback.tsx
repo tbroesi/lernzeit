@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 interface GameFeedbackProps {
   feedback: 'correct' | 'incorrect' | null;
   explanation?: string;
+  correctAnswer?: string;
+  userAnswer?: string;
   onReportIssue?: () => void;
   onSkipFeedback?: () => void;
 }
@@ -13,6 +15,8 @@ interface GameFeedbackProps {
 export function GameFeedback({ 
   feedback, 
   explanation,
+  correctAnswer,
+  userAnswer,
   onReportIssue,
   onSkipFeedback
 }: GameFeedbackProps) {
@@ -34,6 +38,17 @@ export function GameFeedback({
           {feedback === 'correct' ? '🎉 Richtig!' : '❌ Falsch!'}
         </span>
       </div>
+      
+      {/* Show correct answer for incorrect responses */}
+      {feedback === 'incorrect' && correctAnswer && (
+        <div className="mt-3 p-3 bg-white/50 rounded-md border-l-4 border-green-500">
+          <p className="text-sm font-medium mb-1 text-green-700">Richtige Antwort:</p>
+          <p className="text-sm font-semibold text-green-800">{correctAnswer}</p>
+          {userAnswer && (
+            <p className="text-xs text-red-600 mt-1">Deine Antwort: {userAnswer}</p>
+          )}
+        </div>
+      )}
       
       {explanation && (
         <div className="mt-3 p-3 bg-white/50 rounded-md">
