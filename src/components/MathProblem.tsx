@@ -426,17 +426,19 @@ export function MathProblem({ grade, onBack, onComplete, userId }: MathProblemPr
       // Update achievements
       if (userId) {
         try {
-          const questionTime = (Date.now() - questionStartTime) / 1000;
-          const wasTimeLimitExceeded = questionTime > 30;
+          console.log('🎯 Calling updateProgress with:', {
+            category: 'math',
+            type: 'questions_solved',
+            increment: 1
+          });
           
           const achievementResult = await updateProgress(
             'math',
             'questions_solved', 
-            1,
-            true,
-            wasTimeLimitExceeded,
-            questionTime
+            1
           );
+          
+          console.log('🏆 Achievement result:', achievementResult);
           
           if (achievementResult && achievementResult.length > 0) {
             setNewAchievements(achievementResult);

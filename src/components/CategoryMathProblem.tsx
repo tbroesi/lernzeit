@@ -213,24 +213,26 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
       // Update achievements  
       if (user) {
         try {
-          const questionTime = (Date.now() - questionStartTime) / 1000;
-          const wasTimeLimitExceeded = questionTime > 30; // 30 seconds time limit
+          console.log('🎯 Calling updateProgress with:', {
+            category: category.toLowerCase(),
+            type: 'questions_solved',
+            increment: 1
+          });
           
           const achievementResult = await updateProgress(
             category.toLowerCase(),
             'questions_solved',
-            1,
-            true,
-            wasTimeLimitExceeded,
-            questionTime
+            1
           );
+          
+          console.log('🏆 Achievement result:', achievementResult);
           
           if (achievementResult && achievementResult.length > 0) {
             setNewAchievements(achievementResult);
             setShowAchievements(true);
           }
         } catch (error) {
-          console.error('Error updating achievements:', error);
+          console.error('❌ Achievement error:', error);
         }
       }
     }

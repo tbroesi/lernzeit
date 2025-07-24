@@ -91,32 +91,33 @@ export function useAchievements(userId?: string) {
   const updateProgress = async (
     category: string, 
     type: string, 
-    increment: number = 1,
-    isCorrect: boolean = true,
-    timeLimitExceeded: boolean = false,
-    answerTime: number = 0
+    increment: number = 1
   ): Promise<NewAchievement[]> => {
     if (!userId) return [];
 
     try {
+      console.log('🎯 Updating achievement progress:', { userId, category, type, increment });
+      
       const { data, error } = await supabase.rpc('update_achievement_progress', {
         p_user_id: userId,
         p_category: category,
         p_type: type,
-        p_increment: increment,
-        p_is_correct: isCorrect,
-        p_time_limit_exceeded: timeLimitExceeded,
-        p_answer_time: answerTime
-      } as any);
+        p_increment: increment
+      });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Achievement RPC error:', error);
+        throw error;
+      }
+
+      console.log('✅ Achievement update result:', data);
 
       // Lade Achievements neu
       await loadAchievements();
 
       return (data as any)?.new_achievements || [];
     } catch (error: any) {
-      console.error('Fehler beim Aktualisieren des Achievement-Progress:', error);
+      console.error('❌ Fehler beim Aktualisieren des Achievement-Progress:', error);
       return [];
     }
   };
