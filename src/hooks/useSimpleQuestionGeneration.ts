@@ -130,11 +130,13 @@ export function useSimpleQuestionGeneration(
   const generateAIProblems = async (): Promise<SelectionQuestion[]> => {
     console.log('🤖 Trying AI generation with timeout');
     
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    // Create a timeout promise
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('AI generation timeout')), 5000);
+    });
     
     try {
-      const response = await supabase.functions.invoke('generate-problems', {
+      const aiPromise = supabase.functions.invoke('generate-problems', {
         body: {
           category,
           grade,
@@ -142,11 +144,10 @@ export function useSimpleQuestionGeneration(
           excludeQuestions: [],
           sessionId,
           requestId: `simple_${Date.now()}`
-        },
-        signal: controller.signal
+        }
       });
       
-      clearTimeout(timeoutId);
+      const response = await Promise.race([aiPromise, timeoutPromise]);
       
       if (response.error) {
         console.warn('AI generation failed:', response.error);
@@ -157,7 +158,6 @@ export function useSimpleQuestionGeneration(
       console.log(`🎯 AI generated ${problems.length} problems`);
       return problems;
     } catch (error) {
-      clearTimeout(timeoutId);
       console.warn('AI generation timed out or failed:', error);
       return [];
     }
