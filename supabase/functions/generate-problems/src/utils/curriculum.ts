@@ -15,7 +15,7 @@ export const CURRICULUM_OBJECTIVES: { [category: string]: { [grade: number]: Cur
     1: {
       grade: 1,
       category: 'mathematik',
-      topics: ['Zahlen bis 20', 'Addition', 'Subtraktion', 'Zahlenreihen', 'Grundformen'],
+      topics: ['Zahlen bis 20', 'Addition', 'Subtraktion', 'Zahlenreihen', 'Grundformen', 'Geometrische Figuren', 'Formen erkennen'],
       skills: ['Zählen', 'Vergleichen', 'Einfache Rechnungen', 'Mengen erfassen'],
       examples: ['7 + 5 = ?', 'Welche Zahl kommt nach 13?', '15 - 8 = ?'],
       complexity: 'basic'
@@ -23,7 +23,7 @@ export const CURRICULUM_OBJECTIVES: { [category: string]: { [grade: number]: Cur
     2: {
       grade: 2,
       category: 'mathematik',
-      topics: ['Zahlen bis 100', 'Einmaleins bis 5', 'Halbieren', 'Verdoppeln', 'Geld'],
+      topics: ['Zahlen bis 100', 'Einmaleins bis 5', 'Halbieren', 'Verdoppeln', 'Geld', 'Zeit', 'Messen', 'Rechteck und Quadrat'],
       skills: ['Bündeln', 'Schätzen', 'Messen', 'Kleine Multiplikation'],
       examples: ['34 + 27 = ?', '3 × 4 = ?', 'Doppelt so viel wie 15?'],
       complexity: 'basic'
@@ -31,7 +31,7 @@ export const CURRICULUM_OBJECTIVES: { [category: string]: { [grade: number]: Cur
     3: {
       grade: 3,
       category: 'mathematik',
-      topics: ['Einmaleins komplett', 'Division', 'Zahlen bis 1000', 'Brüche', 'Geometrie'],
+      topics: ['Einmaleins komplett', 'Division', 'Zahlen bis 1000', 'Brüche', 'Geometrie', 'Flächenberechnung', 'Umfang', 'Quadrat und Rechteck'],
       skills: ['Automatisierung', 'Strategien entwickeln', 'Sachaufgaben lösen'],
       examples: ['7 × 8 = ?', '56 ÷ 7 = ?', '234 + 178 = ?'],
       complexity: 'intermediate'
@@ -39,7 +39,7 @@ export const CURRICULUM_OBJECTIVES: { [category: string]: { [grade: number]: Cur
     4: {
       grade: 4,
       category: 'mathematik',
-      topics: ['Großes Einmaleins', 'Schriftliche Verfahren', 'Dezimalzahlen', 'Römische Zahlen'],
+      topics: ['Großes Einmaleins', 'Schriftliche Verfahren', 'Dezimalzahlen', 'Römische Zahlen', 'Geometrie erweitert', 'Fläche und Umfang', 'Würfel und Quader'],
       skills: ['Algorithmen verstehen', 'Kontrollieren', 'Überschlagen'],
       examples: ['144 ÷ 12 = ?', '23 × 17 = ?', '2,5 + 1,8 = ?'],
       complexity: 'intermediate'
@@ -204,12 +204,28 @@ export function generateCurriculumPrompt(category: string, grade: number): strin
   const skillsText = objectives.skills.join(', ');
   const examplesText = objectives.examples.join(' | ');
   
+  // Ensure variety of question types, especially for mathematics
+  const questionTypeRequirement = category.toLowerCase() === 'mathematik' ? 
+    `
+WICHTIG - FRAGETYPEN-VIELFALT:
+- Mindestens 40% Multiple-Choice Fragen für bessere Interaktivität
+- Text-Input Fragen für offene Antworten
+- Bei Geometrie: Immer Flächenberechnung, Umfang, Formen erkennen
+- Verschiedene Kontexte: Sachaufgaben, reine Rechnung, Textverständnis
+
+GEOMETRIE-FOKUS für Klasse ${grade}:
+- Klasse 1-2: Formen erkennen (Dreieck, Quadrat, Rechteck, Kreis)
+- Klasse 3-4: Umfang und Flächenberechnung, Würfel und Quader
+- Klasse 5+: Erweiterte geometrische Berechnungen
+` : '';
+
   return `Erstelle Aufgaben für ${category}, Klasse ${grade} basierend auf dem offiziellen Lehrplan:
 
 THEMEN: ${topicsText}
 FÄHIGKEITEN: ${skillsText}
 BEISPIELE: ${examplesText}
 SCHWIERIGKEIT: ${objectives.complexity}
+${questionTypeRequirement}
 
 Die Aufgaben müssen strikt dem Curriculum entsprechen und dem Entwicklungsstand von Klasse ${grade} angemessen sein.`;
 }
