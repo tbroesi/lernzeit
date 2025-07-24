@@ -41,7 +41,6 @@ export function CategoryMathProblem({ category, grade, onComplete }: CategoryMat
   const [currentPlacements, setCurrentPlacements] = useState<Record<string, string>>({});
   const [sessionStartTime] = useState(Date.now());
   const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
-  const [feedbackAdvanceTimer, setFeedbackAdvanceTimer] = useState<NodeJS.Timeout | null>(null);
 
   const currentQuestion: SelectionQuestion | undefined = problems[currentQuestionIndex];
 
@@ -51,14 +50,51 @@ export function CategoryMathProblem({ category, grade, onComplete }: CategoryMat
     }
   }, [gameStarted, problems.length, generateProblems]);
 
-  // Clear timer on unmount
+  // Analyze last session for AI-generated questions
   useEffect(() => {
-    return () => {
-      if (feedbackAdvanceTimer) {
-        clearTimeout(feedbackAdvanceTimer);
+    const analyzeLastSession = async () => {
+      if (!user) return;
+      
+      try {
+        const { data: sessions, error } = await supabase
+          .from('game_sessions')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(1);
+          
+        if (error) {
+          console.error('Error fetching last session:', error);
+          return;
+        }
+        
+        if (sessions && sessions.length > 0) {
+          const lastSession = sessions[0];
+          console.log('🔍 Last session analysis:', {
+            session_id: lastSession.id,
+            question_source: lastSession.question_source,
+            category: lastSession.category,
+            grade: lastSession.grade,
+            score: lastSession.score,
+            total_questions: lastSession.total_questions,
+            created_at: lastSession.created_at
+          });
+          
+          if (lastSession.question_source === 'ai') {
+            console.log('✅ AI-generated questions were used in the last session');
+          } else {
+            console.log(`📝 Template/Simple questions were used (source: ${lastSession.question_source})`);
+          }
+        } else {
+          console.log('No previous sessions found');
+        }
+      } catch (error) {
+        console.error('Error analyzing last session:', error);
       }
     };
-  }, [feedbackAdvanceTimer]);
+
+    analyzeLastSession();
+  }, [user]);
 
   const startGame = () => {
     setGameStarted(true);
@@ -149,20 +185,13 @@ export function CategoryMathProblem({ category, grade, onComplete }: CategoryMat
       }
     }
 
-    // Extended feedback time - 5 seconds for better learning
-    const timer = setTimeout(() => {
-      advanceToNextQuestion();
-    }, 5000);
-    
-    setFeedbackAdvanceTimer(timer);
+    // NO AUTOMATIC ADVANCEMENT - user must click continue
+    console.log('✅ Feedback shown, waiting for user to continue manually');
   };
 
   const advanceToNextQuestion = () => {
-    if (feedbackAdvanceTimer) {
-      clearTimeout(feedbackAdvanceTimer);
-      setFeedbackAdvanceTimer(null);
-    }
-
+    console.log('➡️ Advancing to next question manually');
+    
     if (currentQuestionIndex < problems.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
       setFeedback(null);
@@ -193,6 +222,8 @@ export function CategoryMathProblem({ category, grade, onComplete }: CategoryMat
           time_earned: earnedMinutes,
           time_spent: sessionDuration / 1000
         });
+        
+        console.log('📊 Session saved with source:', generationSource);
       } catch (error) {
         console.error('Error saving session:', error);
       }
@@ -223,11 +254,8 @@ export function CategoryMathProblem({ category, grade, onComplete }: CategoryMat
       setScore(prev => prev + 1);
     }
 
-    const timer = setTimeout(() => {
-      advanceToNextQuestion();
-    }, 5000);
-    
-    setFeedbackAdvanceTimer(timer);
+    // NO AUTOMATIC ADVANCEMENT - user must click continue
+    console.log('✅ Matching feedback shown, waiting for user to continue manually');
   };
 
   const handleQuestionFeedback = async (feedbackType: string, details?: string) => {
@@ -250,14 +278,6 @@ export function CategoryMathProblem({ category, grade, onComplete }: CategoryMat
     }
     
     setShowFeedbackDialog(false);
-  };
-
-  const handleSkipFeedback = () => {
-    if (feedbackAdvanceTimer) {
-      clearTimeout(feedbackAdvanceTimer);
-      setFeedbackAdvanceTimer(null);
-    }
-    advanceToNextQuestion();
   };
 
   if (!gameStarted) {
@@ -346,7 +366,7 @@ export function CategoryMathProblem({ category, grade, onComplete }: CategoryMat
           feedback={feedback} 
           explanation={currentQuestion.explanation} 
           onReportIssue={() => setShowFeedbackDialog(true)}
-          onSkipFeedback={feedback ? handleSkipFeedback : undefined}
+          onSkipFeedback={feedback ? advanceToNextQuestion : undefined}
         />
 
         {!feedback && (
