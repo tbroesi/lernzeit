@@ -602,6 +602,10 @@ export type Database = {
         | "accuracy"
         | "speed"
         | "milestone"
+        | "perfect_sessions"
+        | "total_questions"
+        | "fast_sessions"
+        | "subjects_mastered"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -748,6 +752,10 @@ export const Constants = {
         "accuracy",
         "speed",
         "milestone",
+        "perfect_sessions",
+        "total_questions",
+        "fast_sessions",
+        "subjects_mastered",
       ],
     },
   },
