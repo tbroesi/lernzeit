@@ -136,11 +136,22 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
     analyzeAndTest();
   }, [user, problems, category, grade]);
 
-  // Auto-generate problems when component loads
+  // Auto-generate problems when component loads OR when grade/category changes
   useEffect(() => {
-    console.log('🚀 CategoryMathProblem loaded - Auto-generating problems');
+    console.log('🚀 CategoryMathProblem loaded/changed - Auto-generating problems');
+    console.log(`📊 Parameters: grade=${grade}, category=${category}, userId=${user?.id || 'anonymous'}`);
+    
+    // Reset all game state when parameters change
+    setCurrentQuestionIndex(0);
+    setScore(0);
+    setGameStarted(false);
+    setFeedback(null);
+    setGameCompleted(false);
+    setSessionEndTime(null);
+    resetAnswers();
+    
     generateProblems();
-  }, [generateProblems]);
+  }, [generateProblems, grade, category]);
 
   const startGame = () => {
     setGameStarted(true);

@@ -31,6 +31,7 @@ const Index = () => {
   };
 
   const handleStartGame = (grade: number) => {
+    console.log('🎮 Starting game with grade:', grade);
     setSelectedGrade(grade);
   };
 
