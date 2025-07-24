@@ -101,10 +101,19 @@ export function useBalancedQuestionGeneration(
 
       console.log(`🎯 Filtered templates: ${matchingTemplates.length} matching templates for category "${category}"`);
 
+      // Shuffle templates for randomization using Fisher-Yates algorithm
+      const shuffledTemplates = [...matchingTemplates];
+      for (let i = shuffledTemplates.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffledTemplates[i], shuffledTemplates[j]] = [shuffledTemplates[j], shuffledTemplates[i]];
+      }
+      
+      console.log(`🔀 Templates shuffled for random selection`);
+
       // Convert templates to SelectionQuestion format and filter excluded
       const questions: SelectionQuestion[] = [];
       
-      for (const template of matchingTemplates) {
+      for (const template of shuffledTemplates) {
         if (questions.length >= totalQuestions) break;
         
         try {
