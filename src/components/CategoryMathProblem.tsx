@@ -425,7 +425,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
     );
   }
 
-  // Auto-complete when game is finished - execute immediately
+  // Auto-complete when game is finished - execute immediately and return to profile
   React.useEffect(() => {
     if (gameCompleted && sessionEndTime) {
       const completeSession = async () => {
@@ -460,12 +460,16 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
         }
         
         addScreenTime(earnedSeconds);
-        onComplete(Math.floor(earnedSeconds / 60), category);
+        
+        // Add a small delay to ensure the screen time is updated
+        setTimeout(() => {
+          onComplete(Math.floor(earnedSeconds / 60), category);
+        }, 100);
       };
       
       completeSession();
     }
-  }, [gameCompleted, sessionEndTime]); // Execute when game completes
+  }, [gameCompleted, sessionEndTime, sessionStartTime, score, category, grade, problems.length, user, settings, addScreenTime, onComplete]); // Execute when game completes
 
   return (
     <Card className="w-full max-w-2xl mx-auto">

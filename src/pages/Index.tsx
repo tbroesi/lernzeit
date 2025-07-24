@@ -47,13 +47,16 @@ const Index = () => {
   };
 
   const handleProblemComplete = (minutes: number, category: string) => {
-    setEarnedTime(minutes);
-    setEarnedCategory(category);
-    setShowSuccess(true);
-    
-    // Force reload of user profile when returning to update stats
+    // Don't show success screen - go directly back to profile/grade selection
     if (user) {
+      // For logged in users, go back to profile
+      setSelectedGrade(null);
+      setSelectedCategory(null);
+      // Force reload of user profile when returning to update stats
       window.location.hash = 'reload-stats';
+    } else {
+      // For guest users, go back to grade selection
+      setSelectedCategory(null);
     }
   };
 
@@ -136,7 +139,7 @@ const Index = () => {
   }
 
   // Show user profile if user is logged in and no game is active
-  if (user && !selectedGrade && !showSuccess) {
+  if (user && !selectedGrade) {
     return (
       <UserProfile 
         user={user} 
@@ -146,55 +149,6 @@ const Index = () => {
     );
   }
 
-  // Success screen when earning time
-  if (showSuccess) {
-    return (
-      <div className="min-h-screen bg-gradient-bg flex items-center justify-center p-4">
-        <Card className="max-w-lg w-full shadow-card">
-          <CardContent className="p-8 text-center">
-            <div className="text-8xl mb-6 animate-celebrate">🎉</div>
-            <h1 className="text-3xl font-bold bg-gradient-success bg-clip-text text-transparent mb-4">
-              Fantastisch!
-            </h1>
-            <p className="text-lg text-muted-foreground mb-6">
-              Du hast erfolgreich zusätzliche Handyzeit verdient!
-            </p>
-            
-            <div className="bg-gradient-success text-success-foreground p-6 rounded-lg mb-6">
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <Trophy className="w-6 h-6" />
-                <span className="text-lg font-semibold">
-                  {getCategoryEmoji(earnedCategory)} {getCategoryName(earnedCategory)}
-                </span>
-              </div>
-              <div className="text-3xl font-bold mb-1">
-                +{earnedTime} Minuten
-              </div>
-              <div className="text-sm opacity-90">
-                Bildschirmzeit verdient!
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <Button onClick={handleBack} variant="default" className="w-full">
-                {user ? 'Zurück zum Profil' : 'Neue Runde starten'}
-              </Button>
-              
-              <div className="text-xs text-muted-foreground">
-                {user ? 'Zeit wurde zu deinem Konto hinzugefügt! 📱⏰' : 'Erstelle ein Konto um deine Zeit zu speichern!'}
-              </div>
-              
-              {!user && (
-                <Button onClick={() => setShowAuth(true)} variant="outline" className="w-full">
-                  Konto erstellen
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   // Show math problems if grade and category are selected - FIXED: Pass German category name
   if (selectedGrade && selectedCategory) {
