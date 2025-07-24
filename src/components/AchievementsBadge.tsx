@@ -8,7 +8,15 @@ interface AchievementsBadgeProps {
 }
 
 export function AchievementsBadge({ userId }: AchievementsBadgeProps) {
-  const { getCompletedAchievements, getRecentAchievements, getTotalRewardMinutes, loading } = useAchievements(userId);
+  const { userAchievements, getCompletedAchievements, getRecentAchievements, getTotalRewardMinutes, loading } = useAchievements(userId);
+
+  console.log('🏆 AchievementsBadge data:', {
+    userId,
+    totalAchievements: userAchievements.length,
+    completedCount: getCompletedAchievements().length,
+    recentCount: getRecentAchievements().length,
+    loading
+  });
 
   if (loading) {
     return (
@@ -50,6 +58,10 @@ export function AchievementsBadge({ userId }: AchievementsBadgeProps) {
               {completedAchievements.length > 0 ? (
                 <>
                   {completedAchievements.length} erreicht • +{totalRewardMinutes} Min Bonus
+                </>
+              ) : userAchievements.length > 0 ? (
+                <>
+                  {userAchievements.filter(a => a.current_progress > 0).length} in Arbeit • {userAchievements.length} verfügbar
                 </>
               ) : (
                 'Sammle deine ersten Erfolge!'

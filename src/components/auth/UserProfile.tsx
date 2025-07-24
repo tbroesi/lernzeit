@@ -14,6 +14,7 @@ import { ChildLinking } from '@/components/ChildLinking';
 import { ChildSettingsMenu } from '@/components/ChildSettingsMenu';
 import { ParentSettingsMenu } from '@/components/ParentSettingsMenu';
 import { AchievementsBadge } from '@/components/AchievementsBadge';
+import { AchievementProgressOverview } from '@/components/AchievementProgressOverview';
 import { ProfileEdit } from '@/components/ProfileEdit';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useChildSettings } from '@/hooks/useChildSettings';
@@ -384,6 +385,9 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
 
           {/* Achievements Badge */}
           <AchievementsBadge userId={user.id} />
+
+          {/* Achievement Progress Overview */}
+          <AchievementProgressOverview userId={user.id} />
 
           {/* Quick Actions */}
           <div className="grid grid-cols-2 gap-4">
