@@ -9,19 +9,21 @@ interface GameProgressProps {
   totalQuestions: number;
   score: number;
   startTime: number;
+  isActive?: boolean;
 }
 
 export function GameProgress({ 
   currentQuestion, 
   totalQuestions, 
   score,
-  startTime
+  startTime,
+  isActive = true
 }: GameProgressProps) {
   const progress = (currentQuestion / totalQuestions) * 100;
   
   return (
     <div className="space-y-2">
-      <GameTimer startTime={startTime} />
+      <GameTimer startTime={startTime} isActive={isActive} />
       <div className="flex items-center justify-between text-sm">
         <div className="flex items-center gap-2 text-muted-foreground">
           <Trophy className="w-4 h-4" />

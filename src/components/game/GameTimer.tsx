@@ -3,18 +3,21 @@ import { Clock } from 'lucide-react';
 
 interface GameTimerProps {
   startTime: number;
+  isActive?: boolean;
 }
 
-export function GameTimer({ startTime }: GameTimerProps) {
+export function GameTimer({ startTime, isActive = true }: GameTimerProps) {
   const [elapsedTime, setElapsedTime] = useState(0);
 
   useEffect(() => {
+    if (!isActive) return;
+    
     const interval = setInterval(() => {
       setElapsedTime(Date.now() - startTime);
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [startTime]);
+  }, [startTime, isActive]);
 
   const formatTime = (milliseconds: number) => {
     const totalSeconds = Math.floor(milliseconds / 1000);

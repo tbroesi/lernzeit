@@ -21,9 +21,8 @@ export function GameCompletionScreen({
   onContinue
 }: GameCompletionScreenProps) {
   const earnedSeconds = score * timePerTask;
-  const earnedMinutes = Math.round(earnedSeconds / 60 * 100) / 100;
-  const timeSpentMinutes = Math.round(sessionDuration / 1000 / 60 * 100) / 100;
-  const netTimeMinutes = Math.max(0, earnedMinutes - timeSpentMinutes + achievementBonusMinutes);
+  const timeSpentSeconds = Math.round(sessionDuration / 1000);
+  const netTimeSeconds = Math.max(0, earnedSeconds - timeSpentSeconds + (achievementBonusMinutes * 60));
   const efficiency = Math.round((score / totalQuestions) * 100);
 
   return (
@@ -75,7 +74,7 @@ export function GameCompletionScreen({
                 <span className="font-medium">Verbrauchte Zeit:</span>
               </div>
               <div className="text-lg font-mono font-bold text-orange-600">
-                {Math.round(sessionDuration / 1000)}s ({timeSpentMinutes.toFixed(1)}min)
+                {timeSpentSeconds}s
               </div>
             </div>
 
@@ -87,7 +86,7 @@ export function GameCompletionScreen({
                   <span className="font-medium">Achievement Bonus:</span>
                 </div>
                 <div className="text-lg font-mono font-bold text-purple-600">
-                  +{achievementBonusMinutes}min
+                  +{achievementBonusMinutes * 60}s
                 </div>
               </div>
             )}
@@ -97,10 +96,13 @@ export function GameCompletionScreen({
               <div className="text-center">
                 <div className="text-sm text-muted-foreground mb-2">Berechnung:</div>
                 <div className="font-mono text-lg mb-3">
-                  {earnedMinutes.toFixed(1)}min
-                  {timeSpentMinutes > 0 && ` - ${timeSpentMinutes.toFixed(1)}min`}
-                  {achievementBonusMinutes > 0 && ` + ${achievementBonusMinutes}min`}
-                  = <span className="font-bold text-2xl text-green-600">{netTimeMinutes.toFixed(1)}min</span>
+                  {earnedSeconds}s
+                  {timeSpentSeconds > 0 && ` - ${timeSpentSeconds}s`}
+                  {achievementBonusMinutes > 0 && ` + ${achievementBonusMinutes * 60}s`}
+                  = <span className="font-bold text-2xl text-green-600">{netTimeSeconds}s</span>
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Das sind <span className="font-bold">{Math.round(netTimeSeconds / 60 * 10) / 10} Minuten</span>
                 </div>
               </div>
             </div>
@@ -117,8 +119,8 @@ export function GameCompletionScreen({
           
           <div className="text-center p-4 bg-muted/30 rounded-lg">
             <Clock className="w-6 h-6 mx-auto mb-2 text-green-600" />
-            <div className="text-2xl font-bold text-green-600">{netTimeMinutes.toFixed(1)}</div>
-            <div className="text-sm text-muted-foreground">Gewonnene Minuten</div>
+            <div className="text-2xl font-bold text-green-600">{netTimeSeconds}s</div>
+            <div className="text-sm text-muted-foreground">Gewonnene Sekunden</div>
           </div>
         </div>
 
@@ -130,7 +132,7 @@ export function GameCompletionScreen({
             className="w-full text-lg py-6 bg-green-600 hover:bg-green-700 text-white"
           >
             <Trophy className="w-5 h-5 mr-2" />
-            +{netTimeMinutes.toFixed(1)} Minuten Bildschirmzeit verdient!
+            +{netTimeSeconds}s ({Math.round(netTimeSeconds / 60 * 10) / 10}min) Bildschirmzeit verdient!
           </Button>
           
           <div className="text-center text-sm text-muted-foreground">
