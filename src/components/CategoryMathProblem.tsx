@@ -572,6 +572,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
           currentQuestion={currentQuestionIndex + 1} 
           totalQuestions={problems.length} 
           score={score} 
+          startTime={sessionStartTime}
         />
       </CardHeader>
       <CardContent className="space-y-6">

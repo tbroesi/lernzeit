@@ -75,7 +75,7 @@ export function GameCompletionScreen({
                 <span className="font-medium">Verbrauchte Zeit:</span>
               </div>
               <div className="text-lg font-mono font-bold text-orange-600">
-                {timeSpentMinutes.toFixed(1)}min
+                {Math.round(sessionDuration / 1000)}s ({timeSpentMinutes.toFixed(1)}min)
               </div>
             </div>
 
