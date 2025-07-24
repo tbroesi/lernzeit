@@ -21,7 +21,25 @@ serve(async (req) => {
   try {
     // Parse and validate request
     const requestData = await req.json();
-    const problemRequest: ProblemRequest = validateProblemRequest(requestData);
+    const validationResult = validateProblemRequest(requestData);
+    
+    if (!validationResult.success) {
+      logger.error('Invalid request format', { 
+        requestId, 
+        errors: validationResult.error.errors 
+      });
+      
+      return new Response(JSON.stringify({ 
+        error: 'Invalid request format',
+        details: validationResult.error.errors,
+        problems: []
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
+    const problemRequest: ProblemRequest = validationResult.data;
     
     // Initialize template generator with request ID
     const templateGenerator = new TemplateGenerator(requestId);

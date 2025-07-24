@@ -13,233 +13,230 @@ export function useBalancedQuestionGeneration(
   const [generationSource, setGenerationSource] = useState<'ai' | 'template' | 'simple' | null>(null);
   const [sessionId] = useState(() => `balanced_${Date.now()}_${Math.random()}`);
 
-  const generateTemplateProblems = useCallback((): SelectionQuestion[] => {
-    console.log(`🎯 Generating improved template problems for grade ${grade}`);
-    const templateProblems: SelectionQuestion[] = [];
-    
-    for (let i = 0; i < totalQuestions; i++) {
-      const id = Math.floor(Math.random() * 1000000);
-      const problemTypes = ['text-input', 'multiple-choice', 'word-selection'];
-      const randomType = problemTypes[Math.floor(Math.random() * problemTypes.length)];
+  // Get excluded questions from feedback
+  const getExcludedQuestions = async (category: string, grade: number, userId: string): Promise<string[]> => {
+    try {
+      const { data: feedback, error } = await supabase
+        .from('question_feedback')
+        .select('question_content')
+        .eq('user_id', userId)
+        .eq('category', category)
+        .eq('grade', grade)
+        .in('feedback_type', ['duplicate', 'inappropriate', 'too_easy', 'too_hard']);
       
-      if (category === 'Mathematik') {
-        // Grade-appropriate math complexity
-        const baseComplexity = Math.max(1, grade - 1);
-        const maxNumber = Math.min(1000, 10 + (grade * 20));
-        const minNumber = Math.max(1, grade);
-        
-        if (randomType === 'multiple-choice') {
-          const operations = [
-            { symbol: '+', name: 'Addition', calc: (a: number, b: number) => a + b },
-            { symbol: '-', name: 'Subtraktion', calc: (a: number, b: number) => Math.max(0, a - b) },
-            ...(grade >= 3 ? [{ symbol: '×', name: 'Multiplikation', calc: (a: number, b: number) => a * b }] : []),
-            ...(grade >= 4 ? [{ symbol: '÷', name: 'Division', calc: (a: number, b: number) => b !== 0 ? a / b : 0 }] : [])
-          ];
+      if (error) {
+        console.warn('Error fetching excluded questions:', error);
+        return [];
+      }
+      
+      const excluded = feedback?.map(f => f.question_content) || [];
+      console.log(`🚫 Excluding ${excluded.length} questions based on user feedback`);
+      return excluded;
+    } catch (error) {
+      console.warn('Error getting excluded questions:', error);
+      return [];
+    }
+  };
+
+  const generateTemplateProblems = async (): Promise<SelectionQuestion[]> => {
+    console.log('🔧 Enhanced template generation with duplicate protection');
+    
+    // Get excluded questions from user feedback
+    const excludedQuestions = await getExcludedQuestions(category, grade, userId);
+    console.log(`🚫 Excluding ${excludedQuestions.length} questions based on feedback`);
+    
+    const generatedProblems: SelectionQuestion[] = [];
+    const usedQuestions = new Set<string>();
+    
+    // Try to generate unique questions
+    let attempts = 0;
+    const maxAttempts = totalQuestions * 3;
+    
+    while (generatedProblems.length < totalQuestions && attempts < maxAttempts) {
+      attempts++;
+      
+      try {
+        if (category.toLowerCase() === 'mathematik' || category.toLowerCase() === 'math') {
+          const mathProblem = generateMathProblem(grade);
           
-          const operation = operations[Math.floor(Math.random() * operations.length)];
-          let a = Math.floor(Math.random() * maxNumber) + minNumber;
-          let b = Math.floor(Math.random() * (maxNumber / 2)) + minNumber;
-          
-          // Ensure valid operations
-          if (operation.symbol === '-' && b > a) [a, b] = [b, a];
-          if (operation.symbol === '÷') a = b * Math.floor(Math.random() * 10 + 1);
-          
-          const correctAnswer = operation.calc(a, b);
-          const wrongAnswers = [
-            correctAnswer + Math.floor(Math.random() * 5) + 1,
-            correctAnswer - Math.floor(Math.random() * 5) - 1,
-            correctAnswer + Math.floor(Math.random() * 10) + 5
-          ].filter(x => x !== correctAnswer && x >= 0);
-          
-          const allOptions = [correctAnswer, ...wrongAnswers.slice(0, 3)];
-          const shuffledOptions = allOptions.sort(() => Math.random() - 0.5);
-          const correctIndex = shuffledOptions.indexOf(correctAnswer);
-          
-          templateProblems.push({
-            id,
-            questionType: 'multiple-choice',
-            question: `Was ist ${a} ${operation.symbol} ${b}?`,
-            options: shuffledOptions.map(String),
-            correctAnswer: correctIndex,
-            type: 'math',
-            explanation: `${a} ${operation.symbol} ${b} = ${correctAnswer}. Das ist ${operation.name}.`
-          });
-          
-        } else if (randomType === 'word-selection') {
-          const mathTerms = [
-            ...(grade >= 1 ? ['Addition', 'Subtraktion', 'Plus', 'Minus'] : []),
-            ...(grade >= 3 ? ['Multiplikation', 'Division', 'Mal', 'Geteilt'] : []),
-            ...(grade >= 4 ? ['Gleichung', 'Summe', 'Differenz', 'Produkt'] : []),
-            ...(grade >= 5 ? ['Quotient', 'Bruch', 'Prozent'] : [])
-          ];
-          
-          const correctTerm = mathTerms[Math.floor(Math.random() * mathTerms.length)];
-          const sentence = `Bei der Aufgabe 8 + 3 = 11 handelt es sich um eine ${correctTerm}.`;
-          const words = sentence.split(' ');
-          const correctIndex = words.findIndex(word => word.includes(correctTerm));
-          
-          templateProblems.push({
-            id,
-            questionType: 'word-selection',
-            question: 'Wähle den richtigen mathematischen Begriff:',
-            sentence,
-            selectableWords: words.map((word, index) => ({
-              word,
-              isCorrect: index === correctIndex,
-              index
-            })),
-            type: 'math',
-            explanation: `Der Begriff "${correctTerm}" ist korrekt für diese Art von Aufgabe.`
-          });
-          
-        } else {
-          // Text input with grade-appropriate word problems
-          const wordProblems = [
-            ...(grade >= 1 ? [
-              {
-                template: 'Lisa hat {a} Stifte und bekommt {b} weitere. Wie viele Stifte hat sie insgesamt?',
-                calculate: (a: number, b: number) => a + b,
-                explanation: (a: number, b: number, result: number) => `Lisa hatte ${a} Stifte und bekam ${b} dazu: ${a} + ${b} = ${result} Stifte.`
-              }
-            ] : []),
-            ...(grade >= 3 ? [
-              {
-                template: 'In jeder Schachtel sind {a} Bonbons. Max hat {b} Schachteln. Wie viele Bonbons hat er insgesamt?',
-                calculate: (a: number, b: number) => a * b,
-                explanation: (a: number, b: number, result: number) => `${b} Schachteln mit je ${a} Bonbons: ${a} × ${b} = ${result} Bonbons.`
-              }
-            ] : []),
-            ...(grade >= 4 ? [
-              {
-                template: '{a} Äpfel sollen gleichmäßig auf {b} Kinder verteilt werden. Wie viele Äpfel bekommt jedes Kind?',
-                calculate: (a: number, b: number) => Math.floor(a / b),
-                explanation: (a: number, b: number, result: number) => `${a} Äpfel geteilt durch ${b} Kinder: ${a} ÷ ${b} = ${result} Äpfel pro Kind.`
-              }
-            ] : [])
-          ];
-          
-          const wordProblem = wordProblems[Math.floor(Math.random() * wordProblems.length)];
-          let a = Math.floor(Math.random() * (maxNumber / 2)) + minNumber;
-          let b = Math.floor(Math.random() * (maxNumber / 3)) + minNumber;
-          
-          // Ensure valid operations for division
-          if (wordProblem.template.includes('verteilt')) {
-            a = b * Math.floor(Math.random() * 10 + 1);
+          if (!usedQuestions.has(mathProblem.question) && 
+              !excludedQuestions.includes(mathProblem.question)) {
+            usedQuestions.add(mathProblem.question);
+            generatedProblems.push(mathProblem);
           }
+        } else if (category.toLowerCase() === 'deutsch' || category.toLowerCase() === 'german') {
+          const germanProblem = generateGermanProblem(grade, usedQuestions, excludedQuestions);
           
-          const answer = wordProblem.calculate(a, b);
-          const questionText = wordProblem.template.replace('{a}', a.toString()).replace('{b}', b.toString());
-          
-          templateProblems.push({
-            id,
-            questionType: 'text-input',
-            question: questionText,
-            answer: answer.toString(),
-            type: 'math',
-            explanation: wordProblem.explanation(a, b, answer)
-          });
+          if (germanProblem && !usedQuestions.has(germanProblem.question)) {
+            usedQuestions.add(germanProblem.question);
+            generatedProblems.push(germanProblem);
+          }
         }
-        
-      } else if (category === 'Deutsch') {
-        // Grade-appropriate German problems
-        const germanProblems = [
-          // Basic problems for lower grades
-          ...(grade <= 2 ? [
-            {
-              question: 'Welcher Buchstabe kommt nach "F"?',
-              questionType: 'text-input' as const,
-              answer: 'G',
-              explanation: 'Nach dem Buchstaben "F" kommt "G" im Alphabet.'
-            },
-            {
-              question: 'Wie viele Silben hat das Wort "Blume"?',
-              questionType: 'text-input' as const,
-              answer: '2',
-              explanation: 'Das Wort "Blume" hat 2 Silben: Blu-me.'
-            }
-          ] : []),
-          
-          // Intermediate problems for grades 3-4
-          ...(grade >= 3 && grade <= 4 ? [
-            {
-              question: 'Welche Wortart ist "schön"?',
-              questionType: 'multiple-choice' as const,
-              options: ['Nomen', 'Verb', 'Adjektiv', 'Artikel'],
-              correctAnswer: 2,
-              explanation: '"Schön" ist ein Adjektiv (Eigenschaftswort).'
-            },
-            {
-              question: 'Wie heißt die Mehrzahl von "Maus"?',
-              questionType: 'text-input' as const,
-              answer: 'Mäuse',
-              explanation: 'Die Mehrzahl von "Maus" ist "Mäuse".'
-            }
-          ] : []),
-          
-          // Advanced problems for grades 5+
-          ...(grade >= 5 ? [
-            {
-              question: 'In welcher Zeitform steht "Ich habe gelesen"?',
-              questionType: 'multiple-choice' as const,
-              options: ['Präsens', 'Präteritum', 'Perfekt', 'Futur'],
-              correctAnswer: 2,
-              explanation: '"Ich habe gelesen" steht im Perfekt (vollendete Gegenwart).'
-            },
-            {
-              question: 'Welcher Fall wird hier verwendet: "Ich schenke der Mutter Blumen"?',
-              questionType: 'text-input' as const,
-              answer: 'Dativ',
-              explanation: '"Der Mutter" steht im Dativ (3. Fall).'
-            }
-          ] : [])
-        ];
-        
-        const problem = germanProblems[Math.floor(Math.random() * germanProblems.length)];
-        
-        // Create properly typed question based on questionType
-        if (problem.questionType === 'multiple-choice') {
-          templateProblems.push({
-            id,
-            questionType: 'multiple-choice',
-            question: problem.question,
-            options: problem.options,
-            correctAnswer: problem.correctAnswer,
-            type: 'german',
-            explanation: problem.explanation
-          });
-        } else {
-          templateProblems.push({
-            id,
-            questionType: 'text-input',
-            question: problem.question,
-            answer: problem.answer,
-            type: 'german',
-            explanation: problem.explanation
-          });
-        }
+      } catch (error) {
+        console.error('Error generating template problem:', error);
       }
     }
+
+    // If we still don't have enough questions, fill with simple math
+    while (generatedProblems.length < totalQuestions) {
+      const a = Math.floor(Math.random() * 10) + 1;
+      const b = Math.floor(Math.random() * 10) + 1;
+      const question = `Was ist ${a} + ${b}?`;
+      
+      if (!usedQuestions.has(question)) {
+        usedQuestions.add(question);
+        generatedProblems.push({
+          id: Math.random(),
+          type: 'text-input',
+          question,
+          answer: (a + b).toString(),
+          explanation: `${a} + ${b} = ${a + b}`
+        } as SelectionQuestion);
+      }
+    }
+
+    return generatedProblems;
+  };
+
+  const generateMathProblem = (grade: number): SelectionQuestion => {
+    let a: number, b: number, operation: string, answer: number;
     
-    return templateProblems;
-  }, [category, grade, totalQuestions]);
+    switch (grade) {
+      case 1:
+      case 2:
+        a = Math.floor(Math.random() * 10) + 1;
+        b = Math.floor(Math.random() * 10) + 1;
+        operation = Math.random() > 0.5 ? '+' : '-';
+        if (operation === '-' && a < b) [a, b] = [b, a];
+        answer = operation === '+' ? a + b : a - b;
+        break;
+      case 3:
+      case 4:
+        if (Math.random() > 0.5) {
+          a = Math.floor(Math.random() * 50) + 1;
+          b = Math.floor(Math.random() * 50) + 1;
+          operation = Math.random() > 0.5 ? '+' : '-';
+          if (operation === '-' && a < b) [a, b] = [b, a];
+          answer = operation === '+' ? a + b : a - b;
+        } else {
+          a = Math.floor(Math.random() * 10) + 1;
+          b = Math.floor(Math.random() * 10) + 1;
+          operation = '×';
+          answer = a * b;
+        }
+        break;
+      default:
+        a = Math.floor(Math.random() * 100) + 1;
+        b = Math.floor(Math.random() * 100) + 1;
+        const ops = ['+', '-', '×', '÷'];
+        operation = ops[Math.floor(Math.random() * ops.length)];
+        
+        if (operation === '÷') {
+          answer = Math.floor(Math.random() * 20) + 1;
+          a = answer * b;
+        } else if (operation === '-' && a < b) {
+          [a, b] = [b, a];
+          answer = a - b;
+        } else {
+          answer = operation === '+' ? a + b : operation === '×' ? a * b : a - b;
+        }
+        break;
+    }
+
+    return {
+      id: Math.random(),
+      type: 'text-input',
+      question: `Was ist ${a} ${operation} ${b}?`,
+      answer: answer.toString(),
+      explanation: `${a} ${operation} ${b} = ${answer}`
+    } as SelectionQuestion;
+  };
+
+  const generateGermanProblem = (grade: number, usedQuestions: Set<string>, excludedQuestions: string[]): SelectionQuestion | null => {
+    const expandedGermanQuestions = [
+      // Plural forms - more variety
+      { question: "Wie heißt die Mehrzahl von \"Baum\"?", answer: "Bäume", explanation: "Die Mehrzahl von Baum ist Bäume (mit Umlaut)." },
+      { question: "Wie heißt die Mehrzahl von \"Haus\"?", answer: "Häuser", explanation: "Die Mehrzahl von Haus ist Häuser (mit Umlaut und -er Endung)." },
+      { question: "Wie heißt die Mehrzahl von \"Kind\"?", answer: "Kinder", explanation: "Die Mehrzahl von Kind ist Kinder." },
+      { question: "Wie heißt die Mehrzahl von \"Buch\"?", answer: "Bücher", explanation: "Die Mehrzahl von Buch ist Bücher." },
+      { question: "Wie heißt die Mehrzahl von \"Tisch\"?", answer: "Tische", explanation: "Die Mehrzahl von Tisch ist Tische." },
+      { question: "Wie heißt die Mehrzahl von \"Stuhl\"?", answer: "Stühle", explanation: "Die Mehrzahl von Stuhl ist Stühle." },
+      { question: "Wie heißt die Mehrzahl von \"Blume\"?", answer: "Blumen", explanation: "Die Mehrzahl von Blume ist Blumen." },
+      { question: "Wie heißt die Mehrzahl von \"Auto\"?", answer: "Autos", explanation: "Die Mehrzahl von Auto ist Autos." },
+      { question: "Wie heißt die Mehrzahl von \"Hund\"?", answer: "Hunde", explanation: "Die Mehrzahl von Hund ist Hunde." },
+      { question: "Wie heißt die Mehrzahl von \"Katze\"?", answer: "Katzen", explanation: "Die Mehrzahl von Katze ist Katzen." },
+      
+      // Articles
+      { question: "Welcher Artikel gehört zu \"Sonne\"?", answer: "die", explanation: "Sonne ist feminin, daher: die Sonne." },
+      { question: "Welcher Artikel gehört zu \"Mond\"?", answer: "der", explanation: "Mond ist maskulin, daher: der Mond." },
+      { question: "Welcher Artikel gehört zu \"Auto\"?", answer: "das", explanation: "Auto ist neutrum, daher: das Auto." },
+      { question: "Welcher Artikel gehört zu \"Blume\"?", answer: "die", explanation: "Blume ist feminin, daher: die Blume." },
+      { question: "Welcher Artikel gehört zu \"Tisch\"?", answer: "der", explanation: "Tisch ist maskulin, daher: der Tisch." },
+      
+      // Word types
+      { question: "Was ist \"laufen\" für eine Wortart?", answer: "Verb", explanation: "Laufen ist ein Verb (Tätigkeitswort)." },
+      { question: "Was ist \"groß\" für eine Wortart?", answer: "Adjektiv", explanation: "Groß ist ein Adjektiv (Eigenschaftswort)." },
+      { question: "Was ist \"Hund\" für eine Wortart?", answer: "Nomen", explanation: "Hund ist ein Nomen (Hauptwort)." },
+      { question: "Was ist \"schnell\" für eine Wortart?", answer: "Adjektiv", explanation: "Schnell ist ein Adjektiv (Eigenschaftswort)." },
+      { question: "Was ist \"springen\" für eine Wortart?", answer: "Verb", explanation: "Springen ist ein Verb (Tätigkeitswort)." },
+      
+      // Simple grammar
+      { question: "Wie schreibt man \"ICH GEHE\"?", answer: "Ich gehe", explanation: "Satzanfänge werden groß geschrieben, der Rest klein." },
+      { question: "Was gehört an das Satzende: \"Der Hund bellt\"", answer: ".", explanation: "Aussagesätze enden mit einem Punkt." },
+      { question: "Wie nennt man Wörter wie 'und', 'aber', 'oder'?", answer: "Bindewörter", explanation: "Diese Wörter verbinden Satzteile miteinander." }
+    ];
+    
+    // Filter out used and excluded questions
+    const availableQuestions = expandedGermanQuestions.filter(q => 
+      !usedQuestions.has(q.question) && 
+      !excludedQuestions.includes(q.question)
+    );
+    
+    if (availableQuestions.length === 0) {
+      // Generate a fallback question that's likely to be unique
+      const randomWord = ['Vogel', 'Fisch', 'Apfel', 'Ball', 'Schuh', 'Berg', 'See', 'Stern'][Math.floor(Math.random() * 8)];
+      const pluralMap: { [key: string]: string } = {
+        'Vogel': 'Vögel', 'Fisch': 'Fische', 'Apfel': 'Äpfel', 'Ball': 'Bälle', 
+        'Schuh': 'Schuhe', 'Berg': 'Berge', 'See': 'Seen', 'Stern': 'Sterne'
+      };
+      
+      return {
+        id: `german_fallback_${Date.now()}_${Math.random()}`,
+        type: 'text-input',
+        questionType: 'text-input',
+        question: `Wie heißt die Mehrzahl von "${randomWord}"?`,
+        answer: pluralMap[randomWord] || randomWord + 'e',
+        explanation: `Die Mehrzahl von ${randomWord} ist ${pluralMap[randomWord] || randomWord + 'e'}.`
+      };
+    }
+    
+    const randomQuestion = availableQuestions[Math.floor(Math.random() * availableQuestions.length)];
+    return {
+      id: `german_${Date.now()}_${Math.random()}`,
+      type: 'text-input',
+      questionType: 'text-input',
+      question: randomQuestion.question,
+      answer: randomQuestion.answer,
+      explanation: randomQuestion.explanation
+    };
+  };
 
   const generateSimpleFallback = useCallback((): SelectionQuestion[] => {
     console.log('🔄 Using simple fallback generation');
     const simpleProblems: SelectionQuestion[] = [];
     
     for (let i = 0; i < totalQuestions; i++) {
-      const id = Math.floor(Math.random() * 1000000);
       const maxNum = Math.min(100, 10 + (grade * 10));
       const a = Math.floor(Math.random() * maxNum) + 1;
       const b = Math.floor(Math.random() * (maxNum / 2)) + 1;
       const answer = a + b;
       
       simpleProblems.push({
-        id,
+        id: `simple_${Date.now()}_${i}`,
+        type: 'text-input',
         questionType: 'text-input',
         question: `${a} + ${b} = ?`,
         answer: answer.toString(),
-        type: 'math',
         explanation: `Die Lösung ist ${answer}, weil ${a} + ${b} = ${answer}.`
       });
     }
@@ -255,12 +252,14 @@ export function useBalancedQuestionGeneration(
     });
     
     try {
+      const excludedQuestions = await getExcludedQuestions(category, grade, userId);
+      
       const aiPromise = supabase.functions.invoke('generate-problems', {
         body: {
           category,
           grade,
           count: totalQuestions,
-          excludeQuestions: [],
+          excludeQuestions: excludedQuestions,
           sessionId,
           requestId: `balanced_${Date.now()}`,
           gradeRequirement: `grade_${grade}_appropriate`,
@@ -307,7 +306,7 @@ export function useBalancedQuestionGeneration(
       
       // Fall back to improved templates
       console.log('🎨 AI insufficient, using improved template problems');
-      const templateProblems = generateTemplateProblems();
+      const templateProblems = await generateTemplateProblems();
       setProblems(templateProblems);
       setGenerationSource('template');
       
@@ -318,8 +317,16 @@ export function useBalancedQuestionGeneration(
       setGenerationSource('simple');
     } finally {
       setIsGenerating(false);
+      
+      const excludedQuestions = await getExcludedQuestions(category, grade, userId);
+      console.log('📊 Question generation complete:', {
+        totalGenerated: problems.length,
+        source: generationSource,
+        sessionId,
+        excluded: excludedQuestions?.length || 0
+      });
     }
-  }, [isGenerating, totalQuestions, generateTemplateProblems, generateSimpleFallback]);
+  }, [isGenerating, totalQuestions, generateSimpleFallback]);
 
   return {
     problems,

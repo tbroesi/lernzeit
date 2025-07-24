@@ -179,8 +179,16 @@ export const CURRICULUM_OBJECTIVES: { [category: string]: { [grade: number]: Cur
 };
 
 export function getCurriculumObjectives(category: string, grade: number): CurriculumObjective | null {
+  if (!category || typeof category !== 'string') {
+    console.error('Invalid category provided to getCurriculumObjectives:', category);
+    return null;
+  }
+  
   const categoryObj = CURRICULUM_OBJECTIVES[category.toLowerCase()];
-  if (!categoryObj) return null;
+  if (!categoryObj) {
+    console.warn(`No curriculum found for category: ${category}`);
+    return null;
+  }
   
   return categoryObj[grade] || null;
 }
