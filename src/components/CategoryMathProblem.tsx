@@ -276,9 +276,11 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
       setFeedback(null);
       resetAnswers();
     } else {
-      // Capture the end time once when the game completes
-      setSessionEndTime(Date.now());
+      // Capture the end time once when the game completes - MUST be set before setGameCompleted
+      const endTime = Date.now();
+      setSessionEndTime(endTime);
       setGameCompleted(true);
+      console.log('🏁 Game completed - session end time captured:', endTime);
     }
   };
 
