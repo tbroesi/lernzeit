@@ -175,12 +175,20 @@ export function ChildManagement({ linkedChildren, parentId, onChildUpdate }: Chi
   };
 
   const saveChildSettings = async () => {
-    if (!childSettings || !selectedChildId || !parentId) return;
+    if (!childSettings || !selectedChildId || !parentId || saving) return;
 
     try {
       setSaving(true);
       
-      const upsertData = {
+      // Check if settings exist first
+      const { data: existingSettings } = await supabase
+        .from('child_settings')
+        .select('id')
+        .eq('child_id', selectedChildId)
+        .eq('parent_id', parentId)
+        .maybeSingle();
+
+      const settingsData = {
         parent_id: parentId,
         child_id: selectedChildId,
         weekday_max_minutes: childSettings.weekday_max_minutes,
@@ -194,24 +202,37 @@ export function ChildManagement({ linkedChildren, parentId, onChildUpdate }: Chi
         biology_seconds_per_task: childSettings.biology_seconds_per_task,
         chemistry_seconds_per_task: childSettings.chemistry_seconds_per_task,
         latin_seconds_per_task: childSettings.latin_seconds_per_task,
-        ...(childSettings.id && { id: childSettings.id })
       };
 
-      const { error } = await supabase
-        .from('child_settings')
-        .upsert(upsertData, {
-          onConflict: 'parent_id,child_id'
-        });
+      let result;
+      if (existingSettings) {
+        // Update existing record - much faster than upsert
+        result = await supabase
+          .from('child_settings')
+          .update(settingsData)
+          .eq('id', existingSettings.id);
+      } else {
+        // Insert new record
+        result = await supabase
+          .from('child_settings')
+          .insert(settingsData)
+          .select('id')
+          .single();
+        
+        // Update local state with new ID
+        if (result.data) {
+          setChildSettings(prev => prev ? { ...prev, id: result.data.id } : null);
+        }
+      }
 
-      if (error) throw error;
+      if (result.error) throw result.error;
 
       toast({
         title: "Erfolgreich gespeichert",
         description: `Einstellungen für ${selectedChild?.name} wurden aktualisiert.`,
       });
 
-      // Reload data to get the updated settings with id
-      await loadChildData();
+      // No need to reload data - we already have the updated state locally
     } catch (error: any) {
       console.error('Error saving child settings:', error);
       toast({
