@@ -10,6 +10,12 @@ import { questionTemplates } from '@/utils/questionTemplates';
 import { EnhancedTemplateGenerator, GenerationConfig } from '@/utils/math/enhancedTemplateGenerator';
 import { DuplicateDetectionEngine } from '@/utils/math/duplicateDetection';
 import { GermanMathParser } from '@/utils/math/germanMathParser';
+import { 
+  detectDuplicatesWithContext, 
+  filterForDiversity,
+  calculateQuestionSimilarity,
+  type DiversityMetrics 
+} from '@/utils/duplicateDetection';
 
 export interface AdvancedGenerationOptions {
   enableDuplicateDetection: boolean;
@@ -179,8 +185,8 @@ export function useAdvancedQuestionGeneration({
         console.log(`🔧 Local template result: +${templateResult.length} questions, total: ${questions.length}`);
       }
 
-      // Phase 3: AI Fallback (if still needed and enabled)
-      if (questions.length < Math.min(totalQuestions, 3) && finalOptions.enableFallbackChain) {
+      // Phase 3: AI Fallback (if still needed and enabled) - Fixed trigger condition
+      if (questions.length < totalQuestions && finalOptions.enableFallbackChain) {
         console.log('🤖 Phase 3: AI Generation Fallback');
         
         const remaining = totalQuestions - questions.length;
@@ -208,21 +214,57 @@ export function useAdvancedQuestionGeneration({
         console.log(`🤖 AI generation result: +${aiResult.length} questions, total: ${questions.length}`);
       }
 
-      // Final validation and quality check
-      const validatedQuestions = questions.filter(q => validateQuestionQuality(q, finalOptions.qualityThreshold));
+      // Final validation, quality check, and diversity filtering
+      const qualityFiltered = questions.filter(q => validateQuestionQuality(q, finalOptions.qualityThreshold));
+      
+      // Apply diversity filtering if we have more questions than needed
+      const diversityFiltered = qualityFiltered.length > totalQuestions ? 
+        filterForDiversity(
+          qualityFiltered.map(q => q.question), 
+          totalQuestions,
+          await getExcludedQuestions(category, grade, userId)
+        ).map(questionText => qualityFiltered.find(q => q.question === questionText)!)
+          .filter(Boolean) :
+        qualityFiltered;
+        
+      // Enhanced duplicate detection across all sources
+      if (finalOptions.enableDuplicateDetection && diversityFiltered.length > 0) {
+        const allExisting = await getExcludedQuestions(category, grade, userId);
+        const duplicateAnalysis = detectDuplicatesWithContext(
+          diversityFiltered.map(q => q.question),
+          allExisting,
+          [],
+          { strictMode: true, maxDuplicates: 10 }
+        );
+        
+        console.log('🔍 Duplicate analysis:', {
+          original: diversityFiltered.length,
+          unique: duplicateAnalysis.unique.length,
+          duplicates: duplicateAnalysis.duplicates.length,
+          metrics: duplicateAnalysis.metrics
+        });
+        
+        const finalQuestions = diversityFiltered.filter(q => 
+          duplicateAnalysis.unique.includes(q.question)
+        );
+        
+        generationMetrics.duplicatesRejected += duplicateAnalysis.duplicates.length;
+        setProblems(finalQuestions);
+      } else {
+        setProblems(diversityFiltered);
+      }
       
       generationMetrics.totalGenerationTime = Date.now() - startTime;
-      generationMetrics.averageQuality = calculateAverageQuality(validatedQuestions);
-      generationMetrics.parseSuccessRate = validatedQuestions.length / Math.max(questions.length, 1);
+      generationMetrics.averageQuality = calculateAverageQuality(diversityFiltered);
+      generationMetrics.parseSuccessRate = diversityFiltered.length / Math.max(questions.length, 1);
 
       console.log('✅ Advanced Generation Complete:', {
-        generated: validatedQuestions.length,
+        generated: problems.length,
         target: totalQuestions,
         source: currentSource,
         metrics: generationMetrics
       });
 
-      setProblems(validatedQuestions);
       setGenerationSource(currentSource);
       setMetrics(generationMetrics);
 
