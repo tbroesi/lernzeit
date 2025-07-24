@@ -136,9 +136,15 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
     analyzeAndTest();
   }, [user, problems, category, grade]);
 
+  // Auto-generate problems when component loads
+  useEffect(() => {
+    console.log('🚀 CategoryMathProblem loaded - Auto-generating problems');
+    generateProblems();
+  }, [generateProblems]);
+
   const startGame = () => {
     setGameStarted(true);
-    generateProblems();
+    // Problems should already be generated at this point
   };
 
   const resetAnswers = () => {
