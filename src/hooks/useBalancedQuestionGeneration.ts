@@ -507,7 +507,7 @@ export function useBalancedQuestionGeneration(
     } finally {
       setIsGenerating(false);
     }
-  }, [grade, category, userId, totalQuestions, loadTemplatesFromDatabase, generateFallbackTemplates, generateTemplateProblems]);
+  }, [grade, category, userId, totalQuestions]); // Fixed: Remove function dependencies that cause recreations
   return {
     problems,
     isGenerating,
