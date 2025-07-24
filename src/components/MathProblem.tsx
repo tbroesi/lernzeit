@@ -6,6 +6,9 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Clock, Star, CheckCircle, XCircle, ArrowLeft } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { useChildSettings } from '@/hooks/useChildSettings';
+import { useAchievements } from '@/hooks/useAchievements';
+import { AchievementAnimation } from '@/components/game/AchievementAnimation';
 
 interface Problem {
   question: string;
@@ -338,6 +341,9 @@ const generateUniqueProblems = (grade: number, count: number = 10): Problem[] =>
 };
 
 export function MathProblem({ grade, onBack, onComplete, userId }: MathProblemProps) {
+  const { settings } = useChildSettings(userId || '');
+  const { updateProgress } = useAchievements(userId);
+  
   const [problems] = useState<Problem[]>(() => generateUniqueProblems(grade, 10));
   const [currentProblemIndex, setCurrentProblemIndex] = useState(0);
   const [userAnswer, setUserAnswer] = useState('');
@@ -348,6 +354,8 @@ export function MathProblem({ grade, onBack, onComplete, userId }: MathProblemPr
   const [sessionStartTime] = useState(Date.now());
   const [questionStartTime, setQuestionStartTime] = useState(Date.now());
   const [totalTimeSpent, setTotalTimeSpent] = useState(0);
+  const [newAchievements, setNewAchievements] = useState<any[]>([]);
+  const [showAchievements, setShowAchievements] = useState(false);
 
   const targetQuestions = 5;
   const currentProblem = problems[currentProblemIndex];
@@ -359,32 +367,46 @@ export function MathProblem({ grade, onBack, onComplete, userId }: MathProblemPr
   }, [currentProblemIndex]);
 
   const calculateReward = () => {
-    const minutesPerCorrect = 2;
-    const earnedMinutes = correctAnswers * minutesPerCorrect;
+    // Calculate based on child settings for math
+    let earnedSeconds = 0;
+    if (settings) {
+      earnedSeconds = correctAnswers * settings.math_seconds_per_task;
+    } else {
+      earnedSeconds = correctAnswers * 30; // fallback
+    }
+    
+    const earnedMinutes = Math.round(earnedSeconds / 60 * 100) / 100;
     const timeSpentMinutes = Math.ceil(totalTimeSpent / 60);
-    const netMinutes = Math.max(0, earnedMinutes - timeSpentMinutes);
-    return { earnedMinutes, timeSpentMinutes, netMinutes };
+    const netMinutes = Math.floor(earnedSeconds / 60); // Store whole minutes only
+    
+    return { 
+      earnedMinutes, 
+      timeSpentMinutes, 
+      netMinutes,
+      earnedSeconds 
+    };
   };
 
-  const saveGameSession = async (netMinutes: number) => {
+  const saveGameSession = async (earnedMinutes: number) => {
     if (!userId) return;
 
     try {
-      await supabase.from('game_sessions').insert([{
+      await supabase.from('learning_sessions').insert([{
         user_id: userId,
+        category: 'math',
         grade: grade,
         correct_answers: correctAnswers,
         total_questions: targetQuestions,
         time_spent: totalTimeSpent,
-        time_earned: netMinutes,
+        time_earned: earnedMinutes,
         session_date: new Date().toISOString(),
       }]);
     } catch (error) {
-      console.error('Fehler beim Speichern der Spielsession:', error);
+      console.error('Fehler beim Speichern der Lernsession:', error);
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const answer = parseInt(userAnswer);
     
@@ -398,6 +420,30 @@ export function MathProblem({ grade, onBack, onComplete, userId }: MathProblemPr
       setCorrectAnswers(prev => prev + 1);
       setStreak(prev => prev + 1);
       setFeedback('correct');
+      
+      // Update achievements
+      if (userId) {
+        try {
+          const questionTime = (Date.now() - questionStartTime) / 1000;
+          const wasTimeLimitExceeded = questionTime > 30;
+          
+          const achievementResult = await updateProgress(
+            'math',
+            'questions_solved', 
+            1,
+            true,
+            wasTimeLimitExceeded,
+            questionTime
+          );
+          
+          if (achievementResult && achievementResult.length > 0) {
+            setNewAchievements(achievementResult);
+            setShowAchievements(true);
+          }
+        } catch (error) {
+          console.error('Error updating achievements:', error);
+        }
+      }
       
       if (totalQuestions + 1 >= targetQuestions) {
         // Session beendet
@@ -421,7 +467,7 @@ export function MathProblem({ grade, onBack, onComplete, userId }: MathProblemPr
   };
 
   if (totalQuestions >= targetQuestions) {
-    const { earnedMinutes, timeSpentMinutes, netMinutes } = calculateReward();
+    const { earnedMinutes, timeSpentMinutes, netMinutes, earnedSeconds } = calculateReward();
     
     return (
       <div className="min-h-screen bg-gradient-bg flex items-center justify-center p-4">
@@ -439,7 +485,7 @@ export function MathProblem({ grade, onBack, onComplete, userId }: MathProblemPr
               <div className="bg-primary/10 p-3 rounded-lg">
                 <div className="text-sm text-muted-foreground">Verdient</div>
                 <div className="text-lg font-bold text-primary">
-                  +{earnedMinutes} Min ({correctAnswers} × 2 Min)
+                  +{earnedSeconds}s ({correctAnswers} × {settings?.math_seconds_per_task || 30}s)
                 </div>
               </div>
               
@@ -609,6 +655,15 @@ export function MathProblem({ grade, onBack, onComplete, userId }: MathProblemPr
             </CardContent>
           </Card>
         </div>
+
+        <AchievementAnimation
+          achievements={newAchievements}
+          isVisible={showAchievements}
+          onClose={() => {
+            setShowAchievements(false);
+            setNewAchievements([]);
+          }}
+        />
       </div>
     </div>
   );

@@ -12,6 +12,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SelectionQuestion } from '@/types/questionTypes';
 import { supabase } from '@/lib/supabase';
 import { useScreenTime } from '@/hooks/useScreenTime';
+import { useChildSettings } from '@/hooks/useChildSettings';
+import { useAchievements } from '@/hooks/useAchievements';
+import { AchievementAnimation } from '@/components/game/AchievementAnimation';
 import { AlertTriangle } from 'lucide-react';
 
 interface CategoryMathProblemProps {
@@ -24,6 +27,8 @@ interface CategoryMathProblemProps {
 export function CategoryMathProblem({ category, grade, onComplete, onBack }: CategoryMathProblemProps) {
   const { user } = useAuth();
   const { addScreenTime } = useScreenTime();
+  const { settings } = useChildSettings(user?.id || '');
+  const { updateProgress } = useAchievements(user?.id);
   
   const { 
     problems, 
@@ -41,7 +46,10 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
   const [selectedWords, setSelectedWords] = useState<number[]>([]);
   const [currentPlacements, setCurrentPlacements] = useState<Record<string, string>>({});
   const [sessionStartTime] = useState(Date.now());
+  const [questionStartTime, setQuestionStartTime] = useState(Date.now());
   const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
+  const [newAchievements, setNewAchievements] = useState<any[]>([]);
+  const [showAchievements, setShowAchievements] = useState(false);
 
   const currentQuestion: SelectionQuestion | undefined = problems[currentQuestionIndex];
 
@@ -50,6 +58,11 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
       generateProblems();
     }
   }, [gameStarted, problems.length, generateProblems]);
+
+  // Reset question timer when starting new question
+  useEffect(() => {
+    setQuestionStartTime(Date.now());
+  }, [currentQuestionIndex]);
 
   // Enhanced session analysis and testing
   useEffect(() => {
@@ -193,15 +206,25 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
     if (isCorrect) {
       setScore(prev => prev + 1);
       
-      // Update achievements
+      // Update achievements  
       if (user) {
         try {
-          await supabase.rpc('update_achievement_progress', {
-            p_user_id: user.id,
-            p_category: category.toLowerCase(),
-            p_type: 'questions_solved',
-            p_increment: 1
-          });
+          const questionTime = (Date.now() - questionStartTime) / 1000;
+          const wasTimeLimitExceeded = questionTime > 30; // 30 seconds time limit
+          
+          const achievementResult = await updateProgress(
+            category.toLowerCase(),
+            'questions_solved',
+            1,
+            true,
+            wasTimeLimitExceeded,
+            questionTime
+          );
+          
+          if (achievementResult && achievementResult.length > 0) {
+            setNewAchievements(achievementResult);
+            setShowAchievements(true);
+          }
         } catch (error) {
           console.error('Error updating achievements:', error);
         }
@@ -226,33 +249,45 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
 
   const completeGame = async () => {
     const sessionDuration = Date.now() - sessionStartTime;
-    const earnedMinutes = Math.max(1, Math.floor((score / problems.length) * 5));
+    
+    // Calculate earned time based on child settings
+    let earnedSeconds = 0;
+    if (settings) {
+      const categoryKey = `${category.toLowerCase()}_seconds_per_task` as keyof typeof settings;
+      const secondsPerTask = settings[categoryKey] as number || 30;
+      earnedSeconds = score * secondsPerTask;
+    } else {
+      earnedSeconds = score * 30; // fallback to 30 seconds per correct answer
+    }
+    
+    const earnedMinutes = Math.round(earnedSeconds / 60 * 100) / 100; // Round to 2 decimal places
     
     addScreenTime(earnedMinutes * 60);
     
     // Save enhanced session data
     if (user) {
       try {
-        await supabase.from('game_sessions').insert({
+        await supabase.from('learning_sessions').insert({
           user_id: user.id,
           category: category.toLowerCase(),
           grade,
-          score,
-          total_questions: problems.length,
-          duration_seconds: Math.floor(sessionDuration / 1000),
-          question_source: generationSource || 'unknown',
           correct_answers: score,
-          time_earned: earnedMinutes,
-          time_spent: sessionDuration / 1000
+          total_questions: problems.length,
+          time_spent: sessionDuration / 1000,
+          time_earned: Math.floor(earnedSeconds / 60), // Store as minutes in database
+          session_date: new Date().toISOString()
         });
         
-        console.log('📊 Session saved with source:', generationSource);
+        console.log('📊 Learning session saved:', {
+          earnedSeconds,
+          earnedMinutes: Math.floor(earnedSeconds / 60)
+        });
       } catch (error) {
         console.error('Error saving session:', error);
       }
     }
     
-    onComplete(earnedMinutes, category);
+    onComplete(Math.floor(earnedSeconds / 60), category);
   };
 
   const handleWordToggle = (wordIndex: number) => {
@@ -464,6 +499,15 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
         isOpen={showFeedbackDialog}
         onClose={() => setShowFeedbackDialog(false)}
         onSubmit={handleQuestionFeedback}
+      />
+
+      <AchievementAnimation
+        achievements={newAchievements}
+        isVisible={showAchievements}
+        onClose={() => {
+          setShowAchievements(false);
+          setNewAchievements([]);
+        }}
       />
     </Card>
   );
