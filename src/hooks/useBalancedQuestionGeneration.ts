@@ -122,22 +122,58 @@ export function useBalancedQuestionGeneration(
             
             // Extract answer from simple math questions
             if (template.category === 'Mathematik' && template.content.includes('=')) {
-              const match = template.content.match(/(.+)=\s*\?/);
+              const match = template.content.match(/(.+?)=\s*\?/);
               if (match) {
                 try {
-                  // Simple calculator for basic math
-                  const expression = match[1].trim()
-                    .replace('×', '*')
-                    .replace('÷', '/')
-                    .replace(':', '/');
-                  answerValue = eval(expression).toString();
-                  console.log(`🧮 Calculated answer: ${expression} = ${answerValue}`);
-                } catch {
-                  answerValue = '42'; // Fallback answer
+                  // Enhanced math expression calculator
+                  let expression = match[1].trim();
+                  
+                  // Handle different operation symbols
+                  expression = expression
+                    .replace(/×/g, '*')
+                    .replace(/÷/g, '/')
+                    .replace(/:/g, '/')
+                    .replace(/\s+/g, ''); // Remove spaces
+                  
+                  // Safety check for valid math expressions only
+                  if (/^[\d+\-*/.(),\s]+$/.test(expression)) {
+                    const result = eval(expression);
+                    answerValue = Number.isInteger(result) ? result.toString() : result.toFixed(2);
+                    console.log(`🧮 Calculated answer: ${match[1].trim()} = ${answerValue}`);
+                  } else {
+                    console.warn(`⚠️ Invalid math expression: ${expression}`);
+                    // Try to extract number from the end of the question text
+                    const numberMatch = template.content.match(/(\d+(?:[.,]\d+)?)\s*$/);
+                    answerValue = numberMatch ? numberMatch[1].replace(',', '.') : 'Fehler';
+                  }
+                } catch (calculationError) {
+                  console.error(`❌ Calculation failed for: ${match[1]}`, calculationError);
+                  // Try to extract a number from the template content as last resort
+                  const numberMatch = template.content.match(/(\d+(?:[.,]\d+)?)/g);
+                  if (numberMatch && numberMatch.length >= 2) {
+                    // For simple addition/subtraction, try basic calculation
+                    const nums = numberMatch.map(n => parseFloat(n.replace(',', '.')));
+                    if (template.content.includes('+')) {
+                      answerValue = (nums[0] + nums[1]).toString();
+                    } else if (template.content.includes('-')) {
+                      answerValue = (nums[0] - nums[1]).toString();
+                    } else if (template.content.includes('×') || template.content.includes('*')) {
+                      answerValue = (nums[0] * nums[1]).toString();
+                    } else {
+                      answerValue = 'Berechnung fehlgeschlagen';
+                    }
+                  } else {
+                    answerValue = 'Berechnung fehlgeschlagen';
+                  }
                 }
+              } else {
+                console.warn(`⚠️ No math pattern found in: ${template.content}`);
+                answerValue = 'Muster nicht erkannt';
               }
             } else {
-              answerValue = 'Antwort'; // Generic fallback
+              // For non-math templates, try to extract answer from content
+              const answerMatch = template.content.match(/antwort[:\s]*([^.!?]*)/i);
+              answerValue = answerMatch ? answerMatch[1].trim() : 'Antwort nicht gefunden';
             }
           }
           
