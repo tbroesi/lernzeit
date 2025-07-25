@@ -244,12 +244,24 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
     
     switch (question.questionType) {
       case 'text-input':
-        // Normalize both user input and correct answer for comparison
+        // Get the mathematically corrected answer for validation
+        const storedAnswer = (question as any).answer.toString();
+        const correctedAnswer = getCorrectAnswerText(question); // This uses our math correction
+        
+        console.log('🔍 Answer validation comparison:', {
+          userAnswer: userAnswer.trim(),
+          storedAnswer,
+          correctedAnswer,
+          question: question.question
+        });
+        
+        // Normalize both user input and corrected answer for comparison
         const userAnswerNormalized = userAnswer.trim().toLowerCase().replace(',', '.');
-        const correctAnswerNormalized = (question as any).answer.toString().toLowerCase().replace(',', '.');
+        const correctAnswerNormalized = correctedAnswer.toLowerCase().replace(',', '.');
         
         // Check exact match first
         if (userAnswerNormalized === correctAnswerNormalized) {
+          console.log('✅ Exact match found');
           return true;
         }
         
@@ -258,7 +270,9 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
         const correctNum = parseFloat(correctAnswerNormalized);
         
         if (!isNaN(userNum) && !isNaN(correctNum)) {
-          return Math.abs(userNum - correctNum) < 0.001;
+          const isMatch = Math.abs(userNum - correctNum) < 0.001;
+          console.log('🔢 Numeric comparison:', { userNum, correctNum, isMatch });
+          return isMatch;
         }
         
         return false;
@@ -433,6 +447,48 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
     
     console.log('🎯 Debug: Getting correct answer for question with complete object:', question);
     
+    // MATHEMATICAL CORRECTION FUNCTION - Fix wrong answers in database
+    const correctMathAnswer = (questionText: string, storedAnswer: string): string => {
+      console.log('🧮 Checking math correctness:', { questionText, storedAnswer });
+      
+      // Parse mathematical expressions from question text
+      // Pattern: "Was ist das Ergebnis von X op Y + Z" etc.
+      const mathExpressionMatch = questionText.match(/(?:Ergebnis von|ist)\s*(.+?)\s*\?/i);
+      if (mathExpressionMatch) {
+        const expression = mathExpressionMatch[1].trim();
+        console.log('🧮 Found expression:', expression);
+        
+        try {
+          // Replace text operators with symbols
+          let cleanExpression = expression
+            .replace(/\s*x\s*/g, '*')  // x → *
+            .replace(/\s*mal\s*/g, '*')  // mal → *
+            .replace(/\s*plus\s*/g, '+')  // plus → +
+            .replace(/\s*minus\s*/g, '-')  // minus → -
+            .replace(/\s*geteilt durch\s*/g, '/')  // geteilt durch → /
+            .replace(/\s+/g, '');  // remove spaces
+          
+          console.log('🧮 Clean expression:', cleanExpression);
+          
+          // Evaluate the expression safely
+          const result = Function(`"use strict"; return (${cleanExpression})`)();
+          const calculatedAnswer = result.toString();
+          
+          console.log('🧮 Calculated result:', calculatedAnswer, 'vs stored:', storedAnswer);
+          
+          // If calculated answer differs from stored, use calculated
+          if (calculatedAnswer !== storedAnswer) {
+            console.log('🔧 CORRECTING WRONG ANSWER:', storedAnswer, '→', calculatedAnswer);
+            return calculatedAnswer;
+          }
+        } catch (error) {
+          console.log('🧮 Expression evaluation failed:', error);
+        }
+      }
+      
+      return storedAnswer; // Return original if no correction needed
+    };
+    
     switch (question.questionType) {
       case 'text-input':
         const textAnswer = (question as any).answer;
@@ -470,7 +526,10 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
           }
           return 'Antwort nicht verfügbar';
         }
-        return textAnswer.toString();
+        
+        // Apply mathematical correction before returning
+        const correctedAnswer = correctMathAnswer(question.question, textAnswer.toString());
+        return correctedAnswer;
       case 'multiple-choice':
         const mcAnswer = (question as any).options?.[(question as any).correctAnswer];
         if (mcAnswer === undefined || mcAnswer === null) {
