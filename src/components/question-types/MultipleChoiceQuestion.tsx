@@ -16,6 +16,40 @@ export function MultipleChoiceQuestion({
   onAnswerSelect, 
   disabled = false 
 }: MultipleChoiceQuestionProps) {
+  console.log('🔍 MultipleChoice Debug:', {
+    questionType: question.questionType,
+    hasOptions: !!question.options,
+    optionsLength: question.options?.length,
+    options: question.options,
+    fullQuestion: question
+  });
+
+  // If no options available, treat as text input
+  if (!question.options || question.options.length === 0) {
+    console.log('⚠️ No options found for multiple choice, falling back to text input');
+    return (
+      <div className="space-y-4">
+        <p className="text-xl font-medium mb-6 text-center">
+          {question.question}
+        </p>
+        <div className="max-w-sm mx-auto">
+          <input
+            type="text"
+            placeholder="Deine Antwort..."
+            className="w-full h-12 px-4 border border-gray-300 rounded-lg text-center text-lg"
+            disabled={disabled}
+            onChange={(e) => {
+              // Simulate selection for first option
+              if (e.target.value.trim()) {
+                onAnswerSelect(0);
+              }
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <p className="text-xl font-medium mb-6 text-center">

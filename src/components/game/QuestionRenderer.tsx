@@ -38,9 +38,16 @@ export function QuestionRenderer({
 }: QuestionRendererProps) {
   console.log('🎯 QuestionRenderer - Question type:', question.questionType);
   console.log('🎯 QuestionRenderer - Question:', question.question);
+  console.log('🎯 QuestionRenderer - Full question object:', question);
 
   switch (question.questionType) {
     case 'multiple-choice':
+      // Add extra debugging for multiple choice
+      console.log('🔍 Multiple Choice Details:', {
+        hasOptions: !!(question as any).options,
+        optionsLength: (question as any).options?.length,
+        options: (question as any).options
+      });
       return (
         <MultipleChoiceQuestion
           question={question}
