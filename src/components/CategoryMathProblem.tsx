@@ -7,11 +7,8 @@ import { GameProgress } from '@/components/game/GameProgress';
 import { GameFeedback } from '@/components/game/GameFeedback';
 import { QuestionGenerationInfo } from '@/components/game/QuestionGenerationInfo';
 import { QuestionFeedbackDialog } from '@/components/game/QuestionFeedbackDialog';
-import { EnhancedGenerationDisplay } from '@/components/EnhancedGenerationDisplay';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 import { SelectionQuestion } from '@/types/questionTypes';
 import { supabase } from '@/lib/supabase';
 import { useScreenTime } from '@/hooks/useScreenTime';
@@ -19,7 +16,7 @@ import { useChildSettings } from '@/hooks/useChildSettings';
 import { useAchievements } from '@/hooks/useAchievements';
 import { AchievementAnimation } from '@/components/game/AchievementAnimation';
 import { GameTimeDisplay } from '@/components/game/GameTimeDisplay';
-import { AlertTriangle, RefreshCw, Sparkles } from 'lucide-react';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
 
 interface CategoryMathProblemProps {
   category: string;
@@ -34,8 +31,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
   const { settings } = useChildSettings(user?.id || '');
   const { updateProgress } = useAchievements(user?.id);
   
-  const [useEnhancedMode, setUseEnhancedMode] = useState(false);
-  
+  // Remove enhanced mode to prevent infinite loop - use standard generation only
   const { 
     problems, 
     isGenerating, 
@@ -44,17 +40,14 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
     generationError,
     canRetry,
     manualRetry,
-    refreshQuestions,
-    metadata,
-    qualityReport,
-    enhancedMode
+    refreshQuestions
   } = useQuestionGenerationManager({
     category,
     grade,
     userId: user?.id || 'anonymous',
     totalQuestions: 5,
     autoGenerate: true,
-    useEnhancedMode
+    useEnhancedMode: false // Always false to prevent issues
   });
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -438,11 +431,43 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
       options: (question as any).options
     });
     
+    console.log('🎯 Debug: Getting correct answer for question with complete object:', question);
+    
     switch (question.questionType) {
       case 'text-input':
         const textAnswer = (question as any).answer;
-        if (textAnswer === undefined || textAnswer === null) {
-          console.error('❌ Text input answer is undefined/null:', question);
+        console.log('🔍 Text input answer check:', { textAnswer, type: typeof textAnswer });
+        if (textAnswer === undefined || textAnswer === null || textAnswer === '') {
+          console.error('❌ Text input answer is undefined/null/empty:', {
+            question: question.question,
+            answer: textAnswer,
+            fullQuestion: question
+          });
+          // Try to extract from question text for simple math problems
+          const mathMatch = question.question.match(/(\d+(?:[.,]\d+)?)\s*[cm²]?\s*\??\s*$/);
+          if (mathMatch) {
+            console.log('🔧 Extracted answer from question text:', mathMatch[1]);
+            return mathMatch[1];
+          }
+          // For area calculation: length * width
+          const areaMatch = question.question.match(/(\d+)\s*cm.*?(\d+)\s*cm.*?Fläche/);
+          if (areaMatch) {
+            const area = parseInt(areaMatch[1]) * parseInt(areaMatch[2]);
+            console.log('🔧 Calculated area:', area);
+            return area.toString();
+          }
+          // For Roman numerals
+          const romanMatch = question.question.match(/römische Zahl.*?(\d+)/i);
+          if (romanMatch) {
+            const number = parseInt(romanMatch[1]);
+            const romanNumerals: Record<number, string> = {
+              1: 'I', 2: 'II', 3: 'III', 4: 'IV', 5: 'V', 6: 'VI', 7: 'VII', 8: 'VIII', 9: 'IX', 10: 'X',
+              11: 'XI', 12: 'XII', 13: 'XIII', 14: 'XIV', 15: 'XV', 16: 'XVI', 17: 'XVII', 18: 'XVIII', 19: 'XIX', 20: 'XX'
+            };
+            const roman = romanNumerals[number] || number.toString();
+            console.log('🔧 Calculated Roman numeral:', roman, 'for number:', number);
+            return roman;
+          }
           return 'Antwort nicht verfügbar';
         }
         return textAnswer.toString();
@@ -463,6 +488,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
         }
         return correctWords.join(', ');
       default:
+        console.log('🎯 Unknown question type, returning default');
         return 'Siehe Erklärung';
     }
   };
@@ -507,31 +533,6 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
           <p className="text-sm text-muted-foreground">
             Du bekommst verschiedene Fragetypen: Textaufgaben, Multiple-Choice, Zuordnungen und mehr!
           </p>
-          
-          {/* Enhanced Mode Toggle */}
-          <div className="flex items-center justify-center space-x-2 p-4 bg-muted/50 rounded-lg">
-            <Sparkles className="h-4 w-4 text-primary" />
-            <Label htmlFor="enhanced-mode" className="text-sm font-medium">
-              Enhanced Curriculum Mode
-            </Label>
-            <Switch
-              id="enhanced-mode"
-              checked={useEnhancedMode}
-              onCheckedChange={setUseEnhancedMode}
-            />
-          </div>
-          
-          {useEnhancedMode && (
-            <div className="text-xs text-muted-foreground bg-primary/5 p-3 rounded-lg">
-              <p className="font-medium text-primary mb-1">🎓 Enhanced Mode Features:</p>
-              <ul className="list-disc list-inside space-y-1">
-                <li>Curriculum-aligned questions for all 9 subjects</li>
-                <li>Advanced quality control and metrics</li>
-                <li>Adaptive difficulty progression</li>
-                <li>Rich educational metadata</li>
-              </ul>
-            </div>
-          )}
           
           <Button onClick={startGame} size="lg" className="w-full">
             Spiel starten
@@ -630,11 +631,6 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
         />
       </CardHeader>
       <CardContent className="space-y-6">
-        <EnhancedGenerationDisplay 
-          metadata={metadata}
-          qualityReport={qualityReport}
-          enhancedMode={enhancedMode}
-        />
         <QuestionRenderer
           question={currentQuestion}
           userAnswer={userAnswer}
