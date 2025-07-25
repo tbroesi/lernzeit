@@ -440,13 +440,27 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
     
     switch (question.questionType) {
       case 'text-input':
-        return (question as any).answer.toString();
+        const textAnswer = (question as any).answer;
+        if (textAnswer === undefined || textAnswer === null) {
+          console.error('❌ Text input answer is undefined/null:', question);
+          return 'Antwort nicht verfügbar';
+        }
+        return textAnswer.toString();
       case 'multiple-choice':
-        return (question as any).options?.[(question as any).correctAnswer] || 'Unbekannt';
+        const mcAnswer = (question as any).options?.[(question as any).correctAnswer];
+        if (mcAnswer === undefined || mcAnswer === null) {
+          console.error('❌ Multiple choice answer is undefined/null:', question);
+          return 'Antwort nicht verfügbar';
+        }
+        return mcAnswer;
       case 'word-selection':
         const correctWords = question.selectableWords
           ?.filter(word => word.isCorrect)
           ?.map(word => word.word) || [];
+        if (correctWords.length === 0) {
+          console.error('❌ Word selection has no correct words:', question);
+          return 'Keine korrekten Wörter gefunden';
+        }
         return correctWords.join(', ');
       default:
         return 'Siehe Erklärung';
