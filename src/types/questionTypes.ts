@@ -56,3 +56,24 @@ export interface MatchingQuestion extends BaseQuestion {
 }
 
 export type SelectionQuestion = TextInputQuestion | MultipleChoiceQuestion | WordSelectionQuestion | DragDropQuestion | MatchingQuestion;
+
+// =====================================================
+// ENHANCED CURRICULUM TYPES - EXTENSION
+// =====================================================
+
+// Import enhanced types from the new hook
+import type { 
+  ExtendedSubject, 
+  EnhancedQuestionMetadata 
+} from '@/hooks/useEnhancedCurriculumGeneration';
+
+// Extend existing SelectionQuestion interface
+declare module '@/types/questionTypes' {
+  interface SelectionQuestion {
+    // Enhanced metadata for curriculum system
+    metadata?: EnhancedQuestionMetadata;
+  }
+}
+
+// Export enhanced types for easy access
+export type { ExtendedSubject, EnhancedQuestionMetadata };
