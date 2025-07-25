@@ -19,6 +19,7 @@ import { ProfileEdit } from '@/components/ProfileEdit';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useChildSettings } from '@/hooks/useChildSettings';
 import { useScreenTimeLimit } from '@/hooks/useScreenTimeLimit';
+import { useStreak } from '@/hooks/useStreak';
 
 interface UserProfileProps {
   user: any;
@@ -46,6 +47,11 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
   // Use screen time limit hook for children
   const { isAtLimit, remainingMinutes, getDailyLimit, todayMinutesUsed } = useScreenTimeLimit(
     profile?.role === 'child' ? user?.id || '' : ''
+  );
+
+  // Use streak hook for children
+  const { streak, loading: streakLoading } = useStreak(
+    profile?.role === 'child' ? user?.id : undefined
   );
 
   // Check for parent-child relationship
@@ -401,7 +407,9 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
             <Card className="shadow-card bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-200">
               <CardContent className="p-4 text-center">
                 <Zap className="w-8 h-8 text-blue-600 mx-auto mb-2" />
-                <div className="text-sm font-medium text-blue-700">Streak: 1</div>
+                <div className="text-sm font-medium text-blue-700">
+                  Streak: {streakLoading ? '...' : streak}
+                </div>
                 <div className="text-xs text-blue-600">Tage in Folge</div>
               </CardContent>
             </Card>
