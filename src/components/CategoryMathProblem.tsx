@@ -486,6 +486,37 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
         }
       }
       
+      // GEOMETRY CALCULATIONS - Umfang, Fläche, etc.
+      
+      // Umfang eines Rechtecks: U = 2 × (Länge + Breite)
+      const rectanglePerimeterMatch = questionText.match(/Rechteck.*?(\d+)\s*cm.*?(\d+)\s*cm.*?Umfang/i);
+      if (rectanglePerimeterMatch) {
+        const length = parseInt(rectanglePerimeterMatch[1]);
+        const width = parseInt(rectanglePerimeterMatch[2]);
+        const perimeter = 2 * (length + width);
+        console.log('🔧 RECTANGLE PERIMETER CALCULATION:', { length, width, perimeter });
+        return perimeter.toString();
+      }
+      
+      // Fläche eines Rechtecks: A = Länge × Breite  
+      const rectangleAreaMatch = questionText.match(/Rechteck.*?(\d+)\s*cm.*?(\d+)\s*cm.*?Fläche/i);
+      if (rectangleAreaMatch) {
+        const length = parseInt(rectangleAreaMatch[1]);
+        const width = parseInt(rectangleAreaMatch[2]);
+        const area = length * width;
+        console.log('🔧 RECTANGLE AREA CALCULATION:', { length, width, area });
+        return area.toString();
+      }
+      
+      // Quadrat Fläche: A = Seitenlänge²
+      const squareAreaMatch = questionText.match(/Quadrat.*?(\d+)\s*cm.*?Fläche/i);
+      if (squareAreaMatch) {
+        const side = parseInt(squareAreaMatch[1]);
+        const area = side * side;
+        console.log('🔧 SQUARE AREA CALCULATION:', { side, area });
+        return area.toString();
+      }
+      
       return storedAnswer; // Return original if no correction needed
     };
     
