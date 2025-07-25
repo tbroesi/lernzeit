@@ -112,6 +112,26 @@ export class AnswerCalculator {
         calculationSteps.push(`Area calculation: ${length} × ${width}`);
         answer = length * width;
         calculationSteps.push(`Result: ${answer} cm²`);
+        
+      } else if (template.id.includes('fraction_comparison')) {
+        const { a, b } = params;
+        calculationSteps.push(`Comparing fractions: 1/${a} vs 1/${b}`);
+        
+        // For unit fractions (1/n), larger denominator means smaller fraction
+        // So 1/4 > 1/6 because 4 < 6
+        const fraction1 = 1 / a;
+        const fraction2 = 1 / b;
+        
+        calculationSteps.push(`1/${a} = ${fraction1.toFixed(3)}`);
+        calculationSteps.push(`1/${b} = ${fraction2.toFixed(3)}`);
+        
+        if (fraction1 > fraction2) {
+          answer = `1/${a}`;
+          calculationSteps.push(`1/${a} is larger`);
+        } else {
+          answer = `1/${b}`;
+          calculationSteps.push(`1/${b} is larger`);
+        }
       }
       
       // German language calculations

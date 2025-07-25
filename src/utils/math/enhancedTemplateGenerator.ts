@@ -276,7 +276,7 @@ export class EnhancedTemplateGenerator {
       
       // Create SelectionQuestion object based on type
       if (template.type === 'multiple-choice') {
-        const options = this.generateMultipleChoiceOptions(answer, template);
+        const options = this.generateMultipleChoiceOptions(answer, template, parameters);
         const question: SelectionQuestion = {
           id: Math.floor(Math.random() * 1000000),
           question: questionText,
@@ -516,7 +516,8 @@ export class EnhancedTemplateGenerator {
   
   private static generateMultipleChoiceOptions(
     correctAnswer: string | number,
-    template: QuestionTemplate
+    template: QuestionTemplate,
+    parameters?: Record<string, any>
   ): { options: string[]; correctIndex: number } {
     console.log('🎯 Generating multiple choice options for:', { correctAnswer, isNumeric: typeof correctAnswer });
     
@@ -582,10 +583,21 @@ export class EnhancedTemplateGenerator {
       )) {
         // For fraction comparison questions, provide actual fraction options
         if (template.template?.includes('Bruch')) {
-          const fractionOptions = ['1/6', '1/4', '1/3', '1/2', '2/3', '3/4'];
-          const filteredOptions = fractionOptions.filter(opt => opt !== String(correctAnswer));
+          // Get the parameters to know which fractions are being compared
+          const a = parameters?.a;
+          const b = parameters?.b;
           
-          // Add 3 random fraction options
+          // Create specific options including both fractions being compared
+          const comparedFractions = [`1/${a}`, `1/${b}`];
+          const otherFractionOptions = ['1/3', '1/5', '1/7', '1/8', '2/3', '3/4', '0,17', '0,25'];
+          
+          // Filter out the correct answer and the fractions being compared
+          const filteredOptions = otherFractionOptions.filter(opt => 
+            opt !== String(correctAnswer) && 
+            !comparedFractions.includes(opt)
+          );
+          
+          // Add 3 random options (but not the fractions being compared unless they're the answer)
           for (let i = 0; i < 3 && filteredOptions.length > 0; i++) {
             const randomIndex = Math.floor(Math.random() * filteredOptions.length);
             options.push(filteredOptions[randomIndex]);
