@@ -64,7 +64,7 @@ export function useAdvancedQuestionGeneration({
     isActive: false,
     lastParams: '',
     attempts: 0,
-    maxAttempts: 3
+    maxAttempts: 10
   });
 
   // Default options
