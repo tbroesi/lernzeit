@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { SelectionQuestion } from '@/types/questionTypes';
 import { useBalancedQuestionGeneration } from './useBalancedQuestionGeneration';
+import { useEnhancedCurriculumGeneration } from './useEnhancedCurriculumGeneration';
 
 interface QuestionGenerationManagerProps {
   category: string;
@@ -8,6 +9,7 @@ interface QuestionGenerationManagerProps {
   userId: string;
   totalQuestions?: number;
   autoGenerate?: boolean;
+  useEnhancedMode?: boolean;
 }
 
 export function useQuestionGenerationManager({
@@ -15,7 +17,8 @@ export function useQuestionGenerationManager({
   grade,
   userId,
   totalQuestions = 5,
-  autoGenerate = true
+  autoGenerate = true,
+  useEnhancedMode = false
 }: QuestionGenerationManagerProps) {
   const [isInitialized, setIsInitialized] = useState(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
@@ -26,13 +29,27 @@ export function useQuestionGenerationManager({
   const lastParamsRef = useRef<string>('');
   const initializationRef = useRef(false);
   
+  // Use enhanced or balanced generation based on mode
+  const balancedGeneration = useBalancedQuestionGeneration(category, grade, userId, totalQuestions);
+  const enhancedGeneration = useEnhancedCurriculumGeneration(category, grade, userId, totalQuestions);
+  
   const {
     problems,
     isGenerating,
-    generationSource,
-    sessionId,
-    generateProblems
-  } = useBalancedQuestionGeneration(category, grade, userId, totalQuestions);
+    error: enhancedError,
+    metadata
+  } = useEnhancedMode ? enhancedGeneration : { 
+    problems: balancedGeneration.problems, 
+    isGenerating: balancedGeneration.isGenerating,
+    error: null,
+    metadata: null
+  };
+  
+  const generationSource = useEnhancedMode ? enhancedGeneration.metadata.source : balancedGeneration.generationSource;
+  const sessionId = useEnhancedMode ? enhancedGeneration.metadata.sessionId : balancedGeneration.sessionId;
+  const generateProblems = useEnhancedMode ? 
+    async () => {} : // Enhanced mode auto-generates
+    balancedGeneration.generateProblems;
 
   // Create stable parameter signature
   const currentParams = `${category}-${grade}-${userId}-${totalQuestions}`;
@@ -142,7 +159,7 @@ export function useQuestionGenerationManager({
     isInitialized,
     generationSource,
     sessionId,
-    generationError,
+    generationError: generationError || enhancedError,
     retryCount,
     maxRetries,
     canRetry: retryCount < maxRetries,
@@ -150,6 +167,10 @@ export function useQuestionGenerationManager({
     isComplete: problems.length >= totalQuestions,
     manualRetry,
     refreshQuestions,
-    generateProblems
+    generateProblems,
+    // Enhanced mode specific data
+    metadata: useEnhancedMode ? metadata : undefined,
+    qualityReport: useEnhancedMode ? enhancedGeneration.qualityReport : undefined,
+    enhancedMode: useEnhancedMode
   };
 }

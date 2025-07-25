@@ -1,14 +1,17 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { useAdvancedQuestionGeneration } from '@/hooks/useAdvancedQuestionGeneration';
+import { useQuestionGenerationManager } from '@/hooks/useQuestionGenerationManager';
 import { QuestionRenderer } from '@/components/game/QuestionRenderer';
 import { GameProgress } from '@/components/game/GameProgress';
 import { GameFeedback } from '@/components/game/GameFeedback';
 import { QuestionGenerationInfo } from '@/components/game/QuestionGenerationInfo';
 import { QuestionFeedbackDialog } from '@/components/game/QuestionFeedbackDialog';
+import { EnhancedGenerationDisplay } from '@/components/EnhancedGenerationDisplay';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { SelectionQuestion } from '@/types/questionTypes';
 import { supabase } from '@/lib/supabase';
 import { useScreenTime } from '@/hooks/useScreenTime';
@@ -16,7 +19,7 @@ import { useChildSettings } from '@/hooks/useChildSettings';
 import { useAchievements } from '@/hooks/useAchievements';
 import { AchievementAnimation } from '@/components/game/AchievementAnimation';
 import { GameTimeDisplay } from '@/components/game/GameTimeDisplay';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Sparkles } from 'lucide-react';
 
 interface CategoryMathProblemProps {
   category: string;
@@ -31,6 +34,8 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
   const { settings } = useChildSettings(user?.id || '');
   const { updateProgress } = useAchievements(user?.id);
   
+  const [useEnhancedMode, setUseEnhancedMode] = useState(false);
+  
   const { 
     problems, 
     isGenerating, 
@@ -39,13 +44,17 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
     generationError,
     canRetry,
     manualRetry,
-    refreshQuestions
-  } = useAdvancedQuestionGeneration({
+    refreshQuestions,
+    metadata,
+    qualityReport,
+    enhancedMode
+  } = useQuestionGenerationManager({
     category,
     grade,
     userId: user?.id || 'anonymous',
     totalQuestions: 5,
-    autoGenerate: true
+    autoGenerate: true,
+    useEnhancedMode
   });
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -484,6 +493,32 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
           <p className="text-sm text-muted-foreground">
             Du bekommst verschiedene Fragetypen: Textaufgaben, Multiple-Choice, Zuordnungen und mehr!
           </p>
+          
+          {/* Enhanced Mode Toggle */}
+          <div className="flex items-center justify-center space-x-2 p-4 bg-muted/50 rounded-lg">
+            <Sparkles className="h-4 w-4 text-primary" />
+            <Label htmlFor="enhanced-mode" className="text-sm font-medium">
+              Enhanced Curriculum Mode
+            </Label>
+            <Switch
+              id="enhanced-mode"
+              checked={useEnhancedMode}
+              onCheckedChange={setUseEnhancedMode}
+            />
+          </div>
+          
+          {useEnhancedMode && (
+            <div className="text-xs text-muted-foreground bg-primary/5 p-3 rounded-lg">
+              <p className="font-medium text-primary mb-1">🎓 Enhanced Mode Features:</p>
+              <ul className="list-disc list-inside space-y-1">
+                <li>Curriculum-aligned questions for all 9 subjects</li>
+                <li>Advanced quality control and metrics</li>
+                <li>Adaptive difficulty progression</li>
+                <li>Rich educational metadata</li>
+              </ul>
+            </div>
+          )}
+          
           <Button onClick={startGame} size="lg" className="w-full">
             Spiel starten
           </Button>
@@ -581,6 +616,11 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
         />
       </CardHeader>
       <CardContent className="space-y-6">
+        <EnhancedGenerationDisplay 
+          metadata={metadata}
+          qualityReport={qualityReport}
+          enhancedMode={enhancedMode}
+        />
         <QuestionRenderer
           question={currentQuestion}
           userAnswer={userAnswer}
