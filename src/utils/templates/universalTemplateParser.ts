@@ -142,9 +142,10 @@ const parseMathContent = (content: string) => {
   if (match) {
     const a = parseInt(match[1]);
     const b = parseInt(match[2]);
-    const result = Math.floor(a / b); // Verwende floor statt round für ganze Zahlen
+    const result = a / b; // KORRIGIERT: Verwende direkte Division ohne floor
     
-    console.log(`🧮 Division: ${a} ÷ ${b} = ${result}`);
+    console.log(`🧮 Division: ${a} ÷ ${b} = ${result} (a=${a}, b=${b})`);
+    console.warn(`🔍 DEBUGGING Division 144÷12: Expected=12, Calculated=${result}`);
     
     return {
       success: true,
@@ -265,7 +266,7 @@ const parseMathContent = (content: string) => {
       case '÷': 
       case ':': 
       case '/': 
-        result = Math.floor(a / b); // Ganze Zahlen für Schulmathe
+        result = a / b; // KORRIGIERT: Direkte Division ohne floor
         opSymbol = '÷';
         break;
       default: 
@@ -296,7 +297,7 @@ const parseMathContent = (content: string) => {
       case '+': result = a + b; break;
       case '-': result = a - b; break;
       case '×': case 'x': case '*': result = a * b; break;
-      case '÷': case ':': case '/': result = Math.floor(a / b); break;
+      case '÷': case ':': case '/': result = a / b; break; // KORRIGIERT
       default: result = a + b;
     }
     
@@ -413,18 +414,24 @@ const extractSmartAnswer = (content: string): string => {
   return 'Standard-Antwort';
 };
 
-// Intelligenter Fallback
+// Intelligenter Fallback - sollte jetzt seltener ausgelöst werden
 const createIntelligentFallback = (content: string, template: any) => {
   console.warn(`🆘 FALLBACK ACTIVATED for template ${template.id}: "${content}"`);
-  console.warn(`🆘 This should not happen if math parsing works correctly!`);
+  console.warn(`🔍 DEBUGGING: Math parsing should have handled this!`);
   
   const category = template.category?.toLowerCase() || '';
+  
+  // Zusätzliche Debugging-Information
+  if (content.includes('144') && content.includes('12')) {
+    console.error(`🚨 CRITICAL: Division 144÷12 reached fallback - this is wrong!`);
+    console.error(`🚨 Expected answer: 12, but fallback would give: FALLBACK_ERROR`);
+  }
   
   return {
     success: true,
     questionText: content,
-    answerValue: category.includes('math') ? 'FALLBACK_ERROR' : 'Richtig',
-    explanation: `⚠️ FALLBACK: Automatische Antwort für: ${content.substring(0, 30)}...`,
+    answerValue: category.includes('math') ? 'MATH_PARSE_FAILED' : 'Richtig',
+    explanation: `⚠️ FALLBACK: Parser-Problem für: ${content.substring(0, 30)}...`,
     questionType: 'text-input',
     isFallback: true // Debug-Flag
   };

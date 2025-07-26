@@ -723,7 +723,13 @@ export function useBalancedQuestionGeneration(
     console.log(`🚫 Excluding ${excludedQuestions.length} questions based on feedback`);
     
     const generatedProblems: SelectionQuestion[] = [];
-    const usedQuestions = new Set<string>();
+    
+    // KORRIGIERT: Persistentes Tracking von bereits verwendeten Fragen
+    const sessionKey = `used_questions_${category}_${grade}_${userId}`;
+    const existingUsed = JSON.parse(localStorage.getItem(sessionKey) || '[]');
+    const usedQuestions = new Set<string>([...existingUsed, ...excludedQuestions]);
+    
+    console.log(`🔍 Tracking duplicates: ${usedQuestions.size} bereits verwendet`);
     
     // Try to generate unique questions
     let attempts = 0;
@@ -828,6 +834,10 @@ export function useBalancedQuestionGeneration(
       }
     }
 
+    // KORRIGIERT: Speichere die verwendeten Fragen persistent
+    localStorage.setItem(sessionKey, JSON.stringify(Array.from(usedQuestions)));
+    console.log(`💾 Saved ${usedQuestions.size} used questions to localStorage`);
+    
     console.log(`📊 Template generation complete: ${generatedProblems.length}/${totalQuestions} questions generated in ${attempts} attempts`);
     return generatedProblems;
   };
