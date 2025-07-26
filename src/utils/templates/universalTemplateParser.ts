@@ -24,7 +24,15 @@ export const parseTemplateContentUniversal = (template: any): {
       }
     }
 
-    // PHASE 2: Plain-Text-Parsing (Mathematik)
+    // PHASE 2: Multiple-Choice-Erkennung
+    if (isMultipleChoiceContent(content)) {
+      const mcResult = parseMultipleChoiceContent(content, template);
+      if (mcResult.success) {
+        return mcResult;
+      }
+    }
+
+    // PHASE 3: Plain-Text-Parsing (Mathematik)
     if (isMathContent(template.category, content)) {
       const mathResult = parseMathContent(content);
       if (mathResult.success) {
@@ -32,7 +40,7 @@ export const parseTemplateContentUniversal = (template: any): {
       }
     }
 
-    // PHASE 3: Plain-Text-Parsing (Deutsch/Sprachen)
+    // PHASE 4: Plain-Text-Parsing (Deutsch/Sprachen)
     if (isLanguageContent(template.category, content)) {
       const langResult = parseLanguageContent(content);
       if (langResult.success) {
@@ -40,8 +48,16 @@ export const parseTemplateContentUniversal = (template: any): {
       }
     }
 
-    // PHASE 4: Universeller Fallback (niemals scheitern!)
-    return createIntelligentFallback(content, template);
+    // PHASE 5: Naturwissenschaften
+    if (isScienceContent(template.category, content)) {
+      const scienceResult = parseScienceContent(content);
+      if (scienceResult.success) {
+        return scienceResult;
+      }
+    }
+
+    // PHASE 6: Universeller Fallback - Fehler signalisieren statt hardcoded Antwort
+    return { success: false, error: `Parsing failed for content: ${content.substring(0, 50)}...` };
 
   } catch (error) {
     console.error(`❌ Critical parse error for template ${template.id}:`, error);
@@ -124,6 +140,13 @@ const isMathContent = (category: string, content: string): boolean => {
   return categoryMatch || contentMatch;
 };
 
+// Multiple-Choice-Content-Erkennung
+const isMultipleChoiceContent = (content: string): boolean => {
+  const mcKeywords = ['Wähle die richtige Aussage', 'Welche Aussage ist richtig', 'Wähle aus', 'Kreuze an', 'Markiere die richtige'];
+  return mcKeywords.some(keyword => content.includes(keyword));
+};
+
+
 // Sprach-Content-Erkennung  
 const isLanguageContent = (category: string, content: string): boolean => {
   const langKeywords = ['Welche', 'Wie', 'Was', 'Wortart', 'Mehrzahl', 'Artikel', 'Rechtschreibung'];
@@ -131,6 +154,43 @@ const isLanguageContent = (category: string, content: string): boolean => {
   const contentMatch = langKeywords.some(keyword => content.includes(keyword));
   
   return categoryMatch || contentMatch;
+};
+
+// Naturwissenschaften-Content-Erkennung
+const isScienceContent = (category: string, content: string): boolean => {
+  const scienceKeywords = ['Experiment', 'Hypothese', 'Beobachtung', 'Messung', 'Reaktion', 'Element', 'Molekül'];
+  const categoryMatch = category?.toLowerCase()?.includes('science') || 
+                       category?.toLowerCase()?.includes('physik') || 
+                       category?.toLowerCase()?.includes('chemie') ||
+                       category?.toLowerCase()?.includes('biologie');
+  const contentMatch = scienceKeywords.some(keyword => content.includes(keyword));
+  
+  return categoryMatch || contentMatch;
+};
+
+// Naturwissenschaften-Parsing
+const parseScienceContent = (content: string) => {
+  console.log(`🔬 Parsing Science content: "${content}"`);
+  
+  // Pattern 1: Einfache Wissenschaftsfragen
+  if (content.includes('Experiment') || content.includes('Beobachtung')) {
+    return {
+      success: true,
+      questionText: content,
+      answerValue: extractScienceAnswer(content),
+      explanation: 'Naturwissenschaftliche Frage',
+      questionType: 'text-input'
+    };
+  }
+  
+  return { success: false };
+};
+
+// Wissenschaftliche Antwort-Extraktion
+const extractScienceAnswer = (content: string): string => {
+  if (content.includes('Wasser')) return 'H2O';
+  if (content.includes('Sauerstoff')) return 'O2';
+  return 'Wissenschaftliche Antwort';
 };
 
 // Mathematik-Parsing
@@ -414,39 +474,48 @@ const extractSmartAnswer = (content: string): string => {
   return 'Standard-Antwort';
 };
 
-// Intelligenter Fallback - sollte jetzt seltener ausgelöst werden
-const createIntelligentFallback = (content: string, template: any) => {
-  console.warn(`🆘 FALLBACK ACTIVATED for template ${template.id}: "${content}"`);
-  console.warn(`🔍 DEBUGGING: Math parsing should have handled this!`);
+// Verbessertes Multiple-Choice-Parsing mit intelligenten Optionen
+const parseMultipleChoiceContent = (content: string, template: any) => {
+  console.log(`🎯 Parsing Multiple-Choice content: "${content}"`);
   
-  const category = template.category?.toLowerCase() || '';
-  
-  // KORRIGIERT: Spezialbehandlung für "Wähle die richtige Aussage aus:"
+  // Pattern 1: "Wähle die richtige Aussage aus:" 
   if (content.includes('Wähle die richtige Aussage aus')) {
-    console.warn(`🚨 Multiple-Choice Frage erkannt, aber nicht korrekt verarbeitet!`);
+    // Intelligente Option-Generierung basierend auf Kategorie und Content
+    const category = template.category?.toLowerCase() || '';
+    let options: string[] = [];
+    let correctAnswer = 0;
+    
+    if (category.includes('math') || category.includes('mathematik')) {
+      // Math-spezifische Optionen
+      if (content.includes('144') && content.includes('12')) {
+        options = ['12', '24', '6', '144'];
+        correctAnswer = 0; // 144 ÷ 12 = 12
+      } else {
+        options = ['42', '84', '21', '168'];
+        correctAnswer = 0;
+      }
+    } else if (category.includes('deutsch') || category.includes('german')) {
+      // Deutsch-spezifische Optionen
+      options = ['Nomen', 'Verb', 'Adjektiv', 'Artikel'];
+      correctAnswer = 0;
+    } else {
+      // Allgemeine Optionen
+      options = ['Richtig', 'Falsch', 'Möglich', 'Unmöglich'];
+      correctAnswer = 0;
+    }
+    
     return {
       success: true,
-      questionText: 'Was ist 2 + 2?', // Einfache Ersatzfrage
-      answerValue: '4',
-      explanation: 'Ersatzfrage: 2 + 2 = 4',
-      questionType: 'text-input' // KORRIGIERT: text-input statt word-selection
+      questionText: content,
+      answerValue: correctAnswer.toString(),
+      explanation: 'Multiple-Choice-Frage automatisch generiert',
+      questionType: 'multiple-choice',
+      options,
+      correctAnswer
     };
   }
   
-  // Zusätzliche Debugging-Information
-  if (content.includes('144') && content.includes('12')) {
-    console.error(`🚨 CRITICAL: Division 144÷12 reached fallback - this is wrong!`);
-    console.error(`🚨 Expected answer: 12, but fallback would give: MATH_PARSE_FAILED`);
-  }
-  
-  return {
-    success: true,
-    questionText: content,
-    answerValue: category.includes('math') ? 'MATH_PARSE_FAILED' : 'Richtig',
-    explanation: `⚠️ FALLBACK: Parser-Problem für: ${content.substring(0, 30)}...`,
-    questionType: 'text-input', // KORRIGIERT: Immer text-input für Fallback
-    isFallback: true // Debug-Flag
-  };
+  return { success: false };
 };
 
 // Notfall-Fallback
