@@ -273,99 +273,90 @@ export function useEnhancedCurriculumGeneration(
       const questions: SelectionQuestion[] = [];
       const standards = getCurriculumStandards(category, grade);
 
-      for (const template of data.slice(0, totalQuestions)) {
+      for (const template of data.slice(0, totalQuestions * 2)) { // Get extra templates for filtering
         const parseResult = parseTemplateContentUniversal(template);
         if (parseResult.success) {
           // Enhance with curriculum alignment
           const questionType = (parseResult.questionType as "text-input" | "multiple-choice" | "word-selection" | "drag-drop" | "matching") || 'text-input';
-          const question: SelectionQuestion = (() => {
-            switch (questionType) {
-              case 'multiple-choice':
-                return {
-                  id: Math.floor(Math.random() * 1000000),
-                  question: parseResult.questionText!,
-                  questionType: 'multiple-choice',
-                  explanation: parseResult.explanation!,
-                  type: category as any,
-                  options: parseResult.options || [],
-                  correctAnswer: parseResult.correctAnswer || 0
-                };
-              case 'word-selection':
-                // Create a fallback word-selection question if parse result doesn't have the needed properties
-                const sentenceText = parseResult.questionText || 'Klicke auf die richtigen Wörter.';
-                const words = sentenceText.split(' ');
-                const selectableWords = words.map((word, index) => ({
-                  word,
-                  isCorrect: index === 0, // First word is correct as fallback
-                  index
-                })).slice(0, Math.min(3, words.length)); // Limit to 3 selectable words
-                
-                return {
-                  id: Math.floor(Math.random() * 1000000),
-                  question: parseResult.questionText!,
-                  questionType: 'word-selection',
-                  explanation: parseResult.explanation!,
-                  type: category as any,
-                  sentence: sentenceText,
-                  selectableWords
-                };
-              case 'drag-drop':
-                // Create fallback drag-drop question
-                return {
-                  id: Math.floor(Math.random() * 1000000),
-                  question: parseResult.questionText!,
-                  questionType: 'drag-drop',
-                  explanation: parseResult.explanation!,
-                  type: category as any,
-                  items: [
-                    { id: '1', content: 'Element 1', category: 'cat1' },
-                    { id: '2', content: 'Element 2', category: 'cat2' }
-                  ],
-                  categories: [
-                    { id: 'cat1', name: 'Kategorie 1', acceptsItems: ['1'] },
-                    { id: 'cat2', name: 'Kategorie 2', acceptsItems: ['2'] }
-                  ]
-                };
-              case 'matching':
-                // Create fallback matching question
-                return {
-                  id: Math.floor(Math.random() * 1000000),
-                  question: parseResult.questionText!,
-                  questionType: 'matching',
-                  explanation: parseResult.explanation!,
-                  type: category as any,
-                  items: [
-                    { id: '1', content: 'Element 1', category: 'cat1' },
-                    { id: '2', content: 'Element 2', category: 'cat2' }
-                  ],
-                  categories: [
-                    { id: 'cat1', name: 'Kategorie 1', acceptsItems: ['1'] },
-                    { id: 'cat2', name: 'Kategorie 2', acceptsItems: ['2'] }
-                  ]
-                };
-              default:
-                return {
-                  id: Math.floor(Math.random() * 1000000),
-                  question: parseResult.questionText!,
-                  questionType: 'text-input',
-                  explanation: parseResult.explanation!,
-                  type: category as any,
-                  answer: parseResult.answerValue!
-                };
+          
+          // Skip word-selection questions that don't have proper content structure
+          if (questionType === 'word-selection') {
+            const questionText = parseResult.questionText || '';
+            const words = questionText.split(' ');
+            // Skip if question is too short or doesn't look like a proper sentence
+            if (words.length < 3 || !questionText.includes(' ')) {
+              console.log(`⚠️ Skipping malformed word-selection question: "${questionText}"`);
+              continue;
             }
-          })();
-
-          // Quality assessment
-          if (enhancedOptions.enableQualityControl && standards.length > 0) {
-            const qualityMetrics = await assessQuestionQuality(question, standards[0]);
-            if (qualityMetrics.overall_score >= enhancedOptions.minQualityThreshold) {
-              questions.push(question);
-            }
-          } else {
-            questions.push(question);
           }
 
-          if (questions.length >= totalQuestions) break;
+          // Skip drag-drop and matching for now as they need complex setup
+          if (questionType === 'drag-drop') {
+            console.log(`⚠️ Skipping drag-drop question (not fully implemented)`);
+            continue;
+          }
+          if (questionType === 'matching') {
+            console.log(`⚠️ Skipping matching question (not fully implemented)`);
+            continue;
+          }
+
+          let question: SelectionQuestion | null = null;
+
+          if (questionType === 'multiple-choice') {
+            question = {
+              id: Math.floor(Math.random() * 1000000),
+              question: parseResult.questionText!,
+              questionType: 'multiple-choice',
+              explanation: parseResult.explanation!,
+              type: category as any,
+              options: parseResult.options || [],
+              correctAnswer: parseResult.correctAnswer || 0
+            };
+          } else if (questionType === 'word-selection') {
+            // Create a proper word-selection question with valid sentence structure
+            const sentenceText = parseResult.questionText!;
+            const words = sentenceText.split(' ');
+            const selectableWords = words.map((word, index) => ({
+              word,
+              isCorrect: index === Math.floor(words.length / 2), // Middle word as correct fallback
+              index
+            })).filter((_, index) => index % 2 === 0).slice(0, 3); // Every other word, max 3
+            
+            question = {
+              id: Math.floor(Math.random() * 1000000),
+              question: `Wähle die richtigen Wörter aus: ${sentenceText}`,
+              questionType: 'word-selection',
+              explanation: parseResult.explanation!,
+              type: category as any,
+              sentence: sentenceText,
+              selectableWords
+            };
+          } else {
+            // Default to text-input
+            question = {
+              id: Math.floor(Math.random() * 1000000),
+              question: parseResult.questionText!,
+              questionType: 'text-input',
+              explanation: parseResult.explanation!,
+              type: category as any,
+              answer: parseResult.answerValue!
+            };
+          }
+
+          // Additional validation before adding question
+          if (question && question.question && question.question.length > 5) {
+            // Quality assessment
+            if (enhancedOptions.enableQualityControl && standards.length > 0) {
+              const qualityMetrics = await assessQuestionQuality(question, standards[0]);
+              if (qualityMetrics.overall_score >= enhancedOptions.minQualityThreshold) {
+                questions.push(question);
+              }
+            } else {
+              questions.push(question);
+            }
+
+            if (questions.length >= totalQuestions) break;
+          }
         } else {
           console.warn(`Failed to parse template ${template.id}: ${parseResult.error}`);
         }
