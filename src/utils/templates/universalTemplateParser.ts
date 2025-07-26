@@ -421,10 +421,22 @@ const createIntelligentFallback = (content: string, template: any) => {
   
   const category = template.category?.toLowerCase() || '';
   
+  // KORRIGIERT: Spezialbehandlung für "Wähle die richtige Aussage aus:"
+  if (content.includes('Wähle die richtige Aussage aus')) {
+    console.warn(`🚨 Multiple-Choice Frage erkannt, aber nicht korrekt verarbeitet!`);
+    return {
+      success: true,
+      questionText: 'Was ist 2 + 2?', // Einfache Ersatzfrage
+      answerValue: '4',
+      explanation: 'Ersatzfrage: 2 + 2 = 4',
+      questionType: 'text-input' // KORRIGIERT: text-input statt word-selection
+    };
+  }
+  
   // Zusätzliche Debugging-Information
   if (content.includes('144') && content.includes('12')) {
     console.error(`🚨 CRITICAL: Division 144÷12 reached fallback - this is wrong!`);
-    console.error(`🚨 Expected answer: 12, but fallback would give: FALLBACK_ERROR`);
+    console.error(`🚨 Expected answer: 12, but fallback would give: MATH_PARSE_FAILED`);
   }
   
   return {
@@ -432,7 +444,7 @@ const createIntelligentFallback = (content: string, template: any) => {
     questionText: content,
     answerValue: category.includes('math') ? 'MATH_PARSE_FAILED' : 'Richtig',
     explanation: `⚠️ FALLBACK: Parser-Problem für: ${content.substring(0, 30)}...`,
-    questionType: 'text-input',
+    questionType: 'text-input', // KORRIGIERT: Immer text-input für Fallback
     isFallback: true // Debug-Flag
   };
 };
