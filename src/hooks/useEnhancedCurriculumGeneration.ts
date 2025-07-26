@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { SelectionQuestion } from '@/types/questionTypes';
 import { supabase } from '@/integrations/supabase/client';
+import { parseTemplateContentUniversal } from '../utils/templates/universalTemplateParser';
 
 // Enhanced curriculum-aligned question generation
 interface CurriculumStandard {
@@ -273,14 +274,25 @@ export function useEnhancedCurriculumGeneration(
       const standards = getCurriculumStandards(category, grade);
 
       for (const template of data.slice(0, totalQuestions)) {
-        try {
-          const parsedContent = JSON.parse(template.content);
-          
+        const parseResult = parseTemplateContentUniversal(template);
+        if (parseResult.success) {
           // Enhance with curriculum alignment
-          const question: SelectionQuestion = {
-            ...parsedContent,
+          const questionType = (parseResult.questionType as "text-input" | "multiple-choice" | "word-selection" | "drag-drop" | "matching") || 'text-input';
+          const question: SelectionQuestion = questionType === 'multiple-choice' ? {
             id: Math.floor(Math.random() * 1000000),
-            type: category as any
+            question: parseResult.questionText!,
+            questionType: 'multiple-choice',
+            explanation: parseResult.explanation!,
+            type: category as any,
+            options: parseResult.options || [],
+            correctAnswer: parseResult.correctAnswer || 0
+          } : {
+            id: Math.floor(Math.random() * 1000000),
+            question: parseResult.questionText!,
+            questionType: 'text-input',
+            explanation: parseResult.explanation!,
+            type: category as any,
+            answer: parseResult.answerValue!
           };
 
           // Quality assessment
@@ -294,8 +306,8 @@ export function useEnhancedCurriculumGeneration(
           }
 
           if (questions.length >= totalQuestions) break;
-        } catch (parseError) {
-          console.warn('Failed to parse template content:', parseError);
+        } else {
+          console.warn(`Failed to parse template ${template.id}: ${parseResult.error}`);
         }
       }
 

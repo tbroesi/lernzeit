@@ -6,6 +6,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { SelectionQuestion } from '@/types/questionTypes';
 import { supabase } from '@/lib/supabase';
+import { parseTemplateContentUniversal } from '../utils/templates/universalTemplateParser';
 import { questionTemplates } from '@/utils/questionTemplates';
 import { EnhancedTemplateGenerator, GenerationConfig } from '@/utils/math/enhancedTemplateGenerator';
 import { DuplicateDetectionEngine } from '@/utils/math/duplicateDetection';
@@ -487,26 +488,26 @@ export function useAdvancedQuestionGeneration({
   // Helper functions
   const parseEnhancedTemplate = async (template: any, options: AdvancedGenerationOptions): Promise<SelectionQuestion | null> => {
     try {
-      // Try JSON parsing first
-      try {
-        const parsed = JSON.parse(template.content);
-        if (parsed.question && (parsed.answer || parsed.correctAnswer)) {
-          return {
-            id: Math.floor(Math.random() * 1000000),
-            question: parsed.question,
-            questionType: parsed.questionType || 'text-input',
-            explanation: parsed.explanation || 'Automatisch generierte Erklärung',
-            type: template.category === 'Mathematik' ? 'math' : 'german',
-            ...(parsed.questionType === 'multiple-choice' ? {
-              options: parsed.options || [],
-              correctAnswer: parsed.correctAnswer || 0
-            } : {
-              answer: parsed.answer
-            })
-          };
-        }
-      } catch (e) {
-        // Continue to enhanced parsing
+      // Use universal parser
+      const parseResult = parseTemplateContentUniversal(template);
+      if (parseResult.success) {
+        const questionType = (parseResult.questionType as "text-input" | "multiple-choice" | "word-selection" | "drag-drop" | "matching") || 'text-input';
+        return questionType === 'multiple-choice' ? {
+          id: Math.floor(Math.random() * 1000000),
+          question: parseResult.questionText!,
+          questionType: 'multiple-choice',
+          explanation: parseResult.explanation!,
+          type: template.category === 'Mathematik' ? 'math' : 'german',
+          options: parseResult.options || [],
+          correctAnswer: parseResult.correctAnswer || 0
+        } : {
+          id: Math.floor(Math.random() * 1000000),
+          question: parseResult.questionText!,
+          questionType: 'text-input',
+          explanation: parseResult.explanation!,
+          type: template.category === 'Mathematik' ? 'math' : 'german',
+          answer: parseResult.answerValue || ''
+        };
       }
 
       // Enhanced parsing for math content

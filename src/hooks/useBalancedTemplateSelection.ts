@@ -2,6 +2,7 @@
 import { useState, useCallback } from 'react';
 import { SelectionQuestion } from '@/types/questionTypes';
 import { supabase } from '@/lib/supabase';
+import { parseTemplateContentUniversal } from '../utils/templates/universalTemplateParser';
 import { EnhancedFallbackGenerator } from '@/utils/templates/enhancedFallbackGenerator';
 
 interface TemplateSelectionConfig {
@@ -264,17 +265,32 @@ export function useBalancedTemplateSelection(
 
   const parseTemplateWithFallback = (template: any): { success: boolean; question?: SelectionQuestion; error?: string } => {
     try {
-      // Strategy 1: JSON parsing
-      try {
-        const parsed = JSON.parse(template.content);
-        if (parsed.question) {
-          return {
-            success: true,
-            question: createQuestionFromParsed(template, parsed)
-          };
-        }
-      } catch (jsonError) {
-        // Continue to next strategy
+      // Use universal parser
+      const parseResult = parseTemplateContentUniversal(template);
+      if (parseResult.success) {
+        const questionType = (parseResult.questionType as "text-input" | "multiple-choice" | "word-selection" | "drag-drop" | "matching") || 'text-input';
+        return {
+          success: true,
+          question: questionType === 'multiple-choice' ? {
+            id: Math.floor(Math.random() * 1000000),
+            question: parseResult.questionText!,
+            questionType: 'multiple-choice',
+            explanation: parseResult.explanation!,
+            type: template.category === 'Mathematik' ? 'math' : 'german',
+            options: parseResult.options || [],
+            correctAnswer: parseResult.correctAnswer || 0
+          } : {
+            id: Math.floor(Math.random() * 1000000),
+            question: parseResult.questionText!,
+            questionType: 'text-input',
+            explanation: parseResult.explanation!,
+            type: template.category === 'Mathematik' ? 'math' : 'german',
+            answer: parseResult.answerValue || ''
+          }
+        };
+      } else {
+        console.warn(`Failed to parse template ${template.id}: ${parseResult.error}`);
+        return { success: false, error: parseResult.error };
       }
       
       // Strategy 2: Math expression parsing - now more aggressive
