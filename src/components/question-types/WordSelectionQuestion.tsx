@@ -16,6 +16,17 @@ export function WordSelectionQuestion({
   disabled = false 
 }: WordSelectionQuestionProps) {
   const renderSentenceWithSelectableWords = () => {
+    // Safety check for required properties
+    if (!question.sentence || !question.selectableWords) {
+      console.warn('WordSelectionQuestion: Missing sentence or selectableWords', question);
+      return (
+        <div className="text-center text-muted-foreground">
+          <p>Fehler beim Laden der Wortauswahl-Frage.</p>
+          <p className="text-sm mt-2">Diese Frage hat kein gültiges Format.</p>
+        </div>
+      );
+    }
+
     const words = question.sentence.split(' ');
     
     return words.map((word, index) => {

@@ -278,22 +278,82 @@ export function useEnhancedCurriculumGeneration(
         if (parseResult.success) {
           // Enhance with curriculum alignment
           const questionType = (parseResult.questionType as "text-input" | "multiple-choice" | "word-selection" | "drag-drop" | "matching") || 'text-input';
-          const question: SelectionQuestion = questionType === 'multiple-choice' ? {
-            id: Math.floor(Math.random() * 1000000),
-            question: parseResult.questionText!,
-            questionType: 'multiple-choice',
-            explanation: parseResult.explanation!,
-            type: category as any,
-            options: parseResult.options || [],
-            correctAnswer: parseResult.correctAnswer || 0
-          } : {
-            id: Math.floor(Math.random() * 1000000),
-            question: parseResult.questionText!,
-            questionType: 'text-input',
-            explanation: parseResult.explanation!,
-            type: category as any,
-            answer: parseResult.answerValue!
-          };
+          const question: SelectionQuestion = (() => {
+            switch (questionType) {
+              case 'multiple-choice':
+                return {
+                  id: Math.floor(Math.random() * 1000000),
+                  question: parseResult.questionText!,
+                  questionType: 'multiple-choice',
+                  explanation: parseResult.explanation!,
+                  type: category as any,
+                  options: parseResult.options || [],
+                  correctAnswer: parseResult.correctAnswer || 0
+                };
+              case 'word-selection':
+                // Create a fallback word-selection question if parse result doesn't have the needed properties
+                const sentenceText = parseResult.questionText || 'Klicke auf die richtigen Wörter.';
+                const words = sentenceText.split(' ');
+                const selectableWords = words.map((word, index) => ({
+                  word,
+                  isCorrect: index === 0, // First word is correct as fallback
+                  index
+                })).slice(0, Math.min(3, words.length)); // Limit to 3 selectable words
+                
+                return {
+                  id: Math.floor(Math.random() * 1000000),
+                  question: parseResult.questionText!,
+                  questionType: 'word-selection',
+                  explanation: parseResult.explanation!,
+                  type: category as any,
+                  sentence: sentenceText,
+                  selectableWords
+                };
+              case 'drag-drop':
+                // Create fallback drag-drop question
+                return {
+                  id: Math.floor(Math.random() * 1000000),
+                  question: parseResult.questionText!,
+                  questionType: 'drag-drop',
+                  explanation: parseResult.explanation!,
+                  type: category as any,
+                  items: [
+                    { id: '1', content: 'Element 1', category: 'cat1' },
+                    { id: '2', content: 'Element 2', category: 'cat2' }
+                  ],
+                  categories: [
+                    { id: 'cat1', name: 'Kategorie 1', acceptsItems: ['1'] },
+                    { id: 'cat2', name: 'Kategorie 2', acceptsItems: ['2'] }
+                  ]
+                };
+              case 'matching':
+                // Create fallback matching question
+                return {
+                  id: Math.floor(Math.random() * 1000000),
+                  question: parseResult.questionText!,
+                  questionType: 'matching',
+                  explanation: parseResult.explanation!,
+                  type: category as any,
+                  items: [
+                    { id: '1', content: 'Element 1', category: 'cat1' },
+                    { id: '2', content: 'Element 2', category: 'cat2' }
+                  ],
+                  categories: [
+                    { id: 'cat1', name: 'Kategorie 1', acceptsItems: ['1'] },
+                    { id: 'cat2', name: 'Kategorie 2', acceptsItems: ['2'] }
+                  ]
+                };
+              default:
+                return {
+                  id: Math.floor(Math.random() * 1000000),
+                  question: parseResult.questionText!,
+                  questionType: 'text-input',
+                  explanation: parseResult.explanation!,
+                  type: category as any,
+                  answer: parseResult.answerValue!
+                };
+            }
+          })();
 
           // Quality assessment
           if (enhancedOptions.enableQualityControl && standards.length > 0) {
