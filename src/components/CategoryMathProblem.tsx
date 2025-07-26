@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuestionGenerationManager } from '@/hooks/useQuestionGenerationManager';
+import { useBalancedTemplateSelection } from '@/hooks/useBalancedTemplateSelection';
 import { QuestionRenderer } from '@/components/game/QuestionRenderer';
 import { GameProgress } from '@/components/game/GameProgress';
 import { GameFeedback } from '@/components/game/GameFeedback';
