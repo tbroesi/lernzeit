@@ -24,6 +24,12 @@ export function useBalancedQuestionGeneration(
   // Get excluded questions from feedback
   const getExcludedQuestions = async (category: string, grade: number, userId: string): Promise<string[]> => {
     try {
+      // Skip feedback query for anonymous users
+      if (!userId || userId === 'anonymous') {
+        console.log('🚫 Excluded questions: 0 (anonymous user)');
+        return [];
+      }
+
       const { data: feedback, error } = await supabase
         .from('question_feedback')
         .select('question_content')

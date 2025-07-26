@@ -454,12 +454,12 @@ export function useEnhancedCurriculumGeneration(
   // Auto-generate on parameter changes
   useEffect(() => {
     const currentParams = `${category}-${grade}-${userId}-${totalQuestions}`;
-    if (currentParams !== sessionIdRef.current) {
+    if (currentParams !== sessionIdRef.current && !isGenerating) {
       setProblems([]);
       setError(null);
       generateEnhancedQuestions();
     }
-  }, [category, grade, userId, totalQuestions, generateEnhancedQuestions]);
+  }, [category, grade, userId, totalQuestions]);
 
   return {
     problems,
