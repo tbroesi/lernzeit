@@ -135,23 +135,183 @@ const isLanguageContent = (category: string, content: string): boolean => {
 
 // Mathematik-Parsing
 const parseMathContent = (content: string) => {
-  // Pattern 1: "Berechne X + Y × Z"
-  let match = content.match(/Berechne\s*:?\s*([0-9+\-×÷*\/\s().]+)/i);
+  console.log(`🔢 Parsing Math content: "${content}"`);
+
+  // Pattern 1: Division "Berechne: 144 : 12 = ?" oder "Berechne: 144 ÷ 12 = ?"
+  let match = content.match(/Berechne\s*:?\s*(\d+)\s*[÷:\/]\s*(\d+)\s*=\s*\?/i);
   if (match) {
-    const expression = match[1].trim();
-    const result = calculateMathExpression(expression);
-    if (result !== null) {
+    const a = parseInt(match[1]);
+    const b = parseInt(match[2]);
+    const result = Math.floor(a / b); // Verwende floor statt round für ganze Zahlen
+    
+    console.log(`🧮 Division: ${a} ÷ ${b} = ${result}`);
+    
+    return {
+      success: true,
+      questionText: content,
+      answerValue: result.toString(),
+      explanation: `${a} ÷ ${b} = ${result}`,
+      questionType: 'text-input'
+    };
+  }
+
+  // Pattern 2: Multiplikation "12 x 12 = ?" oder "12 × 12 = ?"
+  match = content.match(/(\d+)\s*[x×*]\s*(\d+)\s*=\s*\?/i);
+  if (match) {
+    const a = parseInt(match[1]);
+    const b = parseInt(match[2]);
+    const result = a * b;
+    
+    console.log(`🧮 Multiplikation: ${a} × ${b} = ${result}`);
+    
+    return {
+      success: true,
+      questionText: content,
+      answerValue: result.toString(),
+      explanation: `${a} × ${b} = ${result}`,
+      questionType: 'text-input'
+    };
+  }
+
+  // Pattern 3: Römische Zahlen (ALLE häufigen Zahlen)
+  const romanNumerals = {
+    'XCIV': 94,  // ✅ KORRIGIERT
+    'XCV': 95,
+    'XCVI': 96,
+    'XCVII': 97,
+    'XCVIII': 98,
+    'XCIX': 99,
+    'C': 100,
+    'CI': 101,
+    'CII': 102,
+    'CX': 110,
+    'CXX': 120,
+    'CL': 150,
+    'CC': 200,
+    'CD': 400,
+    'D': 500,
+    'CM': 900,
+    'M': 1000,
+    'XII': 12,
+    'XIII': 13,
+    'XIV': 14,
+    'XV': 15,
+    'XVI': 16,
+    'XVII': 17,
+    'XVIII': 18,
+    'XIX': 19,
+    'XX': 20,
+    'XXI': 21,
+    'XXX': 30,
+    'XL': 40,
+    'L': 50,
+    'LX': 60,
+    'LXX': 70,
+    'LXXX': 80,
+    'XC': 90,
+    'I': 1,
+    'II': 2,
+    'III': 3,
+    'IV': 4,
+    'V': 5,
+    'VI': 6,
+    'VII': 7,
+    'VIII': 8,
+    'IX': 9,
+    'X': 10,
+    'XI': 11
+  };
+
+  // Suche nach römischen Zahlen im Content
+  for (const [roman, arabic] of Object.entries(romanNumerals)) {
+    if (content.includes(roman)) {
+      console.log(`🏛️ Römische Zahl gefunden: ${roman} = ${arabic}`);
+      
       return {
         success: true,
         questionText: content,
-        answerValue: result.toString(),
-        explanation: `${expression} = ${result}`,
+        answerValue: arabic.toString(),
+        explanation: `${roman} ist die römische Zahl für ${arabic}`,
         questionType: 'text-input'
       };
     }
   }
 
-  // Pattern 2: "Ein Rechteck hat Länge X und Breite Y"
+  // Pattern 4: Allgemeine Math-Expressions
+  match = content.match(/(\d+)\s*([+\-×÷*\/:])\s*(\d+)/);
+  if (match) {
+    const a = parseInt(match[1]);
+    const operator = match[2];
+    const b = parseInt(match[3]);
+    
+    let result;
+    let opSymbol;
+    
+    switch (operator) {
+      case '+': 
+        result = a + b; 
+        opSymbol = '+';
+        break;
+      case '-': 
+        result = a - b; 
+        opSymbol = '-';
+        break;
+      case '×': 
+      case 'x': 
+      case '*': 
+        result = a * b; 
+        opSymbol = '×';
+        break;
+      case '÷': 
+      case ':': 
+      case '/': 
+        result = Math.floor(a / b); // Ganze Zahlen für Schulmathe
+        opSymbol = '÷';
+        break;
+      default: 
+        result = a + b; 
+        opSymbol = '+';
+    }
+    
+    console.log(`🧮 Allgemeine Berechnung: ${a} ${opSymbol} ${b} = ${result}`);
+    
+    return {
+      success: true,
+      questionText: content,
+      answerValue: result.toString(),
+      explanation: `${a} ${opSymbol} ${b} = ${result}`,
+      questionType: 'text-input'
+    };
+  }
+
+  // Pattern 5: "Berechne schriftlich" oder ähnliche Formulierungen
+  match = content.match(/Berechne.*?(\d+)\s*([+\-×÷*\/:])\s*(\d+)/i);
+  if (match) {
+    const a = parseInt(match[1]);
+    const operator = match[2];
+    const b = parseInt(match[3]);
+    
+    let result;
+    switch (operator) {
+      case '+': result = a + b; break;
+      case '-': result = a - b; break;
+      case '×': case 'x': case '*': result = a * b; break;
+      case '÷': case ':': case '/': result = Math.floor(a / b); break;
+      default: result = a + b;
+    }
+    
+    console.log(`🧮 Schriftliche Berechnung: ${a} ${operator} ${b} = ${result}`);
+    
+    return {
+      success: true,
+      questionText: content,
+      answerValue: result.toString(),
+      explanation: `${a} ${operator === '×' || operator === 'x' || operator === '*' ? '×' : operator === '÷' || operator === ':' || operator === '/' ? '÷' : operator} ${b} = ${result}`,
+      questionType: 'text-input'
+    };
+  }
+
+  // Pattern 6: "Ein Rechteck hat Länge X und Breite Y" (preserved from original)
   match = content.match(/Rechteck.*Länge.*?(\d+).*Breite.*?(\d+)/i);
   if (match) {
     const length = parseInt(match[1]);
@@ -180,42 +340,7 @@ const parseMathContent = (content: string) => {
     }
   }
 
-  // Pattern 3: Römische Zahlen
-  if (content.includes('XII')) {
-    return {
-      success: true,
-      questionText: content,
-      answerValue: '12',
-      explanation: 'XII ist die römische Zahl für 12',
-      questionType: 'text-input'
-    };
-  }
-
-  // Pattern 4: Einfache Rechenaufgaben
-  match = content.match(/(\d+)\s*([+\-×÷*\/])\s*(\d+)/);
-  if (match) {
-    const a = parseInt(match[1]);
-    const operator = match[2];
-    const b = parseInt(match[3]);
-    
-    let result;
-    switch (operator) {
-      case '+': result = a + b; break;
-      case '-': result = a - b; break;
-      case '×': case '*': result = a * b; break;
-      case '÷': case '/': result = Math.round(a / b); break;
-      default: result = a + b;
-    }
-    
-    return {
-      success: true,
-      questionText: content,
-      answerValue: result.toString(),
-      explanation: `${a} ${operator} ${b} = ${result}`,
-      questionType: 'text-input'
-    };
-  }
-
+  console.warn(`⚠️ Kein Math-Pattern erkannt in: "${content}"`);
   return { success: false };
 };
 
@@ -290,14 +415,18 @@ const extractSmartAnswer = (content: string): string => {
 
 // Intelligenter Fallback
 const createIntelligentFallback = (content: string, template: any) => {
+  console.warn(`🆘 FALLBACK ACTIVATED for template ${template.id}: "${content}"`);
+  console.warn(`🆘 This should not happen if math parsing works correctly!`);
+  
   const category = template.category?.toLowerCase() || '';
   
   return {
     success: true,
     questionText: content,
-    answerValue: category.includes('math') ? '10' : 'Richtig',
-    explanation: `Automatisch generierte Antwort für: ${content.substring(0, 30)}...`,
-    questionType: 'text-input'
+    answerValue: category.includes('math') ? 'FALLBACK_ERROR' : 'Richtig',
+    explanation: `⚠️ FALLBACK: Automatische Antwort für: ${content.substring(0, 30)}...`,
+    questionType: 'text-input',
+    isFallback: true // Debug-Flag
   };
 };
 
