@@ -372,30 +372,62 @@ const parseMathContent = (content: string) => {
     };
   }
 
-  // Pattern 6: "Ein Rechteck hat Länge X und Breite Y" (preserved from original)
-  match = content.match(/Rechteck.*Länge.*?(\d+).*Breite.*?(\d+)/i);
+  // Pattern 6a: "Ein Quadrat hat eine Seitenlänge von X cm"
+  match = content.match(/Quadrat.*?Seitenlänge.*?(\d+)/i);
+  if (match) {
+    const side = parseInt(match[1]);
+    
+    if (content.includes('Fläche') || content.includes('Flächeninhalt')) {
+      const area = side * side;
+      console.log(`🟩 Quadrat-Fläche berechnet: ${side}² = ${area}`);
+      return {
+        success: true,
+        questionText: content,
+        answerValue: area.toString(),
+        explanation: `Fläche = Seitenlänge × Seitenlänge = ${side} × ${side} = ${area} cm²`,
+        questionType: 'text-input'
+      };
+    }
+    
+    if (content.includes('Umfang')) {
+      const perimeter = 4 * side;
+      console.log(`🟩 Quadrat-Umfang berechnet: 4 × ${side} = ${perimeter}`);
+      return {
+        success: true,
+        questionText: content,
+        answerValue: perimeter.toString(),
+        explanation: `Umfang = 4 × Seitenlänge = 4 × ${side} = ${perimeter} cm`,
+        questionType: 'text-input'
+      };
+    }
+  }
+
+  // Pattern 6b: "Ein Rechteck hat Länge X und Breite Y" (preserved from original)
+  match = content.match(/Rechteck.*?Länge.*?(\d+).*?Breite.*?(\d+)/i);
   if (match) {
     const length = parseInt(match[1]);
     const width = parseInt(match[2]);
     
     if (content.includes('Fläche') || content.includes('Flächeninhalt')) {
       const area = length * width;
+      console.log(`🟦 Rechteck-Fläche berechnet: ${length} × ${width} = ${area}`);
       return {
         success: true,
         questionText: content,
         answerValue: area.toString(),
-        explanation: `Fläche = Länge × Breite = ${length} × ${width} = ${area}`,
+        explanation: `Fläche = Länge × Breite = ${length} × ${width} = ${area} cm²`,
         questionType: 'text-input'
       };
     }
     
     if (content.includes('Umfang')) {
       const perimeter = 2 * (length + width);
+      console.log(`🟦 Rechteck-Umfang berechnet: 2 × (${length} + ${width}) = ${perimeter}`);
       return {
         success: true,
         questionText: content,
         answerValue: perimeter.toString(),
-        explanation: `Umfang = 2 × (Länge + Breite) = 2 × (${length} + ${width}) = ${perimeter}`,
+        explanation: `Umfang = 2 × (Länge + Breite) = 2 × (${length} + ${width}) = ${perimeter} cm`,
         questionType: 'text-input'
       };
     }
