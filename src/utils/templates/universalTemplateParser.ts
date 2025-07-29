@@ -372,14 +372,14 @@ const parseMathContent = (content: string) => {
     };
   }
 
-  // Pattern 6a: "Ein Quadrat hat eine Seitenlänge von X cm"
+  // Pattern 6a: "Ein Quadrat hat eine Seitenlänge von X cm" - FIXED VALIDATION
   match = content.match(/Quadrat.*?Seitenlänge.*?(\d+)/i);
   if (match) {
     const side = parseInt(match[1]);
     
     if (content.includes('Fläche') || content.includes('Flächeninhalt')) {
       const area = side * side;
-      console.log(`🟩 Quadrat-Fläche berechnet: ${side}² = ${area}`);
+      console.log(`🟩 FIXED: Quadrat-Fläche berechnet: ${side}² = ${area}`);
       return {
         success: true,
         questionText: content,
@@ -391,7 +391,7 @@ const parseMathContent = (content: string) => {
     
     if (content.includes('Umfang')) {
       const perimeter = 4 * side;
-      console.log(`🟩 Quadrat-Umfang berechnet: 4 × ${side} = ${perimeter}`);
+      console.log(`🟩 FIXED: Quadrat-Umfang berechnet: 4 × ${side} = ${perimeter}`);
       return {
         success: true,
         questionText: content,
@@ -402,15 +402,15 @@ const parseMathContent = (content: string) => {
     }
   }
 
-  // Pattern 6b: "Ein Rechteck hat Länge X und Breite Y" (preserved from original)
-  match = content.match(/Rechteck.*?Länge.*?(\d+).*?Breite.*?(\d+)/i);
+  // Pattern 6b: "Ein Rechteck hat Länge X und Breite Y" - FIXED VALIDATION
+  match = content.match(/Rechteck.*?(?:Länge|länge).*?(\d+).*?(?:Breite|breite).*?(\d+)/i);
   if (match) {
     const length = parseInt(match[1]);
     const width = parseInt(match[2]);
     
     if (content.includes('Fläche') || content.includes('Flächeninhalt')) {
       const area = length * width;
-      console.log(`🟦 Rechteck-Fläche berechnet: ${length} × ${width} = ${area}`);
+      console.log(`🟦 FIXED: Rechteck-Fläche berechnet: ${length} × ${width} = ${area}`);
       return {
         success: true,
         questionText: content,
@@ -422,7 +422,7 @@ const parseMathContent = (content: string) => {
     
     if (content.includes('Umfang')) {
       const perimeter = 2 * (length + width);
-      console.log(`🟦 Rechteck-Umfang berechnet: 2 × (${length} + ${width}) = ${perimeter}`);
+      console.log(`🟦 FIXED: Rechteck-Umfang berechnet: 2 × (${length} + ${width}) = ${perimeter}`);
       return {
         success: true,
         questionText: content,

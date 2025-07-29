@@ -52,16 +52,16 @@ export function useBalancedQuestionGeneration(
     }
   };
 
-  // PHASE 1: Enhanced Database Template Loading with Diagnosis
+  // PHASE 1: FIXED Enhanced Database Template Loading
   const loadTemplatesFromDatabase = async (): Promise<SelectionQuestion[]> => {
-    console.log('🚀 PHASE 1: Enhanced Database Template Loading');
+    console.log('🚀 FIXED PHASE 1: Enhanced Database Template Loading');
     console.log(`🔍 Target: category="${category}", grade=${grade}, userId="${userId}"`);
     
     try {
       const excludedQuestions = await getExcludedQuestions(category, grade, userId);
       console.log(`🚫 Excluded questions: ${excludedQuestions.length}`);
       
-      // DIAGNOSIS: Check category mapping inconsistencies
+      // FIXED: Better category mapping and filtering
       const categoryVariations = [
         category,
         category.toLowerCase(),
@@ -73,15 +73,20 @@ export function useBalancedQuestionGeneration(
       
       console.log(`🗺️ Trying category variations:`, categoryVariations);
       
-      // Enhanced database query with better error handling
+      // FIXED: Enhanced database query with explicit problematic content exclusion
       const { data: templates, error } = await supabase
         .from('generated_templates')
         .select('*')
         .in('category', categoryVariations)
         .eq('grade', grade)
         .eq('is_active', true)
-        .order('quality_score', { ascending: false }) // Prioritize high-quality templates
-        .limit(totalQuestions * 3); // Get more templates for better selection
+        .gte('quality_score', 0.6) // Higher quality threshold
+        .not('content', 'ilike', '%23 + 17%') // Explicitly exclude problematic content
+        .not('content', 'ilike', '%undefined%')
+        .not('content', 'ilike', '%null%')
+        .order('usage_count', { ascending: true }) // Prefer less used templates first
+        .order('quality_score', { ascending: false }) // Then by quality
+        .limit(totalQuestions * 4); // Get even more templates for better filtering
 
       if (error) {
         console.error('❌ CRITICAL: Database error loading templates:', error);
