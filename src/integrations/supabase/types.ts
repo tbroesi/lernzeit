@@ -55,55 +55,55 @@ export type Database = {
       }
       child_settings: {
         Row: {
-          biology_seconds_per_task: number
-          chemistry_seconds_per_task: number
+          biologie_seconds_per_task: number
+          chemie_seconds_per_task: number
           child_id: string
           created_at: string
-          english_seconds_per_task: number
-          geography_seconds_per_task: number
-          german_seconds_per_task: number
-          history_seconds_per_task: number
+          deutsch_seconds_per_task: number
+          englisch_seconds_per_task: number
+          geographie_seconds_per_task: number
+          geschichte_seconds_per_task: number
           id: string
-          latin_seconds_per_task: number
-          math_seconds_per_task: number
+          latein_seconds_per_task: number
+          mathematik_seconds_per_task: number
           parent_id: string
-          physics_seconds_per_task: number
+          physik_seconds_per_task: number
           updated_at: string
           weekday_max_minutes: number
           weekend_max_minutes: number
         }
         Insert: {
-          biology_seconds_per_task?: number
-          chemistry_seconds_per_task?: number
+          biologie_seconds_per_task?: number
+          chemie_seconds_per_task?: number
           child_id: string
           created_at?: string
-          english_seconds_per_task?: number
-          geography_seconds_per_task?: number
-          german_seconds_per_task?: number
-          history_seconds_per_task?: number
+          deutsch_seconds_per_task?: number
+          englisch_seconds_per_task?: number
+          geographie_seconds_per_task?: number
+          geschichte_seconds_per_task?: number
           id?: string
-          latin_seconds_per_task?: number
-          math_seconds_per_task?: number
+          latein_seconds_per_task?: number
+          mathematik_seconds_per_task?: number
           parent_id: string
-          physics_seconds_per_task?: number
+          physik_seconds_per_task?: number
           updated_at?: string
           weekday_max_minutes?: number
           weekend_max_minutes?: number
         }
         Update: {
-          biology_seconds_per_task?: number
-          chemistry_seconds_per_task?: number
+          biologie_seconds_per_task?: number
+          chemie_seconds_per_task?: number
           child_id?: string
           created_at?: string
-          english_seconds_per_task?: number
-          geography_seconds_per_task?: number
-          german_seconds_per_task?: number
-          history_seconds_per_task?: number
+          deutsch_seconds_per_task?: number
+          englisch_seconds_per_task?: number
+          geographie_seconds_per_task?: number
+          geschichte_seconds_per_task?: number
           id?: string
-          latin_seconds_per_task?: number
-          math_seconds_per_task?: number
+          latein_seconds_per_task?: number
+          mathematik_seconds_per_task?: number
           parent_id?: string
-          physics_seconds_per_task?: number
+          physik_seconds_per_task?: number
           updated_at?: string
           weekday_max_minutes?: number
           weekend_max_minutes?: number
@@ -466,6 +466,33 @@ export type Database = {
         }
         Relationships: []
       }
+      question_history: {
+        Row: {
+          created_at: string | null
+          grade: number
+          id: string
+          question_fingerprint: string
+          question_text: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          grade: number
+          id?: string
+          question_fingerprint: string
+          question_text?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          grade?: number
+          id?: string
+          question_fingerprint?: string
+          question_text?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       template_metrics: {
         Row: {
           created_at: string
@@ -558,6 +585,10 @@ export type Database = {
         Returns: Json
       }
       cleanup_expired_codes: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      cleanup_old_question_history: {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }

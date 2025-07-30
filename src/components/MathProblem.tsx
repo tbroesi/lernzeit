@@ -370,7 +370,7 @@ export function MathProblem({ grade, onBack, onComplete, userId }: MathProblemPr
     // Calculate based on child settings for math
     let earnedSeconds = 0;
     if (settings) {
-      earnedSeconds = correctAnswers * settings.math_seconds_per_task;
+      earnedSeconds = correctAnswers * settings.mathematik_seconds_per_task;
     } else {
       earnedSeconds = correctAnswers * 30; // fallback
     }
@@ -489,7 +489,7 @@ export function MathProblem({ grade, onBack, onComplete, userId }: MathProblemPr
               <div className="bg-primary/10 p-3 rounded-lg">
                 <div className="text-sm text-muted-foreground">Verdient</div>
                 <div className="text-lg font-bold text-primary">
-                  +{earnedSeconds}s ({correctAnswers} × {settings?.math_seconds_per_task || 30}s)
+                  +{earnedSeconds}s ({correctAnswers} × {settings?.mathematik_seconds_per_task || 30}s)
                 </div>
               </div>
               

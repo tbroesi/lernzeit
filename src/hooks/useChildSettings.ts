@@ -3,15 +3,15 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 
 export interface ChildSettings {
-  math_seconds_per_task: number;
-  german_seconds_per_task: number;
-  english_seconds_per_task: number;
-  geography_seconds_per_task: number;
-  history_seconds_per_task: number;
-  physics_seconds_per_task: number;
-  biology_seconds_per_task: number;
-  chemistry_seconds_per_task: number;
-  latin_seconds_per_task: number;
+  mathematik_seconds_per_task: number;
+  deutsch_seconds_per_task: number;
+  englisch_seconds_per_task: number;
+  geographie_seconds_per_task: number;
+  geschichte_seconds_per_task: number;
+  physik_seconds_per_task: number;
+  biologie_seconds_per_task: number;
+  chemie_seconds_per_task: number;
+  latein_seconds_per_task: number;
   weekday_max_minutes: number;
   weekend_max_minutes: number;
 }
@@ -67,15 +67,15 @@ export function useChildSettings(childId: string) {
       // If no child settings found, use default settings (30 seconds per task)
       console.log('🔧 No child settings found, using default settings (30 seconds per task)');
       const defaultSettings = {
-        math_seconds_per_task: 30,
-        german_seconds_per_task: 30,
-        english_seconds_per_task: 30,
-        geography_seconds_per_task: 30,
-        history_seconds_per_task: 30,
-        physics_seconds_per_task: 30,
-        biology_seconds_per_task: 30,
-        chemistry_seconds_per_task: 30,
-        latin_seconds_per_task: 30,
+        mathematik_seconds_per_task: 30,
+        deutsch_seconds_per_task: 30,
+        englisch_seconds_per_task: 30,
+        geographie_seconds_per_task: 30,
+        geschichte_seconds_per_task: 30,
+        physik_seconds_per_task: 30,
+        biologie_seconds_per_task: 30,
+        chemie_seconds_per_task: 30,
+        latein_seconds_per_task: 30,
         weekday_max_minutes: 30,
         weekend_max_minutes: 60,
       };
@@ -87,15 +87,15 @@ export function useChildSettings(childId: string) {
       
       // Use defaults on error (30 seconds per task)
       const defaultSettings = {
-        math_seconds_per_task: 30,
-        german_seconds_per_task: 30,
-        english_seconds_per_task: 30,
-        geography_seconds_per_task: 30,
-        history_seconds_per_task: 30,
-        physics_seconds_per_task: 30,
-        biology_seconds_per_task: 30,
-        chemistry_seconds_per_task: 30,
-        latin_seconds_per_task: 30,
+        mathematik_seconds_per_task: 30,
+        deutsch_seconds_per_task: 30,
+        englisch_seconds_per_task: 30,
+        geographie_seconds_per_task: 30,
+        geschichte_seconds_per_task: 30,
+        physik_seconds_per_task: 30,
+        biologie_seconds_per_task: 30,
+        chemie_seconds_per_task: 30,
+        latein_seconds_per_task: 30,
         weekday_max_minutes: 30,
         weekend_max_minutes: 60,
       };

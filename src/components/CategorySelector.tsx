@@ -80,15 +80,15 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
     
     const seconds = (() => {
       switch (categoryId) {
-        case 'math': return settings.math_seconds_per_task;
-        case 'german': return settings.german_seconds_per_task;
-        case 'english': return settings.english_seconds_per_task;
-        case 'geography': return settings.geography_seconds_per_task;
-        case 'history': return settings.history_seconds_per_task;
-        case 'physics': return settings.physics_seconds_per_task;
-        case 'biology': return settings.biology_seconds_per_task;
-        case 'chemistry': return settings.chemistry_seconds_per_task;
-        case 'latin': return settings.latin_seconds_per_task;
+        case 'math': return settings.mathematik_seconds_per_task;
+        case 'german': return settings.deutsch_seconds_per_task;
+        case 'english': return settings.englisch_seconds_per_task;
+        case 'geography': return settings.geographie_seconds_per_task;
+        case 'history': return settings.geschichte_seconds_per_task;
+        case 'physics': return settings.physik_seconds_per_task;
+        case 'biology': return settings.biologie_seconds_per_task;
+        case 'chemistry': return settings.chemie_seconds_per_task;
+        case 'latin': return settings.latein_seconds_per_task;
         default: return 30; // Default: 30 seconds per task
       }
     })();
