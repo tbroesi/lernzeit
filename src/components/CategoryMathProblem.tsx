@@ -729,7 +729,16 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
   // Show completion screen when game is finished
   if (gameCompleted && sessionEndTime) {
     const sessionDuration = sessionEndTime - sessionStartTime;
-    const timePerTask = settings ? (settings[`${category.toLowerCase()}_seconds_per_task` as keyof typeof settings] as number || 30) : 30;
+    
+    // Debug logging for settings
+    console.log('🔍 Settings debug:', {
+      settings,
+      category: category.toLowerCase(),
+      lookupKey: `${category.toLowerCase()}_seconds_per_task`,
+      foundValue: settings?.[`${category.toLowerCase()}_seconds_per_task` as keyof typeof settings]
+    });
+    
+    const timePerTask = settings?.[`${category.toLowerCase()}_seconds_per_task` as keyof typeof settings] as number || 25; // Default to 25 for math
     const achievementBonusMinutes = Math.floor((newAchievements.length * 5) / 60); // 5 minutes per achievement
     const perfectSessionBonus = score === problems.length ? 2 : 0; // 2 extra minutes for perfect session
     
@@ -742,8 +751,8 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
         achievementBonusMinutes={achievementBonusMinutes}
         perfectSessionBonus={perfectSessionBonus}
         onContinue={() => {
-          // Calculate earned minutes before navigating
-          const timePerTaskValue = settings ? (settings[`${category.toLowerCase()}_seconds_per_task` as keyof typeof settings] as number || 30) : 30;
+          // Calculate earned minutes before navigating - use same calculation as above
+          const timePerTaskValue = settings?.[`${category.toLowerCase()}_seconds_per_task` as keyof typeof settings] as number || 25; // Default to 25 for math
           const earnedSeconds = score * timePerTaskValue;
           const earnedMinutes = Math.floor(earnedSeconds / 60);
           
