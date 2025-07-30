@@ -31,6 +31,16 @@ interface MatchingQuestionProps {
 }
 
 export function MatchingQuestion({ question, onComplete, disabled = false }: MatchingQuestionProps) {
+  // Validate question structure
+  if (!question.items || !question.categories || !Array.isArray(question.items) || !Array.isArray(question.categories)) {
+    console.error('❌ MatchingQuestion: Invalid question structure', question);
+    return (
+      <div className="p-4 border border-destructive rounded-lg">
+        <p className="text-destructive">This question type is not properly configured. Please try a different question.</p>
+      </div>
+    );
+  }
+
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const [matches, setMatches] = useState<Record<string, string>>({});
   const [wrongAttempts, setWrongAttempts] = useState<string[]>([]);
