@@ -193,7 +193,9 @@ export class StepByStepExplainer {
       mainConcept: `Textaufgaben mit ${this.getMainConcept(operation)}`,
       steps,
       finalAnswer,
-      additionalNotes: [`Textaufgaben erfordern sorgfältiges Lesen und Verstehen`]
+      additionalNotes: [`Textaufgaben erfordern sorgfältiges Lesen und Verstehen`],
+      difficulty: this.assessDifficulty(question, steps.length),
+      gradeLevel: this.estimateGradeLevel(question.question)
     };
   }
 
@@ -281,7 +283,9 @@ export class StepByStepExplainer {
         `Achte auf die richtigen Einheiten`,
         `Bei Flächen ist das Ergebnis in Quadrateinheiten`,
         `Bei Umfang ist das Ergebnis in Längeneinheiten`
-      ]
+      ],
+      difficulty: this.assessDifficulty(question, steps.length),
+      gradeLevel: this.estimateGradeLevel(question.question)
     };
   }
 
@@ -337,7 +341,9 @@ export class StepByStepExplainer {
       additionalNotes: [
         `Brüche mit kleineren Nennern sind bei gleichen Zählern größer`,
         `Dezimalumwandlung hilft beim Vergleichen`
-      ]
+      ],
+      difficulty: this.assessDifficulty(question, steps.length),
+      gradeLevel: this.estimateGradeLevel(question.question)
     };
   }
 
@@ -388,7 +394,9 @@ export class StepByStepExplainer {
       additionalNotes: [
         `Bei der Addition/Subtraktion: Kommas untereinander`,
         `Bei der Multiplikation: Kommas am Ende richtig setzen`
-      ]
+      ],
+      difficulty: this.assessDifficulty(question, steps.length),
+      gradeLevel: this.estimateGradeLevel(question.question)
     };
   }
 
@@ -452,7 +460,9 @@ export class StepByStepExplainer {
       additionalNotes: [
         `Jeder Vokal bildet meist eine Silbe`,
         `Doppelkonsonanten werden getrennt`
-      ]
+      ],
+      difficulty: this.assessDifficulty(question, steps.length),
+      gradeLevel: this.estimateGradeLevel(question.question)
     };
   }
 
@@ -597,7 +607,9 @@ export class StepByStepExplainer {
         }
       ],
       finalAnswer: answer || (question as any).answer,
-      additionalNotes: ['Nimm dir Zeit zum Verstehen der Aufgabe']
+      additionalNotes: ['Nimm dir Zeit zum Verstehen der Aufgabe'],
+      difficulty: 'medium' as const,
+      gradeLevel: 2
     };
   }
 

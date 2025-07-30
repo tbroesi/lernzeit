@@ -227,13 +227,24 @@ export function useImprovedMathGeneration({
           const parseResult = ImprovedGermanMathParser.parse(question.question);
           
           if (parseResult.success && parseResult.confidence && parseResult.confidence > 0.7) {
-            // Use improved parsing result
-            const enhancedQuestion: SelectionQuestion = {
-              ...question,
-              answer: parseResult.answer,
-              explanation: question.explanation + 
-                (parseResult.steps ? '\n\nLösungsweg: ' + parseResult.steps.join(', ') : '')
-            };
+            // Use improved parsing result - handle different question types
+            let enhancedQuestion: SelectionQuestion;
+            
+            if (question.questionType === 'text-input') {
+              enhancedQuestion = {
+                ...question,
+                answer: parseResult.answer,
+                explanation: question.explanation + 
+                  (parseResult.steps ? '\n\nLösungsweg: ' + parseResult.steps.join(', ') : '')
+              };
+            } else {
+              // For non-text-input questions, preserve original structure
+              enhancedQuestion = {
+                ...question,
+                explanation: question.explanation + 
+                  (parseResult.steps ? '\n\nLösungsweg: ' + parseResult.steps.join(', ') : '')
+              };
+            }
             
             // Store metadata separately if needed
             (enhancedQuestion as any).metadata = {
