@@ -13,7 +13,7 @@ import { AlertCircle, RefreshCw, Database, Zap, Bot, Filter, Eye, EyeOff, Chevro
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdvancedQuestionGeneration } from '@/hooks/useAdvancedQuestionGeneration';
-import { DuplicateDetectionEngine } from '@/utils/math/duplicateDetection';
+import { ImprovedDuplicateDetectionEngine } from '@/utils/templates/improvedDuplicateDetection';
 import { detectDuplicatesWithContext, type DiversityMetrics } from '@/utils/duplicateDetection';
 
 interface DebugSessionData {

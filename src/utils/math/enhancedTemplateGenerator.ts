@@ -5,7 +5,7 @@
 
 import { QuestionTemplate, GeneratedQuestion } from '../questionTemplates';
 import { GermanMathParser } from './germanMathParser';
-import { DuplicateDetectionEngine } from './duplicateDetection';
+import { ImprovedDuplicateDetectionEngine } from '../templates/improvedDuplicateDetection';
 import { SelectionQuestion } from '@/types/questionTypes';
 
 export interface GenerationConfig {
@@ -64,7 +64,7 @@ export class EnhancedTemplateGenerator {
     });
     
     // Initialize session for duplicate detection
-    const sessionId = DuplicateDetectionEngine.initSession(userId, category, grade);
+    const sessionId = ImprovedDuplicateDetectionEngine.initSession(userId, category, grade);
     
     const result: GenerationResult = {
       questions: [],
@@ -164,7 +164,7 @@ export class EnhancedTemplateGenerator {
       }
       
       // Check for duplicates with advanced detection
-      const duplicateCheck = DuplicateDetectionEngine.checkDuplicate(
+      const duplicateCheck = ImprovedDuplicateDetectionEngine.checkDuplicate(
         sessionId,
         generatedQuestion,
         questions
@@ -188,7 +188,7 @@ export class EnhancedTemplateGenerator {
       
       // Update tracking
       this.updateTrackingMaps(template, topicTracker, typeTracker);
-      DuplicateDetectionEngine.registerQuestion(sessionId, generatedQuestion);
+      ImprovedDuplicateDetectionEngine.registerQuestion(sessionId, generatedQuestion);
       
       console.log(`✅ Generated question ${questions.length}/${count}: ${generatedQuestion.question.substring(0, 50)}...`);
     }

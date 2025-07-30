@@ -9,7 +9,7 @@ import { supabase } from '@/lib/supabase';
 import { parseTemplateContentUniversal } from '../utils/templates/universalTemplateParser';
 import { questionTemplates } from '@/utils/questionTemplates';
 import { EnhancedTemplateGenerator, GenerationConfig } from '@/utils/math/enhancedTemplateGenerator';
-import { DuplicateDetectionEngine } from '@/utils/math/duplicateDetection';
+import { ImprovedDuplicateDetectionEngine } from '@/utils/templates/improvedDuplicateDetection';
 import { GermanMathParser } from '@/utils/math/germanMathParser';
 import { 
   detectDuplicatesWithContext, 
@@ -339,8 +339,8 @@ export function useAdvancedQuestionGeneration({
 
             // Duplicate detection
             if (options.enableDuplicateDetection) {
-              const duplicateCheck = DuplicateDetectionEngine.checkDuplicate(
-                DuplicateDetectionEngine.initSession(userId, category, grade),
+              const duplicateCheck = ImprovedDuplicateDetectionEngine.checkDuplicate(
+                ImprovedDuplicateDetectionEngine.initSession(userId, category, grade),
                 parsed,
                 questions
               );
@@ -621,8 +621,8 @@ export function useAdvancedQuestionGeneration({
     metrics,
     sessionId,
     generateProblems,
-    getSessionStats: () => DuplicateDetectionEngine.getSessionStats(
-      DuplicateDetectionEngine.initSession(userId, category, grade)
+    getSessionStats: () => ImprovedDuplicateDetectionEngine.getSessionStats(
+      ImprovedDuplicateDetectionEngine.initSession(userId, category, grade)
     )
   };
 }
