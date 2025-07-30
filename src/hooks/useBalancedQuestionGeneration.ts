@@ -405,12 +405,17 @@ export function useBalancedQuestionGeneration(
       }
     }
     
-    // Fallback für Math
+    // Generate a valid math problem instead of hardcoded answer
+    const gradeRange = Math.min(100, 10 + (grade * 15));
+    const a = Math.floor(Math.random() * gradeRange) + 1;
+    const b = Math.floor(Math.random() * (gradeRange / 2)) + 1;
+    const answer = a + b;
+    
     return {
       success: true,
-      questionText: content,
-      answerValue: '42',
-      explanation: 'Mathematische Aufgabe - Standard-Antwort'
+      questionText: `${a} + ${b} = ?`,
+      answerValue: answer.toString(),
+      explanation: `${a} + ${b} = ${answer}. Addition bedeutet zusammenzählen.`
     };
   };
 
