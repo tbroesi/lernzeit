@@ -57,16 +57,31 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
   
   // Use improved generation for math, fallback for others
   const { 
-    problems, 
-    isGenerating, 
-    error: generationError,
-    generateProblems
-  } = isMathCategory ? improvedMathGeneration : {
-    problems: fallbackGeneration.problems,
-    isGenerating: fallbackGeneration.isGenerating,
-    error: fallbackGeneration.generationError,
-    generateProblems: fallbackGeneration.generateProblems
+    problems: mathProblems, 
+    isGenerating: mathGenerating, 
+    error: mathError,
+    generateProblems: generateMathProblems
+  } = improvedMathGeneration;
+  
+  // Fallback to normal generation if math generation fails or provides insufficient questions
+  const needsFallback = isMathCategory && mathProblems.length < 5 && !mathGenerating && mathProblems.length > 0;
+  
+  const { 
+    problems: finalProblems, 
+    isGenerating: finalGenerating, 
+    generationError: finalError,
+    generateProblems: finalGenerateProblems
+  } = needsFallback || !isMathCategory ? fallbackGeneration : {
+    problems: mathProblems,
+    isGenerating: mathGenerating,
+    generationError: mathError,
+    generateProblems: generateMathProblems
   };
+  
+  const problems = finalProblems;
+  const isGenerating = finalGenerating;
+  const generationError = finalError;
+  const generateProblems = finalGenerateProblems;
   
   const isInitialized = problems.length >= 5;
   const canRetry = !isGenerating;
