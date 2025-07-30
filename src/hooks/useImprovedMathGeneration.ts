@@ -315,6 +315,74 @@ export function useImprovedMathGeneration(
   }, [config]);
 
   /**
+   * Generiert eine einfache Fallback-Frage wenn die normale Generierung fehlschlägt
+   */
+  const generateSimpleFallbackQuestion = useCallback((
+    grade: number,
+    existingQuestions: string[],
+    questionNumber: number
+  ): SelectionQuestion => {
+    const operations = ['+', '-'];
+    if (grade >= 3) operations.push('×');
+    if (grade >= 4) operations.push('÷');
+    
+    const operation = operations[Math.floor(Math.random() * operations.length)];
+    const maxNum = grade <= 2 ? 20 : grade <= 3 ? 100 : 500;
+    
+    let a = Math.floor(Math.random() * maxNum) + 1;
+    let b = Math.floor(Math.random() * Math.min(maxNum / 2, 20)) + 1;
+    
+    if (operation === '-' && b > a) [a, b] = [b, a];
+    if (operation === '÷') a = b * Math.floor(Math.random() * 10 + 1);
+    
+    const questionText = `${a} ${operation} ${b} = ?`;
+    let answer = 0;
+    
+    switch (operation) {
+      case '+': answer = a + b; break;
+      case '-': answer = a - b; break;
+      case '×': answer = a * b; break;
+      case '÷': answer = a / b; break;
+    }
+    
+    return {
+      id: Math.floor(Math.random() * 1000000),
+      question: questionText,
+      questionType: 'text-input',
+      type: 'math',
+      answer: answer.toString(),
+      explanation: `Die Lösung ist ${answer}.\n\n1. Lies die Aufgabe sorgfältig durch\n2. Bestimme die gesuchte Größe\n3. Das Ergebnis ist ${answer}`
+    };
+  }, []);
+
+  /**
+   * Generiert eine Notfall-Frage als letzter Ausweg
+   */
+  const generateEmergencyFallbackQuestion = useCallback((
+    grade: number,
+    questionNumber: number
+  ): SelectionQuestion => {
+    const simpleProblems = [
+      { question: '5 + 3 = ?', answer: '8' },
+      { question: '10 - 4 = ?', answer: '6' },
+      { question: '7 + 2 = ?', answer: '9' },
+      { question: '8 - 3 = ?', answer: '5' },
+      { question: '6 + 4 = ?', answer: '10' }
+    ];
+    
+    const selected = simpleProblems[questionNumber % simpleProblems.length];
+    
+    return {
+      id: Math.floor(Math.random() * 1000000),
+      question: selected.question,
+      questionType: 'text-input',
+      type: 'math',
+      answer: selected.answer,
+      explanation: `Die Lösung ist ${selected.answer}.\n\n1. Lies die Aufgabe sorgfältig durch\n2. Bestimme die gesuchte Größe\n3. Das Ergebnis ist ${selected.answer}`
+    };
+  }, []);
+
+  /**
    * Hauptfunktion zum Generieren aller Fragen
    */
   const generateProblems = useCallback(async () => {
@@ -336,21 +404,45 @@ export function useImprovedMathGeneration(
       for (let i = 0; i < config.totalQuestions; i++) {
         const rand = Math.random();
         let question: SelectionQuestion | null = null;
+        let attempts = 0;
+        const maxAttempts = 3;
         
-        if (rand < questionTypes['word-problem'] && config.grade >= 2) {
-          question = await generateWordProblem(existingQuestions);
-        } else if (rand < questionTypes['word-problem'] + questionTypes['multiple-choice']) {
-          question = await generateMultipleChoiceQuestion(existingQuestions);
-        } else {
-          question = await generateSingleQuestion(existingQuestions);
+        // Versuche verschiedene Generierungsstrategien bis eine funktioniert
+        while (!question && attempts < maxAttempts) {
+          attempts++;
+          
+          try {
+            if (attempts === 1) {
+              // Erster Versuch: Gewünschter Typ
+              if (rand < questionTypes['word-problem'] && config.grade >= 2) {
+                question = await generateWordProblem(existingQuestions);
+              } else if (rand < questionTypes['word-problem'] + questionTypes['multiple-choice']) {
+                question = await generateMultipleChoiceQuestion(existingQuestions);
+              } else {
+                question = await generateSingleQuestion(existingQuestions);
+              }
+            } else if (attempts === 2) {
+              // Zweiter Versuch: Einfache Textaufgabe
+              question = await generateSingleQuestion(existingQuestions);
+            } else {
+              // Dritter Versuch: Template-basierter Fallback
+              question = generateSimpleFallbackQuestion(config.grade, existingQuestions, i + 1);
+            }
+          } catch (error) {
+            console.warn(`Generation attempt ${attempts} failed for question ${i + 1}:`, error);
+          }
         }
         
         if (question) {
           generatedProblems.push(question);
           existingQuestions.push(question.question);
+          console.log(`✅ Successfully generated question ${i + 1} on attempt ${attempts}`);
         } else {
-          // Fallback bei Generierungsfehler
-          console.warn(`Failed to generate question ${i + 1}`);
+          console.error(`❌ Failed to generate question ${i + 1} after ${maxAttempts} attempts`);
+          // Als absoluter Fallback: Erstelle eine einfache Mathe-Aufgabe
+          const fallbackQuestion = generateEmergencyFallbackQuestion(config.grade, i + 1);
+          generatedProblems.push(fallbackQuestion);
+          existingQuestions.push(fallbackQuestion.question);
         }
       }
       
