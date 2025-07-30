@@ -1,486 +1,536 @@
 /**
- * Improved Math Generation Hook
- * Centralizes all enhanced question generation capabilities
+ * Verbesserter Hook für Mathematik-Fragengenerierung
+ * Integriert alle Phase-1-Verbesserungen
  */
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { SelectionQuestion } from '@/types/questionTypes';
+import { supabase } from '@/integrations/supabase/client';
 import { ImprovedGermanMathParser } from '@/utils/math/ImprovedGermanMathParser';
-import { SemanticDuplicateDetector } from '@/utils/templates/SemanticDuplicateDetector';
-import { StepByStepExplainer, DetailedExplanation } from '@/utils/templates/StepByStepExplainer';
-import { ImprovedDuplicateDetectionEngine } from '@/utils/templates/improvedDuplicateDetection';
-import { useQuestionGenerationManager } from './useQuestionGenerationManager';
-import { supabase } from '@/lib/supabase';
+import { SemanticDuplicateDetector } from '@/utils/math/SemanticDuplicateDetector';
+import { StepByStepExplainer } from '@/utils/math/StepByStepExplainer';
 
-export interface ImprovedGenerationOptions {
-  enableSemanticDuplicateDetection: boolean;
-  enableStepByStepExplanations: boolean;
-  enableImprovedMathParsing: boolean;
-  enableQualityAssurance: boolean;
-  strictDuplicateMode: boolean;
-  enhancedFallback: boolean;
-  maxRetries: number;
-}
-
-export interface GenerationQualityMetrics {
-  parseSuccessRate: number;
-  duplicateRejectionRate: number;
-  explanationCoverage: number;
-  semanticQualityScore: number;
-  averageSteps: number;
-  mathAccuracy: number;
-}
-
-export interface ImprovedGenerationResult {
-  questions: SelectionQuestion[];
-  explanations: Map<string, DetailedExplanation>;
-  qualityMetrics: GenerationQualityMetrics;
-  generationTime: number;
-  source: 'enhanced' | 'fallback' | 'hybrid';
-  errors: string[];
-}
-
-interface UseImprovedMathGenerationProps {
-  category: string;
+export interface MathGenerationConfig {
   grade: number;
-  userId: string;
-  totalQuestions?: number;
-  autoGenerate?: boolean;
-  options?: Partial<ImprovedGenerationOptions>;
+  totalQuestions: number;
+  enableDuplicateDetection: boolean;
+  enableEnhancedExplanations: boolean;
+  difficultyLevel: 'easy' | 'medium' | 'hard' | 'mixed';
 }
 
-export function useImprovedMathGeneration({
-  category,
-  grade,
-  userId,
-  totalQuestions = 5,
-  autoGenerate = true,
-  options = {}
-}: UseImprovedMathGenerationProps) {
-  
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [result, setResult] = useState<ImprovedGenerationResult | null>(null);
-  const [processingStage, setProcessingStage] = useState<string>('');
-  const lastGenerationRef = useRef<string>('');
+export interface GenerationStats {
+  totalGenerated: number;
+  duplicatesAvoided: number;
+  parseErrors: number;
+  explanationQuality: number;
+  generationTime: number;
+}
 
-  // Default options
-  const defaultOptions: ImprovedGenerationOptions = {
-    enableSemanticDuplicateDetection: true,
-    enableStepByStepExplanations: true,
-    enableImprovedMathParsing: true,
-    enableQualityAssurance: true,
-    strictDuplicateMode: false,
-    enhancedFallback: true,
-    maxRetries: 3
-  };
-
-  const finalOptions = { ...defaultOptions, ...options };
-
-  // Use the question generation manager as base
-  const {
-    problems,
-    isGenerating,
-    generationError,
-    generateProblems: baseGenerateProblems,
-    sessionId,
-    generationSource
-  } = useQuestionGenerationManager({
-    category,
-    grade,
-    userId,
-    totalQuestions,
-    autoGenerate: false, // We'll control generation manually
-    useEnhancedMode: true
+export function useImprovedMathGeneration(
+  userId: string,
+  config: MathGenerationConfig
+) {
+  const [problems, setProblems] = useState<SelectionQuestion[]>([]);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [stats, setStats] = useState<GenerationStats>({
+    totalGenerated: 0,
+    duplicatesAvoided: 0,
+    parseErrors: 0,
+    explanationQuality: 0,
+    generationTime: 0
   });
 
-  /**
-   * Enhanced generation process with all improvements
-   */
-  const generateEnhancedQuestions = useCallback(async (): Promise<void> => {
-    const generationKey = `${category}-${grade}-${userId}-${totalQuestions}`;
-    
-    if (lastGenerationRef.current === generationKey && !isProcessing) {
-      console.log('🔄 Skipping duplicate generation request');
-      return;
-    }
+  // Verwende useRef für die Instanz des Duplicate Detectors
+  const duplicateDetectorRef = useRef<SemanticDuplicateDetector | null>(null);
 
-    lastGenerationRef.current = generationKey;
-    setIsProcessing(true);
-    setProcessingStage('Initialisierung...');
-
-    const startTime = Date.now();
-    const errors: string[] = [];
-    
-    console.log('🚀 Starting improved math generation:', {
-      category,
-      grade,
-      userId,
-      totalQuestions,
-      options: finalOptions
-    });
-
-    try {
-      // Phase 1: Generate base questions
-      setProcessingStage('Generiere Grundfragen...');
-      await baseGenerateProblems();
-      
-      if (problems.length === 0) {
-        throw new Error('No base questions generated');
-      }
-
-      // Phase 2: Enhanced parsing and validation
-      setProcessingStage('Verbessere Mathematik-Parsing...');
-      const enhancedQuestions = await enhanceWithImprovedParsing(problems, finalOptions);
-      
-      // Phase 3: Semantic duplicate detection
-      setProcessingStage('Prüfe semantische Duplikate...');
-      const uniqueQuestions = await applySemanticDuplicateDetection(enhancedQuestions, finalOptions);
-      
-      // Phase 4: Quality assurance
-      setProcessingStage('Qualitätskontrolle...');
-      const qualityCheckedQuestions = await applyQualityAssurance(uniqueQuestions, finalOptions);
-      
-      // Phase 5: Generate step-by-step explanations
-      setProcessingStage('Erstelle Erklärungen...');
-      const explanations = await generateDetailedExplanations(qualityCheckedQuestions, finalOptions);
-      
-      // Phase 6: Calculate quality metrics
-      setProcessingStage('Berechne Qualitätsmetriken...');
-      const qualityMetrics = calculateQualityMetrics(
-        problems,
-        qualityCheckedQuestions,
-        explanations,
-        finalOptions
-      );
-
-      // Phase 7: Finalize result
-      const generationTime = Date.now() - startTime;
-      const finalResult: ImprovedGenerationResult = {
-        questions: qualityCheckedQuestions,
-        explanations,
-        qualityMetrics,
-        generationTime,
-        source: determineGenerationSource(qualityCheckedQuestions, problems),
-        errors
-      };
-
-      setResult(finalResult);
-      setProcessingStage('Abgeschlossen');
-
-      console.log('✅ Improved generation complete:', {
-        originalCount: problems.length,
-        finalCount: qualityCheckedQuestions.length,
-        qualityScore: qualityMetrics.semanticQualityScore,
-        generationTime: generationTime + 'ms'
-      });
-
-    } catch (error) {
-      console.error('❌ Improved generation failed:', error);
-      errors.push(error instanceof Error ? error.message : 'Unknown error');
-      
-      // Fallback to basic result
-      const fallbackResult: ImprovedGenerationResult = {
-        questions: problems,
-        explanations: new Map(),
-        qualityMetrics: {
-          parseSuccessRate: 0,
-          duplicateRejectionRate: 0,
-          explanationCoverage: 0,
-          semanticQualityScore: 0.5,
-          averageSteps: 0,
-          mathAccuracy: 0
-        },
-        generationTime: Date.now() - startTime,
-        source: 'fallback',
-        errors
-      };
-      
-      setResult(fallbackResult);
-    } finally {
-      setIsProcessing(false);
-    }
-  }, [category, grade, userId, totalQuestions, problems, baseGenerateProblems, finalOptions]);
-
-  // Auto-generate when needed
+  // Initialisiere Duplikaterkennung
   useEffect(() => {
-    if (autoGenerate && !result && !isProcessing && problems.length > 0) {
-      generateEnhancedQuestions();
+    if (config.enableDuplicateDetection) {
+      const detector = new SemanticDuplicateDetector();
+      duplicateDetectorRef.current = detector;
+      detector.initialize(userId, config.grade);
     }
-  }, [autoGenerate, result, isProcessing, problems.length, generateEnhancedQuestions]);
+  }, [userId, config.grade, config.enableDuplicateDetection]);
 
   /**
-   * Enhanced parsing phase
+   * Generiert eine einzelne Mathematik-Frage
    */
-  const enhanceWithImprovedParsing = async (
-    questions: SelectionQuestion[],
-    options: ImprovedGenerationOptions
-  ): Promise<SelectionQuestion[]> => {
-    if (!options.enableImprovedMathParsing) return questions;
-
-    console.log('🔍 Applying improved math parsing to', questions.length, 'questions');
-
-    const enhancedQuestions: SelectionQuestion[] = [];
-
-    for (const question of questions) {
-      try {
-        if (question.type === 'math' || category.toLowerCase() === 'mathematik') {
-          const parseResult = ImprovedGermanMathParser.parse(question.question);
-          
-          if (parseResult.success && parseResult.confidence && parseResult.confidence > 0.7) {
-            // Use improved parsing result - handle different question types
-            let enhancedQuestion: SelectionQuestion;
-            
-            if (question.questionType === 'text-input') {
-              enhancedQuestion = {
-                ...question,
-                answer: parseResult.answer,
-                explanation: question.explanation + 
-                  (parseResult.steps ? '\n\nLösungsweg: ' + parseResult.steps.join(', ') : '')
-              };
-            } else {
-              // For non-text-input questions, preserve original structure
-              enhancedQuestion = {
-                ...question,
-                explanation: question.explanation + 
-                  (parseResult.steps ? '\n\nLösungsweg: ' + parseResult.steps.join(', ') : '')
-              };
-            }
-            
-            // Store metadata separately if needed
-            (enhancedQuestion as any).metadata = {
-              ...((question as any).metadata || {}),
-              improvedParsing: true,
-              confidence: parseResult.confidence,
-              questionType: parseResult.questionType,
-              parsingMetadata: parseResult.metadata
-            };
-            enhancedQuestions.push(enhancedQuestion);
-            console.log(`✅ Enhanced parsing for: ${question.question.substring(0, 30)}...`);
-          } else {
-            enhancedQuestions.push(question);
-          }
-        } else {
-          enhancedQuestions.push(question);
-        }
-      } catch (error) {
-        console.warn('⚠️ Parsing enhancement failed for question:', error);
-        enhancedQuestions.push(question);
-      }
-    }
-
-    console.log(`🔍 Parsing enhancement: ${enhancedQuestions.length}/${questions.length} processed`);
-    return enhancedQuestions;
-  };
-
-  /**
-   * Semantic duplicate detection phase
-   */
-  const applySemanticDuplicateDetection = async (
-    questions: SelectionQuestion[],
-    options: ImprovedGenerationOptions
-  ): Promise<SelectionQuestion[]> => {
-    if (!options.enableSemanticDuplicateDetection) return questions;
-
-    console.log('🔍 Applying semantic duplicate detection');
-
-    // Get session history for comparison
-    const sessionId = ImprovedDuplicateDetectionEngine.initSession(userId, category, grade);
-    const sessionStats = ImprovedDuplicateDetectionEngine.getSessionStats(sessionId);
+  const generateSingleQuestion = useCallback(async (
+    existingQuestions: string[]
+  ): Promise<SelectionQuestion | null> => {
+    const startTime = Date.now();
     
-    const previousQuestions = sessionStats?.questionsGenerated > 0 ? 
-      await getPreviousQuestionsFromDatabase(userId, category, grade) : [];
-
-    // Apply semantic analysis
-    const analysisResult = SemanticDuplicateDetector.analyzeQuestionSet(
-      [...previousQuestions, ...questions],
-      options.strictDuplicateMode
-    );
-
-    const uniqueQuestions = analysisResult.unique.filter(q => 
-      questions.some(originalQ => originalQ.id === q.id)
-    );
-
-    // Register unique questions in session
-    uniqueQuestions.forEach(q => {
-      ImprovedDuplicateDetectionEngine.registerQuestion(sessionId, q);
-    });
-
-    console.log(`🔍 Semantic duplicate detection: ${uniqueQuestions.length}/${questions.length} unique`);
-    console.log(`📊 Analysis stats:`, analysisResult.stats);
-
-    return uniqueQuestions;
-  };
-
-  /**
-   * Quality assurance phase
-   */
-  const applyQualityAssurance = async (
-    questions: SelectionQuestion[],
-    options: ImprovedGenerationOptions
-  ): Promise<SelectionQuestion[]> => {
-    if (!options.enableQualityAssurance) return questions;
-
-    console.log('🔍 Applying quality assurance');
-
-    const qualityCheckedQuestions: SelectionQuestion[] = [];
-
-    for (const question of questions) {
-      // Basic quality checks
-      if (question.question.length < 10 || question.question.length > 300) {
-        console.log(`🚫 Question too short/long: ${question.question.substring(0, 30)}...`);
-        continue;
-      }
-
-      // Check for placeholder values
-      if (question.question.includes('undefined') || 
-          question.question.includes('NaN') ||
-          question.question.includes('null')) {
-        console.log(`🚫 Question contains placeholders: ${question.question.substring(0, 30)}...`);
-        continue;
-      }
-
-      // Math-specific quality checks
-      if (question.type === 'math') {
-        const hasValidAnswer = (question as any).answer !== undefined && 
-                              (question as any).answer !== null &&
-                              !isNaN(Number((question as any).answer));
-        
-        if (!hasValidAnswer) {
-          console.log(`🚫 Math question without valid answer: ${question.question.substring(0, 30)}...`);
-          continue;
-        }
-      }
-
-      qualityCheckedQuestions.push(question);
-    }
-
-    console.log(`🔍 Quality assurance: ${qualityCheckedQuestions.length}/${questions.length} passed`);
-    return qualityCheckedQuestions;
-  };
-
-  /**
-   * Step-by-step explanation generation
-   */
-  const generateDetailedExplanations = async (
-    questions: SelectionQuestion[],
-    options: ImprovedGenerationOptions
-  ): Promise<Map<string, DetailedExplanation>> => {
-    if (!options.enableStepByStepExplanations) return new Map();
-
-    console.log('📚 Generating step-by-step explanations');
-
-    const explanations = new Map<string, DetailedExplanation>();
-
-    for (const question of questions) {
-      try {
-        const explanation = StepByStepExplainer.explain(question, (question as any).answer);
-        explanations.set(question.id.toString(), explanation);
-        console.log(`📚 Generated ${explanation.steps.length} steps for question ${question.id}`);
-      } catch (error) {
-        console.warn(`⚠️ Failed to generate explanation for question ${question.id}:`, error);
-      }
-    }
-
-    console.log(`📚 Generated explanations for ${explanations.size}/${questions.length} questions`);
-    return explanations;
-  };
-
-  /**
-   * Quality metrics calculation
-   */
-  const calculateQualityMetrics = (
-    originalQuestions: SelectionQuestion[],
-    finalQuestions: SelectionQuestion[],
-    explanations: Map<string, DetailedExplanation>,
-    options: ImprovedGenerationOptions
-  ): GenerationQualityMetrics => {
-    
-    const parseSuccessRate = finalQuestions.filter(q => 
-      (q as any).metadata?.improvedParsing
-    ).length / Math.max(finalQuestions.length, 1);
-
-    const duplicateRejectionRate = originalQuestions.length > 0 ?
-      1 - (finalQuestions.length / originalQuestions.length) : 0;
-
-    const explanationCoverage = explanations.size / Math.max(finalQuestions.length, 1);
-
-    const semanticQualityScore = finalQuestions.reduce((score, q) => {
-      return score + ((q as any).metadata?.confidence || 0.5);
-    }, 0) / Math.max(finalQuestions.length, 1);
-
-    const averageSteps = Array.from(explanations.values())
-      .reduce((sum, exp) => sum + exp.steps.length, 0) / Math.max(explanations.size, 1);
-
-    const mathAccuracy = finalQuestions.filter(q => 
-      q.type === 'math' && (q as any).answer !== undefined
-    ).length / Math.max(finalQuestions.filter(q => q.type === 'math').length, 1);
-
-    return {
-      parseSuccessRate,
-      duplicateRejectionRate,
-      explanationCoverage,
-      semanticQualityScore,
-      averageSteps,
-      mathAccuracy
+    // Bestimme Zahlenbereich basierend auf Klassenstufe
+    const ranges = {
+      1: { min: 1, max: 20, operations: ['+', '-'] },
+      2: { min: 1, max: 100, operations: ['+', '-'] },
+      3: { min: 1, max: 1000, operations: ['+', '-', '×'] },
+      4: { min: 1, max: 10000, operations: ['+', '-', '×', '÷'] }
     };
-  };
+    
+    const gradeConfig = ranges[config.grade as keyof typeof ranges] || ranges[4];
+    
+    let attempts = 0;
+    const maxAttempts = 10;
+    
+    while (attempts < maxAttempts) {
+      attempts++;
+      
+      // Generiere Zahlen und Operation
+      const a = Math.floor(Math.random() * (gradeConfig.max - gradeConfig.min + 1)) + gradeConfig.min;
+      const b = Math.floor(Math.random() * Math.min(gradeConfig.max / 2, 50)) + 1;
+      const operation = gradeConfig.operations[Math.floor(Math.random() * gradeConfig.operations.length)];
+      
+      // Spezialbehandlung für Subtraktion und Division
+      let num1 = a;
+      let num2 = b;
+      
+      if (operation === '-' && num2 > num1) {
+        [num1, num2] = [num2, num1]; // Tausche für positive Ergebnisse
+      }
+      
+      if (operation === '÷') {
+        // Stelle sicher, dass Division aufgeht
+        num1 = num2 * Math.floor(Math.random() * 10 + 1);
+      }
+      
+      // Erstelle verschiedene Frageformate
+      const formats = [
+        `${num1} ${operation} ${num2} = ?`,
+        `Was ist ${num1} ${operation} ${num2}?`,
+        `Berechne: ${num1} ${operation} ${num2}`,
+        `Rechne aus: ${num1} ${operation} ${num2}`
+      ];
+      
+      const questionText = formats[Math.floor(Math.random() * formats.length)];
+      
+      // Prüfe auf Duplikate
+      if (config.enableDuplicateDetection && duplicateDetectorRef.current) {
+        const duplicateCheck = duplicateDetectorRef.current.checkDuplicate(
+          questionText,
+          userId,
+          config.grade,
+          existingQuestions
+        );
+        
+        if (duplicateCheck.isDuplicate) {
+          continue; // Versuche erneut
+        }
+      }
+      
+      // Parse und berechne die Antwort
+      const parseResult = ImprovedGermanMathParser.parse(questionText);
+      
+      if (!parseResult.success || parseResult.answer === undefined) {
+        setStats(prev => ({ ...prev, parseErrors: prev.parseErrors + 1 }));
+        continue;
+      }
+      
+      // Generiere Erklärung
+      const answer = parseResult.answer;
+      let explanation = '';
+      
+      if (config.enableEnhancedExplanations) {
+        const detailedExplanation = StepByStepExplainer.generateExplanation(
+          { question: questionText, type: 'math' } as SelectionQuestion,
+          answer,
+          config.grade
+        );
+        
+        // Formatiere die Erklärung
+        explanation = detailedExplanation.summary + '\n\n';
+        explanation += detailedExplanation.steps
+          .map(step => `${step.step}. ${step.description}${step.calculation ? ': ' + step.calculation : ''}`)
+          .join('\n');
+        
+        if (detailedExplanation.tips && detailedExplanation.tips.length > 0) {
+          explanation += '\n\n💡 Tipp: ' + detailedExplanation.tips[0];
+        }
+      } else {
+        explanation = parseResult.steps ? parseResult.steps.join('\n') : `${questionText.replace('?', '')}${answer}`;
+      }
+      
+      // Erstelle die Frage
+      const question: SelectionQuestion = {
+        id: Math.floor(Math.random() * 1000000),
+        question: questionText,
+        questionType: 'text-input',
+        type: 'math',
+        answer: answer.toString(),
+        explanation
+      };
+      
+      // Speichere in Duplikaterkennung
+      if (config.enableDuplicateDetection && duplicateDetectorRef.current) {
+        await duplicateDetectorRef.current.saveQuestion(questionText, userId, config.grade);
+      }
+      
+      const generationTime = Date.now() - startTime;
+      setStats(prev => ({
+        ...prev,
+        totalGenerated: prev.totalGenerated + 1,
+        duplicatesAvoided: prev.duplicatesAvoided + (attempts - 1),
+        generationTime: prev.generationTime + generationTime
+      }));
+      
+      return question;
+    }
+    
+    return null;
+  }, [config, userId]);
 
   /**
-   * Helper functions
+   * Generiert Multiple-Choice-Fragen
    */
-  const determineGenerationSource = (
-    finalQuestions: SelectionQuestion[],
-    originalQuestions: SelectionQuestion[]
-  ): 'enhanced' | 'fallback' | 'hybrid' => {
-    const enhancedCount = finalQuestions.filter(q => 
-      (q as any).metadata?.improvedParsing
-    ).length;
+  const generateMultipleChoiceQuestion = useCallback(async (
+    existingQuestions: string[]
+  ): Promise<SelectionQuestion | null> => {
+    const baseQuestion = await generateSingleQuestion(existingQuestions);
+    
+    if (!baseQuestion || baseQuestion.questionType !== 'text-input') {
+      return null;
+    }
+    
+    const correctAnswer = parseInt(baseQuestion.answer as string);
+    if (isNaN(correctAnswer)) {
+      return baseQuestion; // Fallback zu Text-Input
+    }
+    
+    // Generiere falsche Antworten
+    const wrongAnswers = new Set<number>();
+    const variations = [-10, -5, -2, -1, 1, 2, 5, 10];
+    
+    // Füge Variationen hinzu
+    variations.forEach(delta => {
+      const wrong = correctAnswer + delta;
+      if (wrong > 0 && wrong !== correctAnswer) {
+        wrongAnswers.add(wrong);
+      }
+    });
+    
+    // Füge zufällige Antworten hinzu
+    while (wrongAnswers.size < 3) {
+      const range = Math.max(20, correctAnswer * 0.5);
+      const wrong = correctAnswer + Math.floor(Math.random() * range * 2 - range);
+      if (wrong > 0 && wrong !== correctAnswer) {
+        wrongAnswers.add(wrong);
+      }
+    }
+    
+    // Wähle 3 falsche Antworten
+    const options = [correctAnswer];
+    const wrongArray = Array.from(wrongAnswers);
+    for (let i = 0; i < 3 && i < wrongArray.length; i++) {
+      options.push(wrongArray[i]);
+    }
+    
+    // Mische die Optionen
+    const shuffled = options.sort(() => Math.random() - 0.5);
+    const correctIndex = shuffled.indexOf(correctAnswer);
+    
+    return {
+      ...baseQuestion,
+      questionType: 'multiple-choice',
+      options: shuffled.map(n => n.toString()),
+      correctAnswer: correctIndex
+    };
+  }, [generateSingleQuestion]);
 
-    if (enhancedCount === finalQuestions.length) return 'enhanced';
-    if (enhancedCount === 0) return 'fallback';
-    return 'hybrid';
-  };
+  /**
+   * Generiert Textaufgaben
+   */
+  const generateWordProblem = useCallback(async (
+    existingQuestions: string[]
+  ): Promise<SelectionQuestion | null> => {
+    const templates = [
+      {
+        template: "{name} hat {a} {item}. {pronoun} bekommt {b} weitere dazu. Wie viele {item} hat {pronoun} jetzt?",
+        operation: '+',
+        names: ['Lisa', 'Max', 'Anna', 'Tom'],
+        items: ['Äpfel', 'Bonbons', 'Murmeln', 'Stifte'],
+        pronouns: { 'Lisa': 'Sie', 'Anna': 'Sie', 'Max': 'Er', 'Tom': 'Er' }
+      },
+      {
+        template: "Im Bus sitzen {a} Personen. An der Haltestelle steigen {b} Personen ein. Wie viele Personen sind jetzt im Bus?",
+        operation: '+'
+      },
+      {
+        template: "{name} hat {a} Euro gespart. {pronoun} kauft sich etwas für {b} Euro. Wie viel Geld hat {pronoun} noch?",
+        operation: '-',
+        names: ['Sarah', 'Paul', 'Emma', 'Leon'],
+        pronouns: { 'Sarah': 'Sie', 'Emma': 'Sie', 'Paul': 'Er', 'Leon': 'Er' }
+      }
+    ];
+    
+    const template = templates[Math.floor(Math.random() * templates.length)];
+    const name = template.names ? template.names[Math.floor(Math.random() * template.names.length)] : '';
+    const item = template.items ? template.items[Math.floor(Math.random() * template.items.length)] : '';
+    const pronoun = template.pronouns ? template.pronouns[name as keyof typeof template.pronouns] : '';
+    
+    // Generiere passende Zahlen
+    const ranges = {
+      1: { max: 20 },
+      2: { max: 50 },
+      3: { max: 100 },
+      4: { max: 500 }
+    };
+    
+    const maxNum = ranges[config.grade as keyof typeof ranges]?.max || 100;
+    let a = Math.floor(Math.random() * maxNum) + 1;
+    let b = Math.floor(Math.random() * Math.min(maxNum / 2, 50)) + 1;
+    
+    if (template.operation === '-') {
+      // Stelle sicher, dass a > b
+      if (b > a) [a, b] = [b, a];
+    }
+    
+    let questionText = template.template
+      .replace(/\{name\}/g, name)
+      .replace(/\{pronoun\}/g, pronoun)
+      .replace(/\{a\}/g, a.toString())
+      .replace(/\{b\}/g, b.toString())
+      .replace(/\{item\}/g, item);
+    
+    // Berechne Antwort
+    const answer = template.operation === '+' ? a + b : a - b;
+    
+    // Generiere Erklärung
+    const explanation = StepByStepExplainer.generateExplanation(
+      { question: questionText, type: 'math' } as SelectionQuestion,
+      answer,
+      config.grade
+    );
+    
+    return {
+      id: Math.floor(Math.random() * 1000000),
+      question: questionText,
+      questionType: 'text-input',
+      type: 'math',
+      answer: answer.toString(),
+      explanation: explanation.summary + '\n\n' + explanation.steps.map(s => 
+        `${s.step}. ${s.description}${s.calculation ? ': ' + s.calculation : ''}`
+      ).join('\n')
+    };
+  }, [config]);
 
-  const getPreviousQuestionsFromDatabase = async (
-    userId: string,
-    category: string,
-    grade: number
-  ): Promise<SelectionQuestion[]> => {
+  /**
+   * Hauptfunktion zum Generieren aller Fragen
+   */
+  const generateProblems = useCallback(async () => {
+    setIsGenerating(true);
+    setError(null);
+    const startTime = Date.now();
+    
     try {
-      // This would query a database of previously generated questions
-      // For now, return empty array as placeholder
-      return [];
-    } catch (error) {
-      console.warn('Failed to get previous questions:', error);
+      const generatedProblems: SelectionQuestion[] = [];
+      const existingQuestions: string[] = problems.map(p => p.question);
+      
+      // Mischung verschiedener Fragetypen
+      const questionTypes = {
+        'text-input': 0.5,
+        'multiple-choice': 0.3,
+        'word-problem': 0.2
+      };
+      
+      for (let i = 0; i < config.totalQuestions; i++) {
+        const rand = Math.random();
+        let question: SelectionQuestion | null = null;
+        
+        if (rand < questionTypes['word-problem'] && config.grade >= 2) {
+          question = await generateWordProblem(existingQuestions);
+        } else if (rand < questionTypes['word-problem'] + questionTypes['multiple-choice']) {
+          question = await generateMultipleChoiceQuestion(existingQuestions);
+        } else {
+          question = await generateSingleQuestion(existingQuestions);
+        }
+        
+        if (question) {
+          generatedProblems.push(question);
+          existingQuestions.push(question.question);
+        } else {
+          // Fallback bei Generierungsfehler
+          console.warn(`Failed to generate question ${i + 1}`);
+        }
+      }
+      
+      setProblems(generatedProblems);
+      
+      // Berechne finale Statistiken
+      const totalTime = Date.now() - startTime;
+      setStats(prev => ({
+        ...prev,
+        generationTime: totalTime,
+        explanationQuality: config.enableEnhancedExplanations ? 0.9 : 0.5
+      }));
+      
+      console.log(`✅ Generated ${generatedProblems.length} math problems in ${totalTime}ms`);
+      console.log(`📊 Stats:`, stats);
+      
+    } catch (err) {
+      console.error('Error generating problems:', err);
+      setError(err instanceof Error ? err.message : 'Unbekannter Fehler');
+    } finally {
+      setIsGenerating(false);
+    }
+  }, [config, problems, stats, generateSingleQuestion, generateMultipleChoiceQuestion, generateWordProblem]);
+
+  /**
+   * Lädt Templates aus der Datenbank
+   */
+  const loadDatabaseTemplates = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('generated_templates')
+        .select('*')
+        .eq('category', 'Mathematik')
+        .eq('grade', config.grade)
+        .eq('is_active', true)
+        .gte('quality_score', 0.7)
+        .order('quality_score', { ascending: false })
+        .limit(50);
+      
+      if (error) {
+        console.error('Error loading templates:', error);
+        return [];
+      }
+      
+      return data || [];
+    } catch (err) {
+      console.error('Database error:', err);
       return [];
     }
-  };
+  }, [config.grade]);
+
+  /**
+   * Generiert eine Frage aus einem Template
+   */
+  const generateFromTemplate = useCallback(async (
+    template: any,
+    existingQuestions: string[]
+  ): Promise<SelectionQuestion | null> => {
+    try {
+      // Parse Template-Parameter
+      const params = JSON.parse(template.parameters || '{}');
+      
+      // Generiere neue Werte für Parameter
+      const values: Record<string, number> = {};
+      for (const [key, range] of Object.entries(params)) {
+        if (typeof range === 'object' && range && 'min' in range && 'max' in range) {
+          const r = range as { min: number; max: number };
+          values[key] = Math.floor(
+            Math.random() * (r.max - r.min + 1) + r.min
+          );
+        }
+      }
+      
+      // Ersetze Platzhalter im Template
+      let questionText = template.template;
+      for (const [key, value] of Object.entries(values)) {
+        questionText = questionText.replace(new RegExp(`\\{${key}\\}`, 'g'), value.toString());
+      }
+      
+      // Prüfe auf Duplikate
+      if (config.enableDuplicateDetection && duplicateDetectorRef.current) {
+        const duplicateCheck = duplicateDetectorRef.current.checkDuplicate(
+          questionText,
+          userId,
+          config.grade,
+          existingQuestions
+        );
+        
+        if (duplicateCheck.isDuplicate) {
+          return null;
+        }
+      }
+      
+      // Parse und berechne Antwort
+      const parseResult = ImprovedGermanMathParser.parse(questionText);
+      
+      if (!parseResult.success || parseResult.answer === undefined) {
+        return null;
+      }
+      
+      // Generiere Erklärung
+      const explanation = StepByStepExplainer.generateExplanation(
+        { question: questionText, type: 'math' } as SelectionQuestion,
+        parseResult.answer,
+        config.grade
+      );
+      
+      return {
+        id: Math.floor(Math.random() * 1000000),
+        question: questionText,
+        questionType: template.question_type || 'text-input',
+        type: 'math',
+        answer: parseResult.answer.toString(),
+        explanation: explanation.summary + '\n\n' + 
+          explanation.steps.map(s => `${s.step}. ${s.description}`).join('\n')
+      };
+      
+    } catch (err) {
+      console.error('Error generating from template:', err);
+      return null;
+    }
+  }, [config, userId]);
+
+  /**
+   * Regeneriert eine einzelne Frage
+   */
+  const regenerateQuestion = useCallback(async (index: number) => {
+    if (index < 0 || index >= problems.length) return;
+    
+    const existingQuestions = problems.map(p => p.question);
+    const newQuestion = await generateSingleQuestion(existingQuestions);
+    
+    if (newQuestion) {
+      const newProblems = [...problems];
+      newProblems[index] = newQuestion;
+      setProblems(newProblems);
+    }
+  }, [problems, generateSingleQuestion]);
+
+  /**
+   * Exportiert die generierten Fragen
+   */
+  const exportProblems = useCallback(() => {
+    const exportData = {
+      metadata: {
+        userId,
+        grade: config.grade,
+        generatedAt: new Date().toISOString(),
+        totalQuestions: problems.length,
+        stats
+      },
+      problems: problems.map(p => ({
+        question: p.question,
+        answer: p.questionType === 'text-input' ? p.answer : p.questionType === 'multiple-choice' ? p.options[p.correctAnswer] : 'N/A',
+        type: p.questionType,
+        explanation: p.explanation
+      }))
+    };
+    
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+      type: 'application/json'
+    });
+    
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `math-problems-grade${config.grade}-${new Date().getTime()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [problems, config, userId, stats]);
 
   return {
-    // Generation state
-    isGenerating: isGenerating || isProcessing,
-    isProcessing,
-    processingStage,
-    
-    // Results
-    result,
-    questions: result?.questions || [],
-    explanations: result?.explanations || new Map(),
-    qualityMetrics: result?.qualityMetrics,
-    
-    // Actions
-    generateEnhancedQuestions,
-    
-    // Status
-    hasError: !!generationError || (result?.errors.length || 0) > 0,
-    errors: result?.errors || (generationError ? [generationError] : []),
-    
-    // Metadata
-    sessionId,
-    generationSource: result?.source || generationSource,
-    generationTime: result?.generationTime || 0,
-    
-    // Options
-    options: finalOptions
+    problems,
+    isGenerating,
+    error,
+    stats,
+    generateProblems,
+    regenerateQuestion,
+    exportProblems,
+    loadDatabaseTemplates,
+    generateFromTemplate
   };
 }
