@@ -55,55 +55,55 @@ export type Database = {
       }
       child_settings: {
         Row: {
-          biologie_seconds_per_task: number
-          chemie_seconds_per_task: number
+          biology_seconds_per_task: number
+          chemistry_seconds_per_task: number
           child_id: string
           created_at: string
-          deutsch_seconds_per_task: number
-          englisch_seconds_per_task: number
-          geographie_seconds_per_task: number
-          geschichte_seconds_per_task: number
+          english_seconds_per_task: number
+          geography_seconds_per_task: number
+          german_seconds_per_task: number
+          history_seconds_per_task: number
           id: string
-          latein_seconds_per_task: number
-          mathematik_seconds_per_task: number
+          latin_seconds_per_task: number
+          math_seconds_per_task: number
           parent_id: string
-          physik_seconds_per_task: number
+          physics_seconds_per_task: number
           updated_at: string
           weekday_max_minutes: number
           weekend_max_minutes: number
         }
         Insert: {
-          biologie_seconds_per_task?: number
-          chemie_seconds_per_task?: number
+          biology_seconds_per_task?: number
+          chemistry_seconds_per_task?: number
           child_id: string
           created_at?: string
-          deutsch_seconds_per_task?: number
-          englisch_seconds_per_task?: number
-          geographie_seconds_per_task?: number
-          geschichte_seconds_per_task?: number
+          english_seconds_per_task?: number
+          geography_seconds_per_task?: number
+          german_seconds_per_task?: number
+          history_seconds_per_task?: number
           id?: string
-          latein_seconds_per_task?: number
-          mathematik_seconds_per_task?: number
+          latin_seconds_per_task?: number
+          math_seconds_per_task?: number
           parent_id: string
-          physik_seconds_per_task?: number
+          physics_seconds_per_task?: number
           updated_at?: string
           weekday_max_minutes?: number
           weekend_max_minutes?: number
         }
         Update: {
-          biologie_seconds_per_task?: number
-          chemie_seconds_per_task?: number
+          biology_seconds_per_task?: number
+          chemistry_seconds_per_task?: number
           child_id?: string
           created_at?: string
-          deutsch_seconds_per_task?: number
-          englisch_seconds_per_task?: number
-          geographie_seconds_per_task?: number
-          geschichte_seconds_per_task?: number
+          english_seconds_per_task?: number
+          geography_seconds_per_task?: number
+          german_seconds_per_task?: number
+          history_seconds_per_task?: number
           id?: string
-          latein_seconds_per_task?: number
-          mathematik_seconds_per_task?: number
+          latin_seconds_per_task?: number
+          math_seconds_per_task?: number
           parent_id?: string
-          physik_seconds_per_task?: number
+          physics_seconds_per_task?: number
           updated_at?: string
           weekday_max_minutes?: number
           weekend_max_minutes?: number
