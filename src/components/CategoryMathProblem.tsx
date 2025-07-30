@@ -15,6 +15,7 @@ import { SelectionQuestion } from '@/types/questionTypes';
 import { supabase } from '@/lib/supabase';
 import { useScreenTime } from '@/hooks/useScreenTime';
 import { useChildSettings } from '@/hooks/useChildSettings';
+import type { ChildSettings } from '@/hooks/useChildSettings';
 import { useAchievements } from '@/hooks/useAchievements';
 import { AchievementAnimation } from '@/components/game/AchievementAnimation';
 import { GameTimeDisplay } from '@/components/game/GameTimeDisplay';
@@ -738,7 +739,29 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
       foundValue: settings?.[`${category.toLowerCase()}_seconds_per_task` as keyof typeof settings]
     });
     
-    const timePerTask = settings?.[`${category.toLowerCase()}_seconds_per_task` as keyof typeof settings] as number || 25; // Default to 25 for math
+    // Map category names to correct setting keys
+    const categoryToSettingKey: Record<string, keyof ChildSettings> = {
+      'mathematik': 'math_seconds_per_task',
+      'math': 'math_seconds_per_task',
+      'deutsch': 'german_seconds_per_task',
+      'englisch': 'english_seconds_per_task',
+      'english': 'english_seconds_per_task',
+      'geographie': 'geography_seconds_per_task',
+      'geography': 'geography_seconds_per_task',
+      'geschichte': 'history_seconds_per_task',
+      'history': 'history_seconds_per_task',
+      'physik': 'physics_seconds_per_task',
+      'physics': 'physics_seconds_per_task',
+      'biologie': 'biology_seconds_per_task',
+      'biology': 'biology_seconds_per_task',
+      'chemie': 'chemistry_seconds_per_task',
+      'chemistry': 'chemistry_seconds_per_task',
+      'latein': 'latin_seconds_per_task',
+      'latin': 'latin_seconds_per_task'
+    };
+    
+    const settingKey = categoryToSettingKey[category.toLowerCase()];
+    const timePerTask = (settings && settingKey) ? (settings[settingKey] || 30) : 30;
     const achievementBonusMinutes = Math.floor((newAchievements.length * 5) / 60); // 5 minutes per achievement
     const perfectSessionBonus = score === problems.length ? 2 : 0; // 2 extra minutes for perfect session
     
@@ -751,8 +774,9 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
         achievementBonusMinutes={achievementBonusMinutes}
         perfectSessionBonus={perfectSessionBonus}
         onContinue={() => {
-          // Calculate earned minutes before navigating - use same calculation as above
-          const timePerTaskValue = settings?.[`${category.toLowerCase()}_seconds_per_task` as keyof typeof settings] as number || 25; // Default to 25 for math
+          // Calculate earned minutes before navigating - use same mapping logic
+          const settingKey = categoryToSettingKey[category.toLowerCase()];
+          const timePerTaskValue = (settings && settingKey) ? (settings[settingKey] || 30) : 30;
           const earnedSeconds = score * timePerTaskValue;
           const earnedMinutes = Math.floor(earnedSeconds / 60);
           

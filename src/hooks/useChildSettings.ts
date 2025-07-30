@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 
-interface ChildSettings {
+export interface ChildSettings {
   math_seconds_per_task: number;
   german_seconds_per_task: number;
   english_seconds_per_task: number;
