@@ -50,10 +50,21 @@ export function GameFeedback({
         </div>
       )}
       
-      {explanation && (
+      {/* Show explanation only for incorrect answers */}
+      {feedback === 'incorrect' && explanation && (
         <div className="mt-3 p-3 bg-white/50 rounded-md">
-          <p className="text-sm font-medium mb-1">Erklärung:</p>
-          <p className="text-sm">{explanation}</p>
+          <p className="text-sm font-medium mb-2">Erklärung:</p>
+          <div className="text-sm space-y-1">
+            {explanation.split('\n').map((line, index) => (
+              <div key={index}>
+                {line.trim() ? (
+                  <p>{line}</p>
+                ) : (
+                  <div className="h-1"></div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
