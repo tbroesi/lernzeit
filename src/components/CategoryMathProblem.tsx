@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuestionGenerationManager } from '@/hooks/useQuestionGenerationManager';
+import { useImprovedMathGeneration, MathGenerationConfig } from '@/hooks/useImprovedMathGeneration';
 import { useBalancedTemplateSelection } from '@/hooks/useBalancedTemplateSelection';
 import { QuestionRenderer } from '@/components/game/QuestionRenderer';
 import { GameProgress } from '@/components/game/GameProgress';
@@ -32,24 +33,45 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
   const { settings } = useChildSettings(user?.id || '');
   const { updateProgress } = useAchievements(user?.id);
   
-  // Remove enhanced mode to prevent infinite loop - use standard generation only
-  const { 
-    problems, 
-    isGenerating, 
-    isInitialized,
-    generationSource, 
-    generationError,
-    canRetry,
-    manualRetry,
-    refreshQuestions
-  } = useQuestionGenerationManager({
+  // Use improved math generation for math categories
+  const isMathCategory = category.toLowerCase().includes('mathematik') || category.toLowerCase().includes('math');
+  
+  const mathConfig: MathGenerationConfig = {
+    grade,
+    totalQuestions: 5,
+    enableDuplicateDetection: true,
+    enableEnhancedExplanations: true,
+    difficultyLevel: 'mixed'
+  };
+  
+  const improvedMathGeneration = useImprovedMathGeneration(user?.id || 'anonymous', mathConfig);
+  
+  const fallbackGeneration = useQuestionGenerationManager({
     category,
     grade,
     userId: user?.id || 'anonymous',
     totalQuestions: 5,
-    autoGenerate: true,
-    useEnhancedMode: false // Always false to prevent issues
+    autoGenerate: !isMathCategory, // Only auto-generate for non-math categories
+    useEnhancedMode: false
   });
+  
+  // Use improved generation for math, fallback for others
+  const { 
+    problems, 
+    isGenerating, 
+    error: generationError,
+    generateProblems
+  } = isMathCategory ? improvedMathGeneration : {
+    problems: fallbackGeneration.problems,
+    isGenerating: fallbackGeneration.isGenerating,
+    error: fallbackGeneration.generationError,
+    generateProblems: fallbackGeneration.generateProblems
+  };
+  
+  const isInitialized = problems.length >= 5;
+  const canRetry = !isGenerating;
+  const manualRetry = generateProblems;
+  const refreshQuestions = generateProblems;
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [score, setScore] = useState(0);
@@ -68,6 +90,14 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
   const [gameCompleted, setGameCompleted] = useState(false);
 
   const currentQuestion: SelectionQuestion | undefined = problems[currentQuestionIndex];
+
+  // Auto-generate math problems when component loads
+  useEffect(() => {
+    if (isMathCategory && problems.length === 0 && !isGenerating) {
+      console.log('🧮 Auto-generating improved math problems');
+      generateProblems();
+    }
+  }, [isMathCategory, problems.length, isGenerating, generateProblems]);
 
   useEffect(() => {
     console.log(`🔄 Game effect: gameStarted=${gameStarted}, problems.length=${problems.length}, isGenerating=${isGenerating}`);
@@ -709,7 +739,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
             <CardTitle>{category} - Klasse {grade}</CardTitle>
           </div>
           <QuestionGenerationInfo 
-            generationSource={generationSource} 
+            generationSource={isMathCategory ? 'ai' : (fallbackGeneration.generationSource || 'simple')} 
             isGenerating={isGenerating} 
           />
         </div>
