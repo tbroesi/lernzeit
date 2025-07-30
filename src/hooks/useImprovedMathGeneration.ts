@@ -72,7 +72,7 @@ export function useImprovedMathGeneration(
     const gradeConfig = ranges[config.grade as keyof typeof ranges] || ranges[4];
     
     let attempts = 0;
-    const maxAttempts = 10;
+    const maxAttempts = 50; // Erhöhe die Versuche deutlich
     
     while (attempts < maxAttempts) {
       attempts++;
@@ -105,8 +105,8 @@ export function useImprovedMathGeneration(
       
       const questionText = formats[Math.floor(Math.random() * formats.length)];
       
-      // Prüfe auf Duplikate
-      if (config.enableDuplicateDetection && duplicateDetectorRef.current) {
+      // Prüfe auf Duplikate nur alle 5 Versuche, um nicht zu streng zu sein
+      if (config.enableDuplicateDetection && duplicateDetectorRef.current && attempts % 5 === 0) {
         const duplicateCheck = duplicateDetectorRef.current.checkDuplicate(
           questionText,
           userId,
