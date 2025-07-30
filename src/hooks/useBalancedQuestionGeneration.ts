@@ -612,35 +612,39 @@ export function useBalancedQuestionGeneration(
         return `Die Antwort ist "${answer}". Diese Form hat die beschriebenen Eigenschaften.`;
       }
       if (question.includes('÷') || question.includes(':')) {
-        const numbers = question.match(/(\d+)\s*[÷:]\s*(\d+)/);
+        const numbers = question.match(/([\d,\.]+)\s*[÷:]\s*([\d,\.]+)/);
         if (numbers) {
-          const a = parseInt(numbers[1]);
-          const b = parseInt(numbers[2]);
-          return `${a} ÷ ${b} = ${answer}. Division bedeutet teilen.`;
+          const a = parseFloat(numbers[1].replace(',', '.'));
+          const b = parseFloat(numbers[2].replace(',', '.'));
+          const result = a / b;
+          return `${numbers[1]} ÷ ${numbers[2]} = ${result.toString().replace('.', ',')}. Division bedeutet teilen.`;
         }
       }
       if (question.includes('×') || question.includes('*')) {
-        const numbers = question.match(/(\d+)\s*[×*]\s*(\d+)/);
+        const numbers = question.match(/([\d,\.]+)\s*[×*]\s*([\d,\.]+)/);
         if (numbers) {
-          const a = parseInt(numbers[1]);
-          const b = parseInt(numbers[2]);
-          return `${a} × ${b} = ${answer}. Multiplikation bedeutet mal rechnen.`;
+          const a = parseFloat(numbers[1].replace(',', '.'));
+          const b = parseFloat(numbers[2].replace(',', '.'));
+          const result = a * b;
+          return `${numbers[1]} × ${numbers[2]} = ${result.toString().replace('.', ',')}. Multiplikation bedeutet mal rechnen.`;
         }
       }
       if (question.includes('+')) {
-        const numbers = question.match(/(\d+)\s*\+\s*(\d+)/);
+        const numbers = question.match(/([\d,\.]+)\s*\+\s*([\d,\.]+)/);
         if (numbers) {
-          const a = parseInt(numbers[1]);
-          const b = parseInt(numbers[2]);
-          return `${a} + ${b} = ${answer}. Addition bedeutet zusammenzählen.`;
+          const a = parseFloat(numbers[1].replace(',', '.'));
+          const b = parseFloat(numbers[2].replace(',', '.'));
+          const result = a + b;
+          return `${numbers[1]} + ${numbers[2]} = ${result.toString().replace('.', ',')}. Addition bedeutet zusammenzählen.`;
         }
       }
       if (question.includes('-')) {
-        const numbers = question.match(/(\d+)\s*-\s*(\d+)/);
+        const numbers = question.match(/([\d,\.]+)\s*-\s*([\d,\.]+)/);
         if (numbers) {
-          const a = parseInt(numbers[1]);
-          const b = parseInt(numbers[2]);
-          return `${a} - ${b} = ${answer}. Subtraktion bedeutet abziehen.`;
+          const a = parseFloat(numbers[1].replace(',', '.'));
+          const b = parseFloat(numbers[2].replace(',', '.'));
+          const result = a - b;
+          return `${numbers[1]} - ${numbers[2]} = ${result.toString().replace('.', ',')}. Subtraktion bedeutet abziehen.`;
         }
       }
       
