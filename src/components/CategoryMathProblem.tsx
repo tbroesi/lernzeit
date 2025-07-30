@@ -18,6 +18,7 @@ import { useChildSettings } from '@/hooks/useChildSettings';
 import { useAchievements } from '@/hooks/useAchievements';
 import { AchievementAnimation } from '@/components/game/AchievementAnimation';
 import { GameTimeDisplay } from '@/components/game/GameTimeDisplay';
+import { GameCompletionScreen } from '@/components/GameCompletionScreen';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 
 interface CategoryMathProblemProps {
@@ -236,10 +237,9 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
       
       addScreenTime(earnedSeconds);
       
-      // Add a small delay to ensure the screen time is updated
-      setTimeout(() => {
-        onComplete(Math.floor(earnedSeconds / 60), category);
-      }, 100);
+      // Remove automatic completion to prevent double navigation
+      // The completion screen will handle navigation via onContinue
+      console.log('🏁 Session saved, completion screen will handle navigation');
     };
     
     completeSession();
@@ -723,6 +723,38 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
           </div>
         </CardContent>
       </Card>
+    );
+  }
+
+  // Show completion screen when game is finished
+  if (gameCompleted && sessionEndTime) {
+    const sessionDuration = sessionEndTime - sessionStartTime;
+    const timePerTask = settings ? (settings[`${category.toLowerCase()}_seconds_per_task` as keyof typeof settings] as number || 30) : 30;
+    const achievementBonusMinutes = Math.floor((newAchievements.length * 5) / 60); // 5 minutes per achievement
+    const perfectSessionBonus = score === problems.length ? 2 : 0; // 2 extra minutes for perfect session
+    
+    return (
+      <GameCompletionScreen
+        score={score}
+        totalQuestions={problems.length}
+        sessionDuration={sessionDuration}
+        timePerTask={timePerTask}
+        achievementBonusMinutes={achievementBonusMinutes}
+        perfectSessionBonus={perfectSessionBonus}
+        onContinue={() => {
+          // Calculate earned minutes before navigating
+          const timePerTaskValue = settings ? (settings[`${category.toLowerCase()}_seconds_per_task` as keyof typeof settings] as number || 30) : 30;
+          const earnedSeconds = score * timePerTaskValue;
+          const earnedMinutes = Math.floor(earnedSeconds / 60);
+          
+          // Reset the game state
+          setGameCompleted(false);
+          setGameStarted(false);
+          
+          // Navigate back and pass earned minutes
+          onComplete(earnedMinutes, category);
+        }}
+      />
     );
   }
 
