@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { SelectionQuestion } from '@/types/questionTypes';
 import { supabase } from '@/lib/supabase';
+import { TemplateBasedGenerator } from '@/utils/templates/templateBasedGenerator';
 
 export function useBalancedQuestionGeneration(
   category: string, 
@@ -988,13 +989,27 @@ export function useBalancedQuestionGeneration(
   };
 
   const generateSimpleFallback = useCallback((): SelectionQuestion[] => {
-    console.log('🔄 Using simple fallback generation');
+    console.log('🔄 Using template-based fallback generation');
+    
+    // Use the new template-based generator
+    try {
+      const problems = TemplateBasedGenerator.generateProblems(category, grade, totalQuestions);
+      
+      if (problems.length > 0) {
+        console.log(`✅ Template-based fallback generated ${problems.length} problems`);
+        return problems;
+      }
+    } catch (error) {
+      console.warn('Template-based generator failed, using basic fallback:', error);
+    }
+    
+    // Ultimate fallback - basic math problems only
     const simpleProblems: SelectionQuestion[] = [];
     
     for (let i = 0; i < totalQuestions; i++) {
-      const maxNum = Math.min(100, 10 + (grade * 10));
-      const a = Math.floor(Math.random() * maxNum) + 1;
-      const b = Math.floor(Math.random() * (maxNum / 2)) + 1;
+      const gradeRange = Math.min(100, 10 + (grade * 15));
+      const a = Math.floor(Math.random() * gradeRange) + 1;
+      const b = Math.floor(Math.random() * (gradeRange / 2)) + 1;
       const answer = a + b;
       
       simpleProblems.push({
@@ -1008,7 +1023,7 @@ export function useBalancedQuestionGeneration(
     }
     
     return simpleProblems;
-  }, [grade, totalQuestions]);
+  }, [category, grade, totalQuestions]);
 
   // PHASE 4: Controlled Generation with Strict Hierarchy
   const generateProblems = useCallback(async () => {

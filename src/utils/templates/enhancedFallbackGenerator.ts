@@ -1,14 +1,50 @@
-// Phase 1: Enhanced fallback generator with more variety
+// DEPRECATED: Enhanced fallback generator - replaced by template-based system
+// This file is kept for compatibility but should use TemplateBasedGenerator instead
 import { SelectionQuestion } from '@/types/questionTypes';
+import { TemplateBasedGenerator } from './templateBasedGenerator';
 
 export class EnhancedFallbackGenerator {
   
+  // Main entry point - delegates to new template-based system
   static generateMathProblems(grade: number, count: number): SelectionQuestion[] {
+    console.log('⚠️ Using deprecated EnhancedFallbackGenerator - migrating to TemplateBasedGenerator');
+    try {
+      return TemplateBasedGenerator.generateProblems('math', grade, count);
+    } catch (error) {
+      console.warn('Template generator failed, using legacy fallback:', error);
+      return this.generateLegacyMathProblems(grade, count);
+    }
+  }
+  
+  static generateGermanProblems(grade: number, count: number): SelectionQuestion[] {
+    console.log('⚠️ Using deprecated EnhancedFallbackGenerator - migrating to TemplateBasedGenerator');
+    try {
+      return TemplateBasedGenerator.generateProblems('german', grade, count);
+    } catch (error) {
+      console.warn('Template generator failed, using legacy fallback:', error);
+      return this.generateLegacyGermanProblems(grade, count);
+    }
+  }
+  
+  // Legacy methods kept for compatibility
+  private static generateLegacyMathProblems(grade: number, count: number): SelectionQuestion[] {
     const problems: SelectionQuestion[] = [];
     
     for (let i = 0; i < count; i++) {
       const problemType = this.selectMathProblemType(grade);
       const problem = this.generateMathProblem(problemType, grade, i);
+      problems.push(problem);
+    }
+    
+    return problems;
+  }
+  
+  private static generateLegacyGermanProblems(grade: number, count: number): SelectionQuestion[] {
+    const problems: SelectionQuestion[] = [];
+    
+    for (let i = 0; i < count; i++) {
+      const problemType = this.selectGermanProblemType(grade);
+      const problem = this.generateGermanProblem(problemType, grade, i);
       problems.push(problem);
     }
     
@@ -284,17 +320,6 @@ export class EnhancedFallbackGenerator {
     };
   }
   
-  static generateGermanProblems(grade: number, count: number): SelectionQuestion[] {
-    const problems: SelectionQuestion[] = [];
-    
-    for (let i = 0; i < count; i++) {
-      const problemType = this.selectGermanProblemType(grade);
-      const problem = this.generateGermanProblem(problemType, grade, i);
-      problems.push(problem);
-    }
-    
-    return problems;
-  }
   
   private static selectGermanProblemType(grade: number): string {
     const basicTypes = ['spelling', 'word_recognition'];

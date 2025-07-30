@@ -518,12 +518,31 @@ const parseMultipleChoiceContent = (content: string, template: any) => {
     let correctAnswer = 0;
     
     if (category.includes('math') || category.includes('mathematik')) {
-      // Math-spezifische Optionen
-      if (content.includes('144') && content.includes('12')) {
+      // Math-specific options - generate based on content
+      const numbers = content.match(/\d+/g);
+      if (numbers && numbers.length >= 2) {
+        const [a, b] = numbers.map(Number);
+        const correctValue = a + b; // Assume addition for basic case
+        options = [
+          correctValue.toString(),
+          (correctValue + Math.floor(Math.random() * 5) + 1).toString(),
+          (correctValue - Math.floor(Math.random() * 3) - 1).toString(),
+          (correctValue * 2).toString()
+        ];
+        correctAnswer = 0;
+      } else if (content.includes('144') && content.includes('12')) {
         options = ['12', '24', '6', '144'];
         correctAnswer = 0; // 144 ÷ 12 = 12
       } else {
-        options = ['42', '84', '21', '168'];
+        // Generate appropriate options based on template grade (fallback to 3)
+        const templateGrade = template.grade || 3;
+        const baseValue = Math.floor(Math.random() * (10 + templateGrade * 5)) + 1;
+        options = [
+          baseValue.toString(),
+          (baseValue + Math.floor(Math.random() * 5) + 1).toString(),
+          (baseValue - Math.floor(Math.random() * 3) - 1).toString(),
+          (baseValue * 2).toString()
+        ];
         correctAnswer = 0;
       }
     } else if (category.includes('deutsch') || category.includes('german')) {
