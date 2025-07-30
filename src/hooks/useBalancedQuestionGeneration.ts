@@ -585,18 +585,67 @@ export function useBalancedQuestionGeneration(
   // Generate proper explanations based on question type
   const generateProperExplanation = (question: string, answer: string, category: string): string => {
     if (category === 'Mathematik' || category === 'math') {
+      // Specific handling for geometry problems
+      if (question.includes('Umfang') && question.includes('Rechteck')) {
+        const lengthMatch = question.match(/(\d+)\s*cm.*?lang/i);
+        const widthMatch = question.match(/(\d+)\s*cm.*?breit/i);
+        if (lengthMatch && widthMatch) {
+          const length = parseInt(lengthMatch[1]);
+          const width = parseInt(widthMatch[1]);
+          const perimeter = 2 * (length + width);
+          return `Umfang = 2 × (Länge + Breite) = 2 × (${length} + ${width}) = ${perimeter} cm`;
+        }
+      }
+      
+      if (question.includes('Fläche') && question.includes('Rechteck')) {
+        const lengthMatch = question.match(/(\d+)\s*cm.*?lang/i);
+        const widthMatch = question.match(/(\d+)\s*cm.*?breit/i);
+        if (lengthMatch && widthMatch) {
+          const length = parseInt(lengthMatch[1]);
+          const width = parseInt(widthMatch[1]);
+          const area = length * width;
+          return `Fläche = Länge × Breite = ${length} × ${width} = ${area} cm²`;
+        }
+      }
+      
       if (question.includes('geometrische Form')) {
         return `Die Antwort ist "${answer}". Diese Form hat die beschriebenen Eigenschaften.`;
       }
-      if (question.includes('Berechne') || question.includes('=')) {
-        return `Das Ergebnis der Berechnung ist ${answer}.`;
+      if (question.includes('÷') || question.includes(':')) {
+        const numbers = question.match(/(\d+)\s*[÷:]\s*(\d+)/);
+        if (numbers) {
+          const a = parseInt(numbers[1]);
+          const b = parseInt(numbers[2]);
+          return `${a} ÷ ${b} = ${answer}. Division bedeutet teilen.`;
+        }
       }
-      if (question.includes('Winkel')) {
-        return `Die richtige Antwort ist ${answer}. Diese Form hat die angegebenen Winkel.`;
+      if (question.includes('×') || question.includes('*')) {
+        const numbers = question.match(/(\d+)\s*[×*]\s*(\d+)/);
+        if (numbers) {
+          const a = parseInt(numbers[1]);
+          const b = parseInt(numbers[2]);
+          return `${a} × ${b} = ${answer}. Multiplikation bedeutet mal rechnen.`;
+        }
       }
-      if (question.includes('Seiten')) {
-        return `Die richtige Antwort ist ${answer}. Diese Form hat die beschriebenen Seiteneigenschaften.`;
+      if (question.includes('+')) {
+        const numbers = question.match(/(\d+)\s*\+\s*(\d+)/);
+        if (numbers) {
+          const a = parseInt(numbers[1]);
+          const b = parseInt(numbers[2]);
+          return `${a} + ${b} = ${answer}. Addition bedeutet zusammenzählen.`;
+        }
       }
+      if (question.includes('-')) {
+        const numbers = question.match(/(\d+)\s*-\s*(\d+)/);
+        if (numbers) {
+          const a = parseInt(numbers[1]);
+          const b = parseInt(numbers[2]);
+          return `${a} - ${b} = ${answer}. Subtraktion bedeutet abziehen.`;
+        }
+      }
+      
+      // Generic math fallback
+      return `Die Lösung ist ${answer}.`;
     }
     
     if (category === 'Deutsch' || category === 'german') {

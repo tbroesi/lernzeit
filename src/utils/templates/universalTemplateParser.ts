@@ -197,21 +197,20 @@ const extractScienceAnswer = (content: string): string => {
 const parseMathContent = (content: string) => {
   console.log(`🔢 Parsing Math content: "${content}"`);
 
-  // Pattern 1: Division "Berechne: 144 : 12 = ?" oder "Berechne: 144 ÷ 12 = ?"
+  // Pattern 1: Division - dynamic generation instead of hardcoded 144÷12
   let match = content.match(/Berechne\s*:?\s*(\d+)\s*[÷:\/]\s*(\d+)\s*=\s*\?/i);
   if (match) {
     const a = parseInt(match[1]);
     const b = parseInt(match[2]);
-    const result = a / b; // KORRIGIERT: Verwende direkte Division ohne floor
+    const result = a / b;
     
     console.log(`🧮 Division: ${a} ÷ ${b} = ${result} (a=${a}, b=${b})`);
-    console.warn(`🔍 DEBUGGING Division 144÷12: Expected=12, Calculated=${result}`);
     
     return {
       success: true,
       questionText: content,
       answerValue: result.toString(),
-      explanation: `${a} ÷ ${b} = ${result}`,
+      explanation: `${a} ÷ ${b} = ${result}. Division bedeutet teilen.`,
       questionType: 'text-input'
     };
   }
@@ -530,9 +529,6 @@ const parseMultipleChoiceContent = (content: string, template: any) => {
           (correctValue * 2).toString()
         ];
         correctAnswer = 0;
-      } else if (content.includes('144') && content.includes('12')) {
-        options = ['12', '24', '6', '144'];
-        correctAnswer = 0; // 144 ÷ 12 = 12
       } else {
         // Generate appropriate options based on template grade (fallback to 3)
         const templateGrade = template.grade || 3;
